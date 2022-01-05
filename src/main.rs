@@ -23,12 +23,6 @@ fn reverse_file(args: ReverseArgs) {
     println!("Reversing {} to {}", args.file, args.output);
     let mut path = File::open(Path::new(&args.file)).expect("Error opening file");
     let (header, data) = wav::read(&mut path).expect("Error reading file");
-
-    println!("{}", header.bits_per_sample);
-    if header.bits_per_sample != 24 {
-        panic!("Only 24 bit files supported")
-    }
-
     let new_data = reverse(&data);
 
     let mut output_file = File::create(Path::new(&args.output)).expect("Error creating file");
