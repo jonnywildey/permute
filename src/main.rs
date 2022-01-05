@@ -36,13 +36,21 @@ fn reverse_file(args: ReverseArgs) {
 }
 
 fn reverse(data: &BitDepth) -> BitDepth {
-    let rev = data.as_twenty_four().unwrap();
+    return match data {
+        BitDepth::TwentyFour(d) => BitDepth::TwentyFour(rev(d)),
+        BitDepth::Sixteen(d) => BitDepth::Sixteen(rev(d)),
+        BitDepth::ThirtyTwoFloat(d) => BitDepth::ThirtyTwoFloat(rev(d)),
+        BitDepth::Eight(d) => BitDepth::Eight(rev(d)),
+        BitDepth::Empty => BitDepth::Empty,
+    };
+}
+
+fn rev<T: std::marker::Copy>(rev: &Vec<T>) -> Vec<T> {
     let mut new_rev = rev.clone();
 
     let length = rev.len();
     for i in 1..length {
         new_rev[i] = rev[length - 1 - i]
     }
-
-    BitDepth::TwentyFour(new_rev.to_vec())
+    new_rev.to_vec()
 }
