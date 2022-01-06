@@ -7,9 +7,15 @@ struct ReverseArgs {
     /// The audio file to look for
     #[structopt(long, short)]
     file: String,
-    /// where to store the reversed file
+    /// Where to store the reversed file
     #[structopt(long, short)]
     output: String,
+    /// Trail to add at beginning of file in seconds
+    #[structopt(long = "inputTrail", short, default_value = "0")]
+    input_trail: f64,
+    /// Trail to add at beginning of file in seconds
+    #[structopt(long = "outputTrail", short, default_value = "0")]
+    output_trail: f64,
 }
 
 fn main() {
@@ -41,6 +47,11 @@ fn reverse_file(args: ReverseArgs) {
         .samples::<i32>()
         .map(|x| (x.unwrap()) as f64 * normalise_factor)
         .collect::<Vec<f64>>();
+    let input_trail_buffer =
+        vec![0_f64; (spec.sample_rate as f64 * args.input_trail).ceil() as usize];
+    let output_trail_buffer =
+        vec![0_f64; (spec.sample_rate as f64 * args.output_trail).ceil() as usize];
+    let samples_64 = [input_trail_buffer, samples_64, output_trail_buffer].concat();
 
     let sample_length = samples_64.len();
 
@@ -51,7 +62,7 @@ fn reverse_file(args: ReverseArgs) {
     };
 
     let processors: Vec<fn(ProcessorParams) -> ProcessorParams> =
-        vec![reverse, delay, delay, reverse];
+        vec![half_gain, half_gain, reverse, delay, delay, reverse];
 
     let output_params = processors
         .iter()
@@ -94,7 +105,7 @@ fn reverse(
 }
 
 fn delay(params: ProcessorParams) -> ProcessorParams {
-    delay_line(params, 0.5, 12000)
+    delay_line(params, 0.75, 4000)
 }
 
 fn delay_line(
@@ -127,4 +138,29 @@ fn delay_line(
         return delay_line(new_params, new_feedback_factor, delay_sample_length);
     }
     return new_params;
+}
+
+fn half_gain(params: ProcessorParams) -> ProcessorParams {
+    gain(params, 0.5)
+}
+
+fn gain(
+    ProcessorParams {
+        samples,
+        sample_length,
+        spec,
+    }: ProcessorParams,
+    gain_factor: f64,
+) -> ProcessorParams {
+    let mut new_samples = samples.clone();
+
+    for i in 0..sample_length {
+        new_samples[i] = samples[i] * gain_factor;
+    }
+
+    return ProcessorParams {
+        samples: new_samples,
+        spec: spec,
+        sample_length: sample_length,
+    };
 }
