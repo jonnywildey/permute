@@ -24,36 +24,62 @@ pub fn reverse(
     };
 }
 
+pub struct DelayLineParams {
+    pub feedback_factor: f64, // 0 - 1
+    pub delay_sample_length: usize,
+    pub dry_gain_factor: f64,
+    pub wet_gain_factor: f64,
+}
+
 pub fn delay_line(
     ProcessorParams {
         samples,
         sample_length,
         spec,
     }: ProcessorParams,
-    feedback_factor: f64, // 0 - 1
-    delay_sample_length: usize,
+    DelayLineParams {
+        feedback_factor,
+        delay_sample_length,
+        dry_gain_factor,
+        wet_gain_factor,
+    }: DelayLineParams,
 ) -> ProcessorParams {
-    let mut new_samples = samples.clone();
+    let mut new_samples = vec![0_f64; sample_length];
 
-    for i in 0..sample_length {
+    for i in delay_sample_length..sample_length {
         let delay_i = i - delay_sample_length;
-        if i >= delay_sample_length {
-            new_samples[i] += samples[delay_i] * feedback_factor
-        }
+        new_samples[i] += samples[delay_i];
     }
 
-    let new_params = ProcessorParams {
+    new_samples = sum(vec![
+        SampleLine {
+            gain_factor: dry_gain_factor,
+            samples: samples,
+        },
+        SampleLine {
+            gain_factor: wet_gain_factor,
+            samples: new_samples,
+        },
+    ]);
+
+    let new_feedback_factor = feedback_factor.powf(1.5); // try and make feedback a bit less non linear
+    let new_processor_params = ProcessorParams {
         samples: new_samples,
         spec: spec,
         sample_length: sample_length,
     };
+    let new_delay_params = DelayLineParams {
+        feedback_factor: new_feedback_factor,
+        delay_sample_length: delay_sample_length,
+        dry_gain_factor: 1_f64,
+        wet_gain_factor: feedback_factor,
+    };
 
-    let new_feedback_factor = feedback_factor * feedback_factor;
-
-    if new_feedback_factor > 0_f64 {
-        return delay_line(new_params, new_feedback_factor, delay_sample_length);
+    if feedback_factor > 0_f64 {
+        return delay_line(new_processor_params, new_delay_params);
     }
-    return new_params;
+
+    return new_processor_params;
 }
 
 pub fn half_gain(params: ProcessorParams) -> ProcessorParams {
@@ -104,7 +130,6 @@ pub fn ceiling(
         }
     });
     let ceiling_factor = ceiling / abs_max;
-    println!("abs: {}, ceiling_factor: {}", abs_max, ceiling_factor);
 
     for i in 0..sample_length {
         new_samples[i] = samples[i] * ceiling_factor;
@@ -115,4 +140,31 @@ pub fn ceiling(
         spec: spec,
         sample_length: sample_length,
     };
+}
+
+struct SampleLine {
+    samples: Vec<f64>,
+    gain_factor: f64,
+}
+
+fn sum(sample_lines: Vec<SampleLine>) -> Vec<f64> {
+    // get max len
+    let samples_len = sample_lines.iter().fold(0, |a, b| {
+        let b_len = b.samples.len();
+        if b_len > a {
+            b_len
+        } else {
+            a
+        }
+    });
+
+    let mut new_samples = vec![0_f64; samples_len];
+    let sample_lines_len = sample_lines.len();
+
+    for i in 0..samples_len {
+        for j in 0..sample_lines_len {
+            new_samples[i] += sample_lines[j].samples[i] * sample_lines[j].gain_factor;
+        }
+    }
+    new_samples
 }

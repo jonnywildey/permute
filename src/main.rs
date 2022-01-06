@@ -3,8 +3,7 @@ use structopt::StructOpt;
 mod process;
 mod random_process;
 use process::*;
-
-use crate::random_process::random_metallic_delay;
+use random_process::*;
 
 /// Permute file
 #[derive(StructOpt, Clone)]
@@ -67,15 +66,8 @@ fn permute_file(args: PermuteArgs) {
         sample_length: sample_length,
     };
 
-    let processors: Vec<fn(ProcessorParams) -> ProcessorParams> = vec![
-        reverse,
-        random_metallic_delay,
-        random_metallic_delay,
-        random_metallic_delay,
-        random_metallic_delay,
-        reverse,
-        normalise,
-    ];
+    let processors: Vec<fn(ProcessorParams) -> ProcessorParams> =
+        vec![random_rhythmic_delay, normalise];
 
     let output_params = processors
         .iter()
