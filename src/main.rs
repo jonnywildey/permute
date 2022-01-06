@@ -1,7 +1,10 @@
 use hound::{self};
 use structopt::StructOpt;
 mod process;
-use process::{delay, half_gain, reverse, ProcessorParams};
+mod random_process;
+use process::*;
+
+use crate::random_process::random_metallic_delay;
 
 /// Permute file
 #[derive(StructOpt, Clone)]
@@ -38,12 +41,13 @@ fn permute_file(args: PermuteArgs) {
         sample_format: hound::SampleFormat::Float,
     };
 
+    // Set all values to -1..1
     let normalise_factor: f64 = match spec.bits_per_sample {
-        0..=24 => 1_f64 / (2_f64.powf(spec.bits_per_sample as f64) - 1_f64),
+        0..=24 => 1_f64 / (2_f64.powf((spec.bits_per_sample - 1) as f64) - 1_f64),
         _ => 1_f64,
     };
 
-    let denormalise_factor = 1_f64 / normalise_factor;
+    let denormalise_factor = (1_f64 / normalise_factor) - 1_f64;
 
     let samples_64 = reader
         .samples::<i32>()
@@ -63,8 +67,15 @@ fn permute_file(args: PermuteArgs) {
         sample_length: sample_length,
     };
 
-    let processors: Vec<fn(ProcessorParams) -> ProcessorParams> =
-        vec![half_gain, half_gain, reverse, delay, delay, reverse];
+    let processors: Vec<fn(ProcessorParams) -> ProcessorParams> = vec![
+        reverse,
+        random_metallic_delay,
+        random_metallic_delay,
+        random_metallic_delay,
+        random_metallic_delay,
+        reverse,
+        normalise,
+    ];
 
     let output_params = processors
         .iter()
@@ -73,9 +84,8 @@ fn permute_file(args: PermuteArgs) {
     let mut pro_writer = hound::WavWriter::create(args.output, spec).expect("Error in output");
 
     for s in output_params.samples {
-        pro_writer
-            .write_sample((s * denormalise_factor) as i32)
-            .expect("Error writing file");
+        let t = (s * denormalise_factor) as i32;
+        pro_writer.write_sample(t).expect("Error writing file");
     }
     pro_writer.finalize().expect("Error writing file");
 }

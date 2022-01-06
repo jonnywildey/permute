@@ -24,10 +24,6 @@ pub fn reverse(
     };
 }
 
-pub fn delay(params: ProcessorParams) -> ProcessorParams {
-    delay_line(params, 0.75, 4000)
-}
-
 pub fn delay_line(
     ProcessorParams {
         samples,
@@ -76,6 +72,42 @@ pub fn gain(
 
     for i in 0..sample_length {
         new_samples[i] = samples[i] * gain_factor;
+    }
+
+    return ProcessorParams {
+        samples: new_samples,
+        spec: spec,
+        sample_length: sample_length,
+    };
+}
+
+pub fn normalise(params: ProcessorParams) -> ProcessorParams {
+    ceiling(params, 1_f64)
+}
+
+pub fn ceiling(
+    ProcessorParams {
+        samples,
+        sample_length,
+        spec,
+    }: ProcessorParams,
+    ceiling: f64,
+) -> ProcessorParams {
+    let mut new_samples = samples.clone();
+
+    let abs_max = samples.iter().fold(0_f64, |a, b| {
+        let b = b.abs();
+        if a >= b {
+            a
+        } else {
+            b
+        }
+    });
+    let ceiling_factor = ceiling / abs_max;
+    println!("abs: {}, ceiling_factor: {}", abs_max, ceiling_factor);
+
+    for i in 0..sample_length {
+        new_samples[i] = samples[i] * ceiling_factor;
     }
 
     return ProcessorParams {
