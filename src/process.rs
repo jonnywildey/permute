@@ -1,3 +1,4 @@
+#[derive(Clone)]
 pub struct ProcessorParams {
     pub spec: hound::WavSpec,
     pub samples: Vec<f64>,

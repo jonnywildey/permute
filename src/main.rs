@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use hound::{self};
 use structopt::StructOpt;
 mod process;
@@ -20,6 +22,9 @@ struct PermuteArgs {
     /// Trail to add at beginning of file in seconds
     #[structopt(long = "outputTrail", short, default_value = "0")]
     output_trail: f64,
+    /// Number of times to randomly process file
+    #[structopt(long, short)]
+    permutations: usize,
 }
 
 fn main() {
@@ -28,7 +33,10 @@ fn main() {
 }
 
 fn permute_file(args: PermuteArgs) {
-    println!("Reversing {} to {}", args.file, args.output);
+    println!(
+        "Permuting {} to {}, {} mutations",
+        args.file, args.output, args.permutations
+    );
 
     let mut reader = hound::WavReader::open(args.file).expect("Error opening file");
     let spec = reader.spec();
@@ -66,18 +74,31 @@ fn permute_file(args: PermuteArgs) {
         sample_length: sample_length,
     };
 
-    let processors: Vec<fn(ProcessorParams) -> ProcessorParams> =
-        vec![random_rhythmic_delay, normalise];
+    let output = args.output;
+    for i in 1..=args.permutations {
+        let output_i = generate_file_name(output.clone(), i);
+        println!("Permutating {:?}", output_i);
+        let process_node = get_processor_node(GetProcessorNodeParams {
+            normalise_at_end: true,
+        });
 
-    let output_params = processors
-        .iter()
-        .fold(processor_params, |params, processor| processor(params));
+        let output_params = process_node(processor_params.clone());
 
-    let mut pro_writer = hound::WavWriter::create(args.output, spec).expect("Error in output");
+        let mut pro_writer = hound::WavWriter::create(output_i, spec).expect("Error in output");
 
-    for s in output_params.samples {
-        let t = (s * denormalise_factor) as i32;
-        pro_writer.write_sample(t).expect("Error writing file");
+        for s in output_params.samples {
+            let t = (s * denormalise_factor) as i32;
+            pro_writer.write_sample(t).expect("Error writing file");
+        }
+        pro_writer.finalize().expect("Error writing file");
     }
-    pro_writer.finalize().expect("Error writing file");
+}
+
+fn generate_file_name(output: String, permutation_count: usize) -> std::path::PathBuf {
+    let path = Path::new(&output);
+    let file_stem = path.file_stem().unwrap_or_default().to_str().unwrap_or("");
+    let extension = path.extension().unwrap_or_default().to_str().unwrap_or("");
+    let new_filename = [file_stem, &permutation_count.to_string(), ".", extension].concat();
+
+    path.with_file_name(new_filename)
 }
