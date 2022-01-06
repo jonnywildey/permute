@@ -1,5 +1,4 @@
 ## Directory
 ## Reverb
-## Delay
-## Think through 
+## Delay Mix
 ## Filter

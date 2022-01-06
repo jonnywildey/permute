@@ -1,13 +1,13 @@
 use hound::{self};
 use structopt::StructOpt;
 
-/// Reverse file
+/// Permute file
 #[derive(StructOpt, Clone)]
-struct ReverseArgs {
-    /// The audio file to look for
+struct PermuteArgs {
+    /// The audio file to process
     #[structopt(long, short)]
     file: String,
-    /// Where to store the reversed file
+    /// Output of processed file
     #[structopt(long, short)]
     output: String,
     /// Trail to add at beginning of file in seconds
@@ -19,11 +19,11 @@ struct ReverseArgs {
 }
 
 fn main() {
-    let args = ReverseArgs::from_args();
-    reverse_file(args.clone());
+    let args = PermuteArgs::from_args();
+    permute_file(args.clone());
 }
 
-fn reverse_file(args: ReverseArgs) {
+fn permute_file(args: PermuteArgs) {
     println!("Reversing {} to {}", args.file, args.output);
 
     let mut reader = hound::WavReader::open(args.file).expect("Error opening file");

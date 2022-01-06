@@ -1,5 +1,5 @@
 [package]
-name = "reverse"
+name = "permute"
 version = "0.1.0"
 authors = ["Jonny Wildey <jonnywildey@gmail.com>"]
 edition = "2018"
