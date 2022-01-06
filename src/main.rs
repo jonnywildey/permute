@@ -1,7 +1,5 @@
-use std::fs::File;
-use std::path::Path;
+use hound::{self};
 use structopt::StructOpt;
-use wav::{self, BitDepth};
 
 /// Reverse file
 #[derive(StructOpt, Clone)]
@@ -21,52 +19,74 @@ fn main() {
 
 fn reverse_file(args: ReverseArgs) {
     println!("Reversing {} to {}", args.file, args.output);
-    let mut path = File::open(Path::new(&args.file)).expect("Error opening file");
-    let (header, data) = wav::read(&mut path).expect("Error reading file");
-    let new_data = reverse(&data);
 
-    let mut output_file = File::create(Path::new(&args.output)).expect("Error creating file");
-    wav::write(header, &new_data, &mut output_file).expect("Error writing to file");
-}
+    let mut reader = hound::WavReader::open(args.file).expect("Error opening file");
+    let spec = reader.spec();
 
-fn reverse(data: &BitDepth) -> BitDepth {
-    return match data {
-        BitDepth::TwentyFour(d) => BitDepth::TwentyFour(rev(d)),
-        BitDepth::Sixteen(d) => BitDepth::Sixteen(rev(d)),
-        BitDepth::ThirtyTwoFloat(d) => BitDepth::ThirtyTwoFloat(rev(d)),
-        BitDepth::Eight(d) => BitDepth::Eight(rev(d)),
-        BitDepth::Empty => BitDepth::Empty,
+    let processor_spec = hound::WavSpec {
+        channels: spec.channels,
+        sample_rate: spec.sample_rate,
+        bits_per_sample: 64,
+        sample_format: hound::SampleFormat::Float,
     };
+
+    let normalise_factor: f64 = match spec.bits_per_sample {
+        0..=24 => 1_f64 / (2_f64.powf(spec.bits_per_sample as f64) - 1_f64),
+        _ => 1_f64,
+    };
+
+    let denormalise_factor = 1_f64 / normalise_factor;
+
+    let samples_64 = reader
+        .samples::<i16>()
+        .map(|x| {
+            let sample = x.unwrap();
+            sample as f64 * normalise_factor
+        })
+        .collect::<Vec<f64>>();
+
+    let sample_length = samples_64.len();
+
+    let processor_params = ProcessorParams {
+        samples: samples_64,
+        spec: processor_spec,
+        sample_length: sample_length,
+    };
+
+    let output_params = reverse(processor_params);
+
+    let mut pro_writer = hound::WavWriter::create(args.output, spec).expect("Error in output");
+
+    for s in output_params.samples {
+        pro_writer
+            .write_sample((s * denormalise_factor) as i32)
+            .expect("Error writing file");
+    }
+    pro_writer.finalize().expect("Error writing file");
 }
 
-fn rev<T: std::marker::Copy>(rev: &Vec<T>) -> Vec<T> {
-    let mut new_rev = rev.clone();
-
-    let length = rev.len();
-    for i in 1..length {
-        new_rev[i] = rev[length - 1 - i]
-    }
-    new_rev.to_vec()
+struct ProcessorParams {
+    spec: hound::WavSpec,
+    samples: Vec<f64>,
+    sample_length: usize,
 }
 
-fn delay<T: std::marker::Copy + std::ops::AddAssign>(
-    rev: &Vec<T>,
-    delay_length: usize,
-    repeats: u32,
-) -> Vec<T> {
-    let mut new_rev = rev.clone();
+fn reverse(
+    ProcessorParams {
+        samples,
+        sample_length,
+        spec,
+    }: ProcessorParams,
+) -> ProcessorParams {
+    let mut new_samples = samples.clone();
 
-    let length = rev.len();
-
-    for i in 1..length {
-        let delay_i = i - delay_length;
-        if i >= delay_length {
-            new_rev[i] += rev[delay_i]
-        }
+    for i in 0..sample_length {
+        new_samples[i] = samples[sample_length - 1 - i]
     }
 
-    if (repeats > 0) {
-        new_rev = delay(&new_rev, delay_length, repeats - 1);
-    }
-    new_rev.to_vec()
+    return ProcessorParams {
+        samples: new_samples,
+        spec: spec,
+        sample_length: sample_length,
+    };
 }

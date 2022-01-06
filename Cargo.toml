@@ -8,4 +8,4 @@ edition = "2018"
 
 [dependencies]
 structopt = "0.3.13"
-wav = "1.0.0"
+hound = "3.4.0"
