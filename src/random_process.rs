@@ -33,28 +33,54 @@ pub fn random_rhythmic_delay(params: ProcessorParams) -> ProcessorParams {
 pub type ProcessorFn = fn(ProcessorParams) -> ProcessorParams;
 pub struct GetProcessorNodeParams {
     pub normalise_at_end: bool,
+    pub depth: usize,
 }
 
-pub fn get_processor_node(
-    GetProcessorNodeParams { normalise_at_end }: GetProcessorNodeParams,
-) -> impl Fn(ProcessorParams) -> ProcessorParams {
+pub fn generate_processor_sequence(
+    GetProcessorNodeParams {
+        normalise_at_end,
+        depth,
+    }: GetProcessorNodeParams,
+) -> Vec<ProcessorFn> {
     let mut rng = thread_rng();
 
     let processor_pool: Vec<ProcessorFn> =
         vec![reverse, random_metallic_delay, random_rhythmic_delay];
 
     let processor_count = rng.gen_range(2..8);
-
     let mut processors: Vec<ProcessorFn> = vec![];
+
     for _ in 0..processor_count {
         processors.push(processor_pool[rng.gen_range(0..processor_pool.len())])
     }
+    if depth > 0 {
+        processors = [
+            generate_processor_sequence(GetProcessorNodeParams {
+                depth: depth - 1,
+                normalise_at_end: false,
+            }),
+            processors,
+        ]
+        .concat();
+    }
     if normalise_at_end {
-        processors.push(normalise)
+        processors.push(normalise);
     }
-    move |processor_params: ProcessorParams| {
-        return processors
-            .iter()
-            .fold(processor_params, |params, processor| processor(params));
-    }
+    processors
+}
+
+pub struct RunProcessorsParams {
+    pub processors: Vec<ProcessorFn>,
+    pub processor_params: ProcessorParams,
+}
+
+pub fn run_processors(
+    RunProcessorsParams {
+        processors,
+        processor_params,
+    }: RunProcessorsParams,
+) -> ProcessorParams {
+    processors
+        .iter()
+        .fold(processor_params, |params, processor| processor(params))
 }

@@ -25,6 +25,9 @@ struct PermuteArgs {
     /// Number of times to randomly process file
     #[structopt(long, short)]
     permutations: usize,
+    /// How much the file is permuted. Numbers larger than 5 will take a long time to process
+    #[structopt(long = "depth", short, default_value = "1")]
+    permutation_depth: usize,
 }
 
 fn main() {
@@ -78,12 +81,16 @@ fn permute_file(args: PermuteArgs) {
     for i in 1..=args.permutations {
         let output_i = generate_file_name(output.clone(), i);
         println!("Permutating {:?}", output_i);
-        let process_node = get_processor_node(GetProcessorNodeParams {
+
+        let proccesors = generate_processor_sequence(GetProcessorNodeParams {
+            depth: args.permutation_depth,
             normalise_at_end: true,
         });
 
-        let output_params = process_node(processor_params.clone());
-
+        let output_params = run_processors(RunProcessorsParams {
+            processor_params: processor_params.clone(),
+            processors: proccesors,
+        });
         let mut pro_writer = hound::WavWriter::create(output_i, spec).expect("Error in output");
 
         for s in output_params.samples {
