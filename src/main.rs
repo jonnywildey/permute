@@ -82,14 +82,14 @@ fn permute_file(args: PermuteArgs) {
         let output_i = generate_file_name(output.clone(), i);
         println!("Permutating {:?}", output_i);
 
-        let proccesors = generate_processor_sequence(GetProcessorNodeParams {
+        let processors = generate_processor_sequence(GetProcessorNodeParams {
             depth: args.permutation_depth,
             normalise_at_end: true,
         });
 
         let output_params = run_processors(RunProcessorsParams {
             processor_params: processor_params.clone(),
-            processors: proccesors,
+            processors: processors,
         });
         let mut pro_writer = hound::WavWriter::create(output_i, spec).expect("Error in output");
 

@@ -169,3 +169,38 @@ fn sum(sample_lines: Vec<SampleLine>) -> Vec<f64> {
     }
     new_samples
 }
+
+pub fn half_speed(params: ProcessorParams) -> ProcessorParams {
+    change_speed(params, 0.5_f64)
+}
+pub fn double_speed(params: ProcessorParams) -> ProcessorParams {
+    change_speed(params, 2_f64)
+}
+
+pub fn change_speed(
+    ProcessorParams {
+        samples,
+        sample_length,
+        spec,
+    }: ProcessorParams,
+    speed: f64,
+) -> ProcessorParams {
+    let new_sample_length: usize = ((sample_length as f64) / speed).ceil() as usize;
+    let mut new_samples = vec![0_f64; new_sample_length];
+
+    new_samples[0] = samples[0];
+    let mut ptr1: usize;
+    let mut ptr2: usize;
+    for i in 1..new_sample_length {
+        ptr1 = ((i as f64 - 1_f64) * speed).floor() as usize;
+        ptr2 = (i as f64 * speed).floor() as usize;
+
+        new_samples[i] = samples[ptr1] + ((samples[ptr2] - samples[ptr1]) * speed);
+    }
+
+    return ProcessorParams {
+        samples: new_samples,
+        spec: spec,
+        sample_length: new_sample_length,
+    };
+}

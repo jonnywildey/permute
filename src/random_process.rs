@@ -44,8 +44,13 @@ pub fn generate_processor_sequence(
 ) -> Vec<ProcessorFn> {
     let mut rng = thread_rng();
 
-    let processor_pool: Vec<ProcessorFn> =
-        vec![reverse, random_metallic_delay, random_rhythmic_delay];
+    let processor_pool: Vec<ProcessorFn> = vec![
+        reverse,
+        random_metallic_delay,
+        random_rhythmic_delay,
+        half_speed,
+        double_speed,
+    ];
 
     let processor_count = rng.gen_range(2..8);
     let mut processors: Vec<ProcessorFn> = vec![];
