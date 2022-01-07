@@ -145,12 +145,12 @@ pub fn ceiling(
     };
 }
 
-struct SampleLine {
-    samples: Vec<f64>,
-    gain_factor: f64,
+pub struct SampleLine {
+    pub samples: Vec<f64>,
+    pub gain_factor: f64,
 }
 
-fn sum(sample_lines: Vec<SampleLine>) -> Vec<f64> {
+pub fn sum(sample_lines: Vec<SampleLine>) -> Vec<f64> {
     // get max len
     let samples_len = sample_lines.iter().fold(0, |a, b| {
         let b_len = b.samples.len();
@@ -220,19 +220,22 @@ pub fn vibrato(
     }: ProcessorParams,
     VibratoParams { speed_hz, depth }: VibratoParams,
 ) -> ProcessorParams {
-    let new_sample_length: usize = ((sample_length as f64) * 1.0).ceil() as usize;
-    let mut new_samples = vec![0_f64; new_sample_length];
+    let adjusted_depth = depth * 0.001; // ideally 1 should be a somewhat usable value
+    let mut new_samples = vec![0_f64; sample_length];
 
     new_samples[0] = samples[0];
     let mut ptr1: usize;
     let mut ptr2: usize;
     let mut speed: f64;
-    for i in 1..new_sample_length {
-        speed = 1_f64 + (i as f64 / spec.sample_rate as f64 * speed_hz).sin() * 0.001 * depth;
+    let mut cos_amplitude: f64;
+    for i in 1..sample_length {
+        // speed = 1_f64 + (i as f64 / spec.sample_rate as f64 * speed_hz).sin() * 0.001 * depth;
+        cos_amplitude = (i as f64 / spec.sample_rate as f64 * 2.0 * PI * speed_hz).cos();
+        speed = 1_f64 + cos_amplitude * adjusted_depth;
+
         ptr1 = ((i as f64 - 1_f64) * speed).floor() as usize;
         ptr2 = (i as f64 * speed).floor() as usize;
-        // we can sometimes go slightly over the sample length
-        // We should be able to calculate that based on depth
+
         if ptr2 >= sample_length {
             break;
         }
@@ -243,6 +246,6 @@ pub fn vibrato(
     return ProcessorParams {
         samples: new_samples,
         spec: spec,
-        sample_length: new_sample_length,
+        sample_length: sample_length,
     };
 }
