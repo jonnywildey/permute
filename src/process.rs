@@ -1,3 +1,5 @@
+use std::f64::consts::PI;
+
 #[derive(Clone)]
 pub struct ProcessorParams {
     pub spec: hound::WavSpec,
@@ -194,6 +196,46 @@ pub fn change_speed(
     for i in 1..new_sample_length {
         ptr1 = ((i as f64 - 1_f64) * speed).floor() as usize;
         ptr2 = (i as f64 * speed).floor() as usize;
+
+        new_samples[i] = samples[ptr1] + ((samples[ptr2] - samples[ptr1]) * speed);
+    }
+
+    return ProcessorParams {
+        samples: new_samples,
+        spec: spec,
+        sample_length: new_sample_length,
+    };
+}
+
+pub struct VibratoParams {
+    pub speed_hz: f64,
+    pub depth: f64, // usable values seem to be around 0 - 0.2
+}
+
+pub fn vibrato(
+    ProcessorParams {
+        samples,
+        sample_length,
+        spec,
+    }: ProcessorParams,
+    VibratoParams { speed_hz, depth }: VibratoParams,
+) -> ProcessorParams {
+    let new_sample_length: usize = ((sample_length as f64) * 1.0).ceil() as usize;
+    let mut new_samples = vec![0_f64; new_sample_length];
+
+    new_samples[0] = samples[0];
+    let mut ptr1: usize;
+    let mut ptr2: usize;
+    let mut speed: f64;
+    for i in 1..new_sample_length {
+        speed = 1_f64 + (i as f64 / spec.sample_rate as f64 * speed_hz).sin() * 0.001 * depth;
+        ptr1 = ((i as f64 - 1_f64) * speed).floor() as usize;
+        ptr2 = (i as f64 * speed).floor() as usize;
+        // we can sometimes go slightly over the sample length
+        // We should be able to calculate that based on depth
+        if ptr2 >= sample_length {
+            break;
+        }
 
         new_samples[i] = samples[ptr1] + ((samples[ptr2] - samples[ptr1]) * speed);
     }

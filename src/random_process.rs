@@ -30,6 +30,29 @@ pub fn random_rhythmic_delay(params: ProcessorParams) -> ProcessorParams {
     delay_line(params, delay_params)
 }
 
+pub fn random_wow(params: ProcessorParams) -> ProcessorParams {
+    let mut rng = thread_rng();
+
+    vibrato(
+        params,
+        VibratoParams {
+            speed_hz: rng.gen_range(1_f64..20_f64),
+            depth: rng.gen_range(0.001_f64..0.1_f64),
+        },
+    )
+}
+pub fn random_flutter(params: ProcessorParams) -> ProcessorParams {
+    let mut rng = thread_rng();
+
+    vibrato(
+        params,
+        VibratoParams {
+            speed_hz: rng.gen_range(50_f64..300_f64),
+            depth: rng.gen_range(0.001_f64..0.1_f64),
+        },
+    )
+}
+
 pub type ProcessorFn = fn(ProcessorParams) -> ProcessorParams;
 pub struct GetProcessorNodeParams {
     pub normalise_at_end: bool,
@@ -50,6 +73,8 @@ pub fn generate_processor_sequence(
         random_rhythmic_delay,
         half_speed,
         double_speed,
+        random_wow,
+        random_flutter,
     ];
 
     let processor_count = rng.gen_range(2..8);

@@ -87,6 +87,8 @@ fn permute_file(args: PermuteArgs) {
             normalise_at_end: true,
         });
 
+        // let processors: Vec<ProcessorFn> = vec![flutter];
+
         let output_params = run_processors(RunProcessorsParams {
             processor_params: processor_params.clone(),
             processors: processors,
