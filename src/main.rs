@@ -14,13 +14,13 @@ struct PermuteArgs {
     #[structopt(long, short)]
     file: String,
     /// Output of processed file
-    #[structopt(long, short)]
+    #[structopt(long, short = "o")]
     output: String,
     /// Trail to add at beginning of file in seconds
-    #[structopt(long = "inputTrail", short, default_value = "0")]
+    #[structopt(long = "inputTrail", default_value = "0")]
     input_trail: f64,
     /// Trail to add at beginning of file in seconds
-    #[structopt(long = "outputTrail", short, default_value = "0")]
+    #[structopt(long = "outputTrail", default_value = "0")]
     output_trail: f64,
     /// Number of times to randomly process file
     #[structopt(long, short)]
@@ -87,7 +87,7 @@ fn permute_file(args: PermuteArgs) {
             normalise_at_end: true,
         });
 
-        // let processors: Vec<ProcessorFn> = vec![random_chorus];
+        // let processors: Vec<ProcessorFn> = vec![random_flange, normalise];
 
         let output_params = run_processors(RunProcessorsParams {
             processor_params: processor_params.clone(),

@@ -30,6 +30,13 @@ pub fn random_rhythmic_delay(params: ProcessorParams) -> ProcessorParams {
     delay_line(params, delay_params)
 }
 
+pub fn half_speed(params: ProcessorParams) -> ProcessorParams {
+    change_speed(params, 0.5_f64)
+}
+pub fn double_speed(params: ProcessorParams) -> ProcessorParams {
+    change_speed(params, 2_f64)
+}
+
 pub fn random_wow(params: ProcessorParams) -> ProcessorParams {
     let mut rng = thread_rng();
 
@@ -56,40 +63,27 @@ pub fn random_flutter(params: ProcessorParams) -> ProcessorParams {
 pub fn random_chorus(params: ProcessorParams) -> ProcessorParams {
     let mut rng = thread_rng();
 
-    let dry_samples = params.samples.clone();
     let millis_low = (params.spec.sample_rate as f64 / 1000_f64 * 4_f64) as usize;
     let millis_high = (params.spec.sample_rate as f64 / 1000_f64 * 20_f64) as usize;
     let delay_params = DelayLineParams {
         feedback_factor: rng.gen_range(0_f64..0.8_f64),
         delay_sample_length: rng.gen_range(millis_low..millis_high),
-        dry_gain_factor: 0_f64,
+        dry_gain_factor: 1_f64,
         wet_gain_factor: rng.gen_range(0.7..1_f64),
     };
 
-    let vibrator_params = VibratoParams {
+    let vibrato_params = VibratoParams {
         speed_hz: rng.gen_range(0.1_f64..5_f64),
         depth: rng.gen_range(0.1_f64..0.7_f64),
     };
 
-    let delayed = delay_line(params, delay_params);
-    let vibratod = vibrato(delayed, vibrator_params);
-
-    let summed = sum(vec![
-        SampleLine {
-            samples: dry_samples,
-            gain_factor: 1_f64,
+    chorus(
+        params,
+        ChorusParams {
+            delay_params,
+            vibrato_params,
         },
-        SampleLine {
-            samples: vibratod.samples,
-            gain_factor: 1_f64,
-        },
-    ]);
-
-    return ProcessorParams {
-        sample_length: vibratod.sample_length,
-        samples: summed,
-        spec: vibratod.spec,
-    };
+    )
 }
 
 pub type ProcessorFn = fn(ProcessorParams) -> ProcessorParams;
@@ -107,14 +101,17 @@ pub fn generate_processor_sequence(
     let mut rng = thread_rng();
 
     let processor_pool: Vec<ProcessorFn> = vec![
-        reverse,
-        random_metallic_delay,
-        random_rhythmic_delay,
+        // reverse,
+        // random_metallic_delay,
+        // random_rhythmic_delay,
+        // reverse,
+        // random_metallic_delay,
+        // random_rhythmic_delay,
         half_speed,
         double_speed,
-        random_wow,
-        random_flutter,
-        random_chorus,
+        // random_wow,
+        // random_flutter,
+        // random_chorus,
     ];
 
     let processor_count = rng.gen_range(2..8);

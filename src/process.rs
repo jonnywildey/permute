@@ -1,3 +1,5 @@
+use biquad::*;
+use hound::WavSpec;
 use std::f64::consts::PI;
 
 #[derive(Clone)]
@@ -85,10 +87,6 @@ pub fn delay_line(
     return new_processor_params;
 }
 
-pub fn half_gain(params: ProcessorParams) -> ProcessorParams {
-    gain(params, 0.5)
-}
-
 pub fn gain(
     ProcessorParams {
         samples,
@@ -172,13 +170,6 @@ pub fn sum(sample_lines: Vec<SampleLine>) -> Vec<f64> {
     new_samples
 }
 
-pub fn half_speed(params: ProcessorParams) -> ProcessorParams {
-    change_speed(params, 0.5_f64)
-}
-pub fn double_speed(params: ProcessorParams) -> ProcessorParams {
-    change_speed(params, 2_f64)
-}
-
 pub fn change_speed(
     ProcessorParams {
         samples,
@@ -187,8 +178,19 @@ pub fn change_speed(
     }: ProcessorParams,
     speed: f64,
 ) -> ProcessorParams {
-    let new_sample_length: usize = ((sample_length as f64) / speed).ceil() as usize;
+    let mut new_sample_length: usize = ((sample_length as f64) / speed).ceil() as usize;
+    let sample_mod = new_sample_length % spec.channels as usize;
+    if sample_mod > 0 {
+        new_sample_length = new_sample_length - sample_mod;
+    }
     let mut new_samples = vec![0_f64; new_sample_length];
+
+    println!(
+        "{}, {}, {}",
+        sample_length,
+        new_sample_length,
+        sample_length as f64 / speed
+    );
 
     new_samples[0] = samples[0];
     let mut ptr1: usize;
@@ -229,7 +231,6 @@ pub fn vibrato(
     let mut speed: f64;
     let mut cos_amplitude: f64;
     for i in 1..sample_length {
-        // speed = 1_f64 + (i as f64 / spec.sample_rate as f64 * speed_hz).sin() * 0.001 * depth;
         cos_amplitude = (i as f64 / spec.sample_rate as f64 * 2.0 * PI * speed_hz).cos();
         speed = 1_f64 + cos_amplitude * adjusted_depth;
 
@@ -249,3 +250,148 @@ pub fn vibrato(
         sample_length: sample_length,
     };
 }
+
+pub struct ChorusParams {
+    pub delay_params: DelayLineParams,
+    pub vibrato_params: VibratoParams,
+}
+
+pub fn chorus(
+    params: ProcessorParams,
+    ChorusParams {
+        delay_params,
+        vibrato_params,
+    }: ChorusParams,
+) -> ProcessorParams {
+    let dry_samples = params.samples.clone();
+
+    let delayed = delay_line(params, delay_params);
+    let vibratod = vibrato(delayed, vibrato_params);
+
+    let summed = sum(vec![
+        SampleLine {
+            samples: dry_samples,
+            gain_factor: 1_f64,
+        },
+        SampleLine {
+            samples: vibratod.samples,
+            gain_factor: -1_f64,
+        },
+    ]);
+
+    return ProcessorParams {
+        sample_length: vibratod.sample_length,
+        samples: summed,
+        spec: vibratod.spec,
+    };
+}
+
+pub type FilterType<T> = Type<T>;
+
+pub struct FilterParams {
+    pub frequency: f64,
+    pub q: Option<f64>,
+    pub filter_type: FilterType<f64>,
+}
+
+pub fn filter(
+    ProcessorParams {
+        samples,
+        sample_length,
+        spec,
+    }: ProcessorParams,
+    FilterParams {
+        filter_type,
+        frequency,
+        q,
+    }: FilterParams,
+) -> ProcessorParams {
+    // Cutoff and sampling frequencies
+    let f0 = frequency.hz();
+    let fs = spec.sample_rate.hz();
+    let q = q.unwrap_or(Q_BUTTERWORTH_F64);
+
+    // Create coefficients for the biquads
+    let coeffs = Coefficients::<f64>::from_params(filter_type, fs, f0, q).unwrap();
+    let mut biquad1 = DirectForm2Transposed::<f64>::new(coeffs);
+
+    let mut new_samples = vec![0_f64; sample_length];
+
+    for i in 0..sample_length {
+        new_samples[i] = biquad1.run(samples[i]);
+    }
+
+    return ProcessorParams {
+        samples: new_samples,
+        spec: spec,
+        sample_length: sample_length,
+    };
+}
+
+pub struct PhaserParams {
+    pub frequency_hz: f64,
+    pub q: Option<f64>,
+    pub phases: i32,
+}
+
+// pub fn phaser(
+//     ProcessorParams {
+//         samples,
+//         sample_length,
+//         spec,
+//     }: ProcessorParams,
+//     PhaserParams {
+//         frequency_hz,
+//         phases,
+//         q,
+//     }: PhaserParams,
+// ) -> ProcessorParams {
+//     let dry_samples = samples.clone();
+//     // Cutoff and sampling frequencies
+//     let f0 = frequency_hz.hz();
+//     let fs = spec.sample_rate.hz();
+//     let q = q.unwrap_or(Q_BUTTERWORTH_F64);
+
+//     let coeffs = Coefficients::<f64>::from_params(FilterType::AllPass, fs, f0, q).unwrap();
+//     let mut filters: Vec<DirectForm2Transposed<f64>> = vec![0..phases]
+//         .iter()
+//         .map(|_| DirectForm2Transposed::<f64>::new(coeffs))
+//         .collect();
+
+//     let mut filtered_samples = samples.clone();
+
+//     for i in 0..sample_length {
+//         let cos_amplitude = (i as f64 / spec.sample_rate as f64 * 2.0 * PI * 100_f64).cos();
+//         let depth = 1_f64 + cos_amplitude * 0.1;
+
+//         let coeffs = Coefficients::<f64>::from_params(
+//             FilterType::AllPass,
+//             fs,
+//             (frequency_hz * depth).hz(),
+//             q,
+//         )
+//         .unwrap();
+
+//         for j in 0..filters.len() {
+//             filters[j].update_coefficients(coeffs);
+//             filtered_samples[i] = filters[j].run(filtered_samples[i]);
+//         }
+//     }
+
+//     let summed = sum(vec![
+//         SampleLine {
+//             samples: dry_samples,
+//             gain_factor: 1_f64,
+//         },
+//         SampleLine {
+//             samples: filtered_samples,
+//             gain_factor: 1.5_f64,
+//         },
+//     ]);
+
+//     return ProcessorParams {
+//         sample_length: sample_length,
+//         samples: summed,
+//         spec: spec,
+//     };
+// }
