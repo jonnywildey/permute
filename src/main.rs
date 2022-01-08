@@ -52,21 +52,29 @@ fn permute_file(args: PermuteArgs) {
     };
 
     // Set all values to -1..1
-    let normalise_factor: f64 = match spec.bits_per_sample {
-        0..=24 => 1_f64 / (2_f64.powf((spec.bits_per_sample - 1) as f64) - 1_f64),
+    let denormalise_factor = match spec.bits_per_sample {
+        0..=24 => 2_f64.powf((spec.bits_per_sample - 1) as f64) - 1_f64,
         _ => 1_f64,
     };
-
-    let denormalise_factor = (1_f64 / normalise_factor) - 1_f64;
+    let normalise_factor: f64 = match spec.bits_per_sample {
+        0..=24 => 1_f64 / denormalise_factor,
+        _ => 1_f64,
+    };
 
     let samples_64 = reader
         .samples::<i32>()
         .map(|x| (x.unwrap()) as f64 * normalise_factor)
         .collect::<Vec<f64>>();
-    let input_trail_buffer =
-        vec![0_f64; (spec.sample_rate as f64 * args.input_trail).ceil() as usize];
-    let output_trail_buffer =
-        vec![0_f64; (spec.sample_rate as f64 * args.output_trail).ceil() as usize];
+    let input_trail_buffer = vec![
+        0_f64;
+        (spec.sample_rate as f64 * args.input_trail * spec.channels as f64).ceil()
+            as usize
+    ];
+    let output_trail_buffer = vec![
+        0_f64;
+        (spec.sample_rate as f64 * args.output_trail * spec.channels as f64).ceil()
+            as usize
+    ];
     let samples_64 = [input_trail_buffer, samples_64, output_trail_buffer].concat();
 
     let sample_length = samples_64.len();
@@ -82,12 +90,12 @@ fn permute_file(args: PermuteArgs) {
         let output_i = generate_file_name(output.clone(), i);
         println!("Permutating {:?}", output_i);
 
-        // let processors = generate_processor_sequence(GetProcessorNodeParams {
-        //     depth: args.permutation_depth,
-        //     normalise_at_end: true,
-        // });
+        let processors = generate_processor_sequence(GetProcessorNodeParams {
+            depth: args.permutation_depth,
+            normalise_at_end: true,
+        });
 
-        let processors: Vec<ProcessorFn> = vec![half_speed];
+        // let processors: Vec<ProcessorFn> = vec![random_chorus, normalise];
 
         let output_params = run_processors(RunProcessorsParams {
             processor_params: processor_params.clone(),

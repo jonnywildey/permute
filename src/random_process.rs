@@ -43,8 +43,8 @@ pub fn random_wow(params: ProcessorParams) -> ProcessorParams {
     vibrato(
         params,
         VibratoParams {
-            speed_hz: rng.gen_range(0.1_f64..1_f64),
-            depth: rng.gen_range(0.1_f64..0.5_f64),
+            speed_hz: rng.gen_range(0.2_f64..1.6_f64),
+            depth: rng.gen_range(0.3_f64..0.7_f64),
         },
     )
 }
@@ -54,8 +54,8 @@ pub fn random_flutter(params: ProcessorParams) -> ProcessorParams {
     vibrato(
         params,
         VibratoParams {
-            speed_hz: rng.gen_range(1_f64..10_f64),
-            depth: rng.gen_range(0.1_f64..0.3_f64),
+            speed_hz: rng.gen_range(3_f64..20_f64),
+            depth: rng.gen_range(0.05_f64..0.5_f64),
         },
     )
 }
@@ -73,8 +73,8 @@ pub fn random_chorus(params: ProcessorParams) -> ProcessorParams {
     };
 
     let vibrato_params = VibratoParams {
-        speed_hz: rng.gen_range(0.1_f64..5_f64),
-        depth: rng.gen_range(0.1_f64..0.7_f64),
+        speed_hz: rng.gen_range(0.5_f64..5_f64),
+        depth: rng.gen_range(0.2_f64..0.4_f64),
     };
 
     chorus(
@@ -101,20 +101,17 @@ pub fn generate_processor_sequence(
     let mut rng = thread_rng();
 
     let processor_pool: Vec<ProcessorFn> = vec![
-        // reverse,
-        // random_metallic_delay,
-        // random_rhythmic_delay,
-        // reverse,
-        // random_metallic_delay,
-        // random_rhythmic_delay,
+        reverse,
+        random_metallic_delay,
+        random_rhythmic_delay,
         half_speed,
         double_speed,
-        // random_wow,
-        // random_flutter,
-        // random_chorus,
+        random_wow,
+        random_flutter,
+        random_chorus,
     ];
 
-    let processor_count = rng.gen_range(2..8);
+    let processor_count = rng.gen_range(2..5);
     let mut processors: Vec<ProcessorFn> = vec![];
 
     for _ in 0..processor_count {

@@ -124,10 +124,10 @@ pub fn ceiling(
 
     let abs_max = samples.iter().fold(0_f64, |a, b| {
         let b = b.abs();
-        if a >= b {
-            a
-        } else {
+        if b >= a {
             b
+        } else {
+            a
         }
     });
     let ceiling_factor = ceiling / abs_max;
@@ -162,9 +162,9 @@ pub fn sum(sample_lines: Vec<SampleLine>) -> Vec<f64> {
     let mut new_samples = vec![0_f64; samples_len];
     let sample_lines_len = sample_lines.len();
 
-    for i in 0..samples_len {
-        for j in 0..sample_lines_len {
-            new_samples[i] += sample_lines[j].samples[i] * sample_lines[j].gain_factor;
+    for i in 0..sample_lines_len {
+        for j in 0..sample_lines[i].samples.len() {
+            new_samples[j] += sample_lines[i].samples[j] * sample_lines[i].gain_factor;
         }
     }
     new_samples
@@ -207,6 +207,34 @@ pub fn change_speed(
     };
 }
 
+fn split_channels(samples: Vec<f64>, channels: u16) -> Vec<Vec<f64>> {
+    let channels: usize = channels as usize;
+    let mut by_channels: Vec<Vec<f64>> = vec![];
+    for c in 0..channels {
+        let mut channel_sample: Vec<f64> = vec![];
+        for i in (c..samples.len()).step_by(channels) {
+            channel_sample.push(samples[i]);
+        }
+        by_channels.push(channel_sample);
+    }
+    by_channels
+}
+
+fn interleave_channels(by_channels: Vec<Vec<f64>>) -> Vec<f64> {
+    let channel_length = by_channels[0].len();
+    let channels = by_channels.len();
+    let total_sample_length = channel_length * channels;
+
+    let mut samples: Vec<f64> = vec![0_f64; total_sample_length];
+
+    for c in 0..channels {
+        for i in 0..by_channels[c].len() {
+            samples[(i * channels) + c] = by_channels[c][i];
+        }
+    }
+    samples
+}
+
 pub struct VibratoParams {
     pub speed_hz: f64,
     pub depth: f64, // usable values seem to be around 0 - 0.2
@@ -220,32 +248,42 @@ pub fn vibrato(
     }: ProcessorParams,
     VibratoParams { speed_hz, depth }: VibratoParams,
 ) -> ProcessorParams {
-    let adjusted_depth = depth * 0.001; // ideally 1 should be a somewhat usable value
-    let mut new_samples = vec![0_f64; sample_length];
+    let adjusted_depth = depth.powf(2_f64) * 512_f64; // ideally 1 should be a somewhat usable value
+    let channel_samples = split_channels(samples, spec.channels);
+    let mut new_channel_samples: Vec<Vec<f64>> = vec![];
 
-    new_samples[0] = samples[0];
-    let mut ptr1: usize;
-    let mut ptr2: usize;
-    let mut speed: f64;
-    let mut cos_amplitude: f64;
-    for i in 1..sample_length {
-        cos_amplitude = (i as f64 / spec.sample_rate as f64 * 2.0 * PI * speed_hz).cos();
-        speed = 1_f64 + cos_amplitude * adjusted_depth;
+    for c in 0..channel_samples.len() {
+        let cs = &channel_samples[c];
+        let channel_length = cs.len();
+        let mut ns = vec![0_f64; channel_length];
 
-        ptr1 = ((i as f64 - 1_f64) * speed).floor() as usize;
-        ptr2 = (i as f64 * speed).floor() as usize;
+        let mut ptr1: usize;
+        let mut ptr2: usize;
+        let mut speed: f64;
+        let mut cos_amplitude: f64;
+        for i in 0..channel_length {
+            cos_amplitude = (i as f64 / spec.sample_rate as f64 * 2.0 * PI * speed_hz).cos();
+            speed = 1_f64 + cos_amplitude;
 
-        if ptr2 >= sample_length {
-            break;
+            ptr1 = ((i as f64 - 1_f64) + (speed * adjusted_depth)).floor() as usize;
+            ptr2 = ptr1 + 1;
+
+            if ptr2 >= channel_length {
+                break;
+            }
+
+            ns[i] = cs[ptr1] + ((cs[ptr2] - cs[ptr1]) * speed);
         }
-
-        new_samples[i] = samples[ptr1] + ((samples[ptr2] - samples[ptr1]) * speed);
+        new_channel_samples.push(ns);
     }
 
+    let interleave_samples = interleave_channels(new_channel_samples);
+    let interleave_sample_length = interleave_samples.len();
+
     return ProcessorParams {
-        samples: new_samples,
+        samples: interleave_samples,
         spec: spec,
-        sample_length: sample_length,
+        sample_length: interleave_sample_length,
     };
 }
 
@@ -278,7 +316,7 @@ pub fn chorus(
     ]);
 
     return ProcessorParams {
-        sample_length: vibratod.sample_length,
+        sample_length: summed.len(),
         samples: summed,
         spec: vibratod.spec,
     };
