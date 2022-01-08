@@ -178,28 +178,26 @@ pub fn change_speed(
     }: ProcessorParams,
     speed: f64,
 ) -> ProcessorParams {
+    let channels = spec.channels as usize;
     let mut new_sample_length: usize = ((sample_length as f64) / speed).ceil() as usize;
-    let sample_mod = new_sample_length % spec.channels as usize;
+    let sample_mod = new_sample_length % channels as usize;
     if sample_mod > 0 {
         new_sample_length = new_sample_length - sample_mod;
     }
     let mut new_samples = vec![0_f64; new_sample_length];
 
-    println!(
-        "{}, {}, {}",
-        sample_length,
-        new_sample_length,
-        sample_length as f64 / speed
-    );
-
     new_samples[0] = samples[0];
     let mut ptr1: usize;
     let mut ptr2: usize;
-    for i in 1..new_sample_length {
-        ptr1 = ((i as f64 - 1_f64) * speed).floor() as usize;
-        ptr2 = (i as f64 * speed).floor() as usize;
+    let mut new_ptr: usize;
+    for c_offset in 0..channels {
+        for i in (0..new_sample_length / channels).step_by(channels) {
+            ptr1 = channels * (((i as f64 - 1_f64) * speed).floor() as usize) + c_offset;
+            ptr2 = channels * ((i as f64 * speed).floor() as usize) + c_offset;
+            new_ptr = (channels * i) + c_offset;
 
-        new_samples[i] = samples[ptr1] + ((samples[ptr2] - samples[ptr1]) * speed);
+            new_samples[new_ptr] = samples[ptr1] + ((samples[ptr2] - samples[ptr1]) * speed);
+        }
     }
 
     return ProcessorParams {

@@ -82,12 +82,12 @@ fn permute_file(args: PermuteArgs) {
         let output_i = generate_file_name(output.clone(), i);
         println!("Permutating {:?}", output_i);
 
-        let processors = generate_processor_sequence(GetProcessorNodeParams {
-            depth: args.permutation_depth,
-            normalise_at_end: true,
-        });
+        // let processors = generate_processor_sequence(GetProcessorNodeParams {
+        //     depth: args.permutation_depth,
+        //     normalise_at_end: true,
+        // });
 
-        // let processors: Vec<ProcessorFn> = vec![random_flange, normalise];
+        let processors: Vec<ProcessorFn> = vec![half_speed];
 
         let output_params = run_processors(RunProcessorsParams {
             processor_params: processor_params.clone(),
