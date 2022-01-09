@@ -1,7 +1,7 @@
 # Permute
 
 ## UI
-
+- [Neon electron app](https://github.com/neon-bindings/neon) [Example](https://keminglabs.com/blog/building-a-fast-electron-app-with-rust/)
 - [Druid](https://linebender.org/druid/)
 - [Iced](https://github.com/iced-rs/iced)
 
