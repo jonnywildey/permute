@@ -1,5 +1,27 @@
-## Random
-## Directory
-## Reverb
-## Delay Mix
-## Filter
+# Permute
+
+## UI
+
+- [Druid](https://linebender.org/druid/)
+- [Iced](https://github.com/iced-rs/iced)
+
+
+## Features
+- Hi quality mode (run at 192k)
+- Add node path vector to params, so we can log names
+- Name depth as net, web, knot, mesh?
+- name permute length as something fun (3 modes?)
+
+## FX Ideas
+
+- Rising lopass
+- Rising hipass
+- Falling lopass
+- Falling hipass
+- Phaser
+- Tremolo
+- Input sensitive Tremolo / Ring Mod
+- Reverb
+- Pitch shift (no time change). Blend and no blend
+- BB Delay (add lopass filter)
+- Saturator
