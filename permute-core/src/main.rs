@@ -39,14 +39,14 @@ fn main() {
     );
 
     let processor_pool: Vec<PermuteNodeName> = vec![
-        PermuteNodeName::Reverse,
+        // PermuteNodeName::Reverse,
         PermuteNodeName::MetallicDelay,
         PermuteNodeName::RhythmicDelay,
-        PermuteNodeName::HalfSpeed,
-        PermuteNodeName::DoubleSpeed,
-        PermuteNodeName::Wow,
-        PermuteNodeName::Flutter,
-        PermuteNodeName::Chorus,
+        // PermuteNodeName::HalfSpeed,
+        // PermuteNodeName::DoubleSpeed,
+        // PermuteNodeName::Wow,
+        // PermuteNodeName::Flutter,
+        // PermuteNodeName::Chorus,
     ];
 
     permute_files(PermuteFilesParams {

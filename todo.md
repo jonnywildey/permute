@@ -12,6 +12,7 @@
 - Add node path vector to params, so we can log names
 - Separate out cli layer and core layer
 - UI
+- overload option rather than normalise
 
 ## FX Ideas
 

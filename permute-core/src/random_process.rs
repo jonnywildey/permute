@@ -3,6 +3,7 @@ use rand::prelude::*;
 
 pub struct GetProcessorNodeParams {
     pub normalise_at_end: bool,
+    pub high_sample_rate: bool,
     pub depth: usize,
     pub processor_pool: Vec<PermuteNodeName>,
 }
@@ -10,6 +11,7 @@ pub struct GetProcessorNodeParams {
 pub fn generate_processor_sequence(
     GetProcessorNodeParams {
         normalise_at_end,
+        high_sample_rate,
         depth,
         processor_pool,
     }: GetProcessorNodeParams,
@@ -28,10 +30,15 @@ pub fn generate_processor_sequence(
                 depth: depth - 1,
                 normalise_at_end: false,
                 processor_pool,
+                high_sample_rate: false,
             }),
             processors,
         ]
         .concat();
+    }
+    if high_sample_rate {
+        processors.insert(0, PermuteNodeName::SampleRateConversionHigh);
+        processors.push(PermuteNodeName::SampleRateConversionOriginal);
     }
     if normalise_at_end {
         processors.push(PermuteNodeName::Normalise);
@@ -51,6 +58,8 @@ pub fn get_processor_function(name: PermuteNodeName) -> ProcessorFn {
         PermuteNodeName::RhythmicDelay => random_rhythmic_delay,
         PermuteNodeName::Wow => random_wow,
         PermuteNodeName::Normalise => normalise,
+        PermuteNodeName::SampleRateConversionHigh => change_sample_rate_high,
+        PermuteNodeName::SampleRateConversionOriginal => change_sample_rate_original,
     }
 }
 

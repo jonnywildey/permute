@@ -22,6 +22,7 @@ pub struct Permutation {
     pub output: String,
     pub processor_pool: Vec<PermuteNodeName>,
     pub processors: Vec<PermuteNodeName>,
+    pub original_sample_rate: u32,
     pub node_index: usize,
 }
 
@@ -42,6 +43,8 @@ pub enum PermuteNodeName {
     Flutter,
     Chorus,
     Normalise,
+    SampleRateConversionHigh,
+    SampleRateConversionOriginal,
 }
 
 pub fn reverse(
@@ -83,6 +86,77 @@ pub struct DelayLineParams {
     pub delay_sample_length: usize,
     pub dry_gain_factor: f64,
     pub wet_gain_factor: f64,
+}
+
+pub fn change_sample_rate(params: ProcessorParams, new_sample_rate: u32) -> ProcessorParams {
+    if params.spec.sample_rate == new_sample_rate {
+        return params;
+    }
+    let mut new_params = params.clone();
+    let speed = params.spec.sample_rate as f64 / new_sample_rate as f64;
+
+    if speed >= 2.0 {
+        new_params = multi_channel_filter(
+            new_params,
+            FilterParams {
+                filter_type: FilterType::LowPass,
+                frequency: (new_sample_rate / 2) as f64,
+                q: None,
+            },
+        );
+    }
+
+    let resampled = change_speed(new_params, speed);
+
+    resampled
+}
+
+pub fn change_sample_rate_high(params: ProcessorParams) -> ProcessorParams {
+    let new_params = params.clone();
+    let update_progress = params.update_progress;
+    let permutation = params.permutation;
+    update_progress(
+        permutation.clone(),
+        PermuteNodeName::SampleRateConversionHigh,
+        PermuteNodeEvent::NodeProcessStarted,
+    );
+
+    let new_sample_rate = match params.spec.sample_rate {
+        0..=48000 => params.spec.sample_rate * 4,
+        48001..=96000 => params.spec.sample_rate * 2,
+        _ => params.spec.sample_rate,
+    };
+
+    let mut new_params = change_sample_rate(new_params, new_sample_rate);
+    new_params.permutation.original_sample_rate = params.spec.sample_rate;
+    new_params.spec.sample_rate = new_sample_rate;
+
+    update_progress(
+        new_params.permutation.clone(),
+        PermuteNodeName::SampleRateConversionHigh,
+        PermuteNodeEvent::NodeProcessComplete,
+    );
+    new_params
+}
+
+pub fn change_sample_rate_original(params: ProcessorParams) -> ProcessorParams {
+    let new_params = params.clone();
+    let update_progress = params.update_progress;
+    let permutation = params.permutation;
+    update_progress(
+        permutation.clone(),
+        PermuteNodeName::SampleRateConversionOriginal,
+        PermuteNodeEvent::NodeProcessStarted,
+    );
+
+    let new_params = change_sample_rate(new_params, permutation.original_sample_rate);
+
+    update_progress(
+        new_params.permutation.clone(),
+        PermuteNodeName::SampleRateConversionOriginal,
+        PermuteNodeEvent::NodeProcessComplete,
+    );
+    new_params
 }
 
 pub fn delay_line(
@@ -392,10 +466,49 @@ pub fn chorus(
 
 pub type FilterType<T> = Type<T>;
 
+#[derive(Clone)]
 pub struct FilterParams {
     pub frequency: f64,
     pub q: Option<f64>,
     pub filter_type: FilterType<f64>,
+}
+
+pub fn multi_channel_filter(
+    params: ProcessorParams,
+    filter_params: FilterParams,
+) -> ProcessorParams {
+    let copied_params = params.clone();
+    let channel_samples = split_channels(params.samples, params.spec.channels);
+
+    let split_params = channel_samples
+        .iter()
+        .map(|cs| {
+            filter(
+                ProcessorParams {
+                    permutation: copied_params.permutation.clone(),
+                    sample_length: cs.len(),
+                    samples: cs.to_vec(),
+                    spec: copied_params.spec.clone(),
+                    update_progress: copied_params.update_progress,
+                },
+                filter_params.clone(),
+            )
+        })
+        .collect::<Vec<ProcessorParams>>();
+
+    let split_samples = split_params
+        .iter()
+        .map(|ss| ss.samples.to_vec())
+        .collect::<Vec<Vec<f64>>>();
+
+    let interleaved_samples = interleave_channels(split_samples);
+    ProcessorParams {
+        permutation: copied_params.permutation,
+        sample_length: interleaved_samples.len(),
+        samples: interleaved_samples,
+        spec: copied_params.spec,
+        update_progress: copied_params.update_progress,
+    }
 }
 
 pub fn filter(

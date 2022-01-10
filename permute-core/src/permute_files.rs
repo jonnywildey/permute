@@ -84,6 +84,7 @@ fn permute_file(
         let processors = generate_processor_sequence(GetProcessorNodeParams {
             depth: permutation_depth,
             normalise_at_end: true,
+            high_sample_rate: true,
             processor_pool: processor_pool.clone(),
         });
 
@@ -98,6 +99,7 @@ fn permute_file(
             output: output.clone(),
             processor_pool: processor_pool.clone(),
             processors: processors.clone(),
+            original_sample_rate: spec.sample_rate,
             node_index: 0,
         };
         let processor_params = ProcessorParams {
@@ -155,6 +157,7 @@ pub fn run_processors(
                     permutation_index: new_params.permutation.permutation_index,
                     processor_pool: new_params.permutation.processor_pool,
                     processors: new_params.permutation.processors,
+                    original_sample_rate: new_params.permutation.original_sample_rate,
                 },
                 sample_length: new_params.sample_length,
                 samples: new_params.samples,
@@ -175,5 +178,7 @@ pub fn get_processor_display_name(name: PermuteNodeName) -> String {
         PermuteNodeName::RhythmicDelay => String::from("Rhythmic delay"),
         PermuteNodeName::Wow => String::from("Wow"),
         PermuteNodeName::Normalise => String::from("Normalise"),
+        PermuteNodeName::SampleRateConversionHigh => String::from("Sample rate conversion high"),
+        PermuteNodeName::SampleRateConversionOriginal => String::from("Sample rate conversion low"),
     }
 }
