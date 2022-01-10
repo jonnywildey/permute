@@ -84,7 +84,7 @@ fn permute_file(
             permutation_index: i,
             output: output.clone(),
             processor_pool: processor_pool.clone(),
-            node_index: 0,
+            node_index: -1, // easier to add 1
         };
         let processor_params = ProcessorParams {
             samples: samples_64.clone(),
