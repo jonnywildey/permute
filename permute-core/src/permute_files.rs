@@ -83,6 +83,8 @@ fn permute_file(
             file: file.clone(),
             permutation_index: i,
             output: output.clone(),
+            processor_pool: processor_pool.clone(),
+            node_index: 0,
         };
         let processor_params = ProcessorParams {
             samples: samples_64.clone(),
@@ -140,9 +142,38 @@ pub fn run_processors(
         processor_params,
     }: RunProcessorsParams,
 ) -> ProcessorParams {
-    processors
-        .iter()
-        .fold(processor_params, |params, processor| processor(params))
+    processors.iter().fold(
+        processor_params,
+        |ProcessorParams {
+             permutation:
+                 Permutation {
+                     file,
+                     permutation_index,
+                     output,
+                     processor_pool,
+                     node_index,
+                 },
+             sample_length,
+             update_progress,
+             samples,
+             spec,
+         },
+         processor| {
+            processor(ProcessorParams {
+                permutation: Permutation {
+                    file,
+                    node_index: node_index + 1,
+                    output,
+                    permutation_index,
+                    processor_pool,
+                },
+                sample_length,
+                samples,
+                spec,
+                update_progress,
+            })
+        },
+    )
 }
 
 pub fn get_processor_display_name(name: PermuteNodeName) -> String {

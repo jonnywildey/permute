@@ -70,10 +70,13 @@ fn update_permute_node_progress(
 ) {
     match event {
         PermuteNodeEvent::NodeProcessStarted => {
-            println!("{} {}", get_processor_display_name(name), "started")
+            // println!("{} {}", get_processor_display_name(name), "started")
         }
         PermuteNodeEvent::NodeProcessComplete => {
-            println!("{} {}", get_processor_display_name(name), "complete")
+            // println!("{} {}", get_processor_display_name(name), "complete");
+            let percentage_progress: f64 =
+                (permutation.node_index as f64 / permutation.processor_pool.len() as f64) * 100.0;
+            println!("{}%", percentage_progress,)
         }
     }
 }

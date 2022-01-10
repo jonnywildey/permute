@@ -20,6 +20,8 @@ pub struct Permutation {
     pub file: String,
     pub permutation_index: usize,
     pub output: String,
+    pub processor_pool: Vec<PermuteNodeName>,
+    pub node_index: usize,
 }
 
 #[derive(Debug, Clone)]
