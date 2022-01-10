@@ -1,12 +1,32 @@
 use biquad::*;
-use hound::WavSpec;
 use std::f64::consts::PI;
+
+pub type ProcessorFn = fn(ProcessorParams) -> ProcessorParams;
 
 #[derive(Clone)]
 pub struct ProcessorParams {
     pub spec: hound::WavSpec,
     pub samples: Vec<f64>,
     pub sample_length: usize,
+    pub update_progress: fn(name: PermuteNodeName, event: PermuteNodeEvent),
+}
+
+#[derive(Debug, Clone)]
+pub enum PermuteNodeEvent {
+    NodeProcessStarted,
+    NodeProcessComplete,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum PermuteNodeName {
+    Reverse,
+    RhythmicDelay,
+    MetallicDelay,
+    HalfSpeed,
+    DoubleSpeed,
+    Wow,
+    Flutter,
+    Chorus,
 }
 
 pub fn reverse(
@@ -14,18 +34,28 @@ pub fn reverse(
         samples,
         sample_length,
         spec,
+        update_progress,
     }: ProcessorParams,
 ) -> ProcessorParams {
+    update_progress(
+        PermuteNodeName::Reverse,
+        PermuteNodeEvent::NodeProcessStarted,
+    );
     let mut new_samples = samples.clone();
 
     for i in 0..sample_length {
         new_samples[i] = samples[sample_length - 1 - i]
     }
 
+    update_progress(
+        PermuteNodeName::Reverse,
+        PermuteNodeEvent::NodeProcessComplete,
+    );
     return ProcessorParams {
         samples: new_samples,
         spec: spec,
         sample_length: sample_length,
+        update_progress,
     };
 }
 
@@ -41,6 +71,7 @@ pub fn delay_line(
         samples,
         sample_length,
         spec,
+        update_progress,
     }: ProcessorParams,
     DelayLineParams {
         feedback_factor,
@@ -72,6 +103,7 @@ pub fn delay_line(
         samples: new_samples,
         spec: spec,
         sample_length: sample_length,
+        update_progress,
     };
     let new_delay_params = DelayLineParams {
         feedback_factor: new_feedback_factor,
@@ -92,6 +124,7 @@ pub fn gain(
         samples,
         sample_length,
         spec,
+        update_progress,
     }: ProcessorParams,
     gain_factor: f64,
 ) -> ProcessorParams {
@@ -105,6 +138,7 @@ pub fn gain(
         samples: new_samples,
         spec: spec,
         sample_length: sample_length,
+        update_progress,
     };
 }
 
@@ -117,6 +151,7 @@ pub fn ceiling(
         samples,
         sample_length,
         spec,
+        update_progress,
     }: ProcessorParams,
     ceiling: f64,
 ) -> ProcessorParams {
@@ -140,6 +175,7 @@ pub fn ceiling(
         samples: new_samples,
         spec: spec,
         sample_length: sample_length,
+        update_progress,
     };
 }
 
@@ -175,6 +211,7 @@ pub fn change_speed(
         samples,
         sample_length,
         spec,
+        update_progress,
     }: ProcessorParams,
     speed: f64,
 ) -> ProcessorParams {
@@ -204,6 +241,7 @@ pub fn change_speed(
         samples: new_samples,
         spec: spec,
         sample_length: new_sample_length,
+        update_progress,
     };
 }
 
@@ -245,6 +283,7 @@ pub fn vibrato(
         samples,
         sample_length,
         spec,
+        update_progress,
     }: ProcessorParams,
     VibratoParams { speed_hz, depth }: VibratoParams,
 ) -> ProcessorParams {
@@ -284,6 +323,7 @@ pub fn vibrato(
         samples: interleave_samples,
         spec: spec,
         sample_length: interleave_sample_length,
+        update_progress,
     };
 }
 
@@ -300,6 +340,7 @@ pub fn chorus(
     }: ChorusParams,
 ) -> ProcessorParams {
     let dry_samples = params.samples.clone();
+    let update_progress = params.update_progress;
 
     let delayed = delay_line(params, delay_params);
     let vibratod = vibrato(delayed, vibrato_params);
@@ -319,6 +360,7 @@ pub fn chorus(
         sample_length: summed.len(),
         samples: summed,
         spec: vibratod.spec,
+        update_progress: update_progress,
     };
 }
 
@@ -335,6 +377,7 @@ pub fn filter(
         samples,
         sample_length,
         spec,
+        update_progress,
     }: ProcessorParams,
     FilterParams {
         filter_type,
@@ -361,5 +404,6 @@ pub fn filter(
         samples: new_samples,
         spec: spec,
         sample_length: sample_length,
+        update_progress,
     };
 }

@@ -1,11 +1,12 @@
-use std::path::Path;
-
-use hound::{self};
-use structopt::StructOpt;
+mod permute_files;
 mod process;
 mod random_process;
+
+use permute_files::*;
 use process::*;
-use random_process::*;
+use structopt::StructOpt;
+
+use crate::process::PermuteNodeName;
 
 /// Permute file
 #[derive(StructOpt, Clone)]
@@ -32,90 +33,41 @@ struct PermuteArgs {
 
 fn main() {
     let args = PermuteArgs::from_args();
-    permute_file(args.clone());
-}
-
-fn permute_file(args: PermuteArgs) {
     println!(
         "Permuting {} to {}, {} mutations",
         args.file, args.output, args.permutations
     );
 
-    let mut reader = hound::WavReader::open(args.file).expect("Error opening file");
-    let spec = reader.spec();
-
-    let processor_spec = hound::WavSpec {
-        channels: spec.channels,
-        sample_rate: spec.sample_rate,
-        bits_per_sample: 64,
-        sample_format: hound::SampleFormat::Float,
-    };
-
-    // Set all values to -1..1
-    let denormalise_factor = match spec.bits_per_sample {
-        0..=24 => 2_f64.powf((spec.bits_per_sample - 1) as f64) - 1_f64,
-        _ => 1_f64,
-    };
-    let normalise_factor: f64 = match spec.bits_per_sample {
-        0..=24 => 1_f64 / denormalise_factor,
-        _ => 1_f64,
-    };
-
-    let samples_64 = reader
-        .samples::<i32>()
-        .map(|x| (x.unwrap()) as f64 * normalise_factor)
-        .collect::<Vec<f64>>();
-    let input_trail_buffer = vec![
-        0_f64;
-        (spec.sample_rate as f64 * args.input_trail * spec.channels as f64).ceil()
-            as usize
+    let processor_pool: Vec<PermuteNodeName> = vec![
+        PermuteNodeName::Reverse,
+        PermuteNodeName::MetallicDelay,
+        PermuteNodeName::RhythmicDelay,
+        PermuteNodeName::HalfSpeed,
+        PermuteNodeName::DoubleSpeed,
+        PermuteNodeName::Wow,
+        PermuteNodeName::Flutter,
+        PermuteNodeName::Chorus,
     ];
-    let output_trail_buffer = vec![
-        0_f64;
-        (spec.sample_rate as f64 * args.output_trail * spec.channels as f64).ceil()
-            as usize
-    ];
-    let samples_64 = [input_trail_buffer, samples_64, output_trail_buffer].concat();
 
-    let sample_length = samples_64.len();
-
-    let processor_params = ProcessorParams {
-        samples: samples_64,
-        spec: processor_spec,
-        sample_length: sample_length,
-    };
-
-    let output = args.output;
-    for i in 1..=args.permutations {
-        let output_i = generate_file_name(output.clone(), i);
-        println!("Permutating {:?}", output_i);
-
-        let processors = generate_processor_sequence(GetProcessorNodeParams {
-            depth: args.permutation_depth,
-            normalise_at_end: true,
-        });
-
-        // let processors: Vec<ProcessorFn> = vec![random_chorus, normalise];
-
-        let output_params = run_processors(RunProcessorsParams {
-            processor_params: processor_params.clone(),
-            processors: processors,
-        });
-        let mut pro_writer = hound::WavWriter::create(output_i, spec).expect("Error in output");
-
-        for s in output_params.samples {
-            let t = (s * denormalise_factor) as i32;
-            pro_writer.write_sample(t).expect("Error writing file");
-        }
-        pro_writer.finalize().expect("Error writing file");
-    }
+    permute_files(PermuteFilesParams {
+        files: vec![args.file],
+        output: args.output,
+        input_trail: args.input_trail,
+        output_trail: args.output_trail,
+        permutations: args.permutations,
+        permutation_depth: args.permutation_depth,
+        processor_pool: processor_pool,
+        update_permute_node_progress: print_node_update,
+    });
 }
 
-fn generate_file_name(output: String, permutation_count: usize) -> std::path::PathBuf {
-    let path = Path::new(&output);
-    let file_stem = path.file_stem().unwrap_or_default().to_str().unwrap_or("");
-    let extension = path.extension().unwrap_or_default().to_str().unwrap_or("");
-    let new_filename = [file_stem, &permutation_count.to_string(), ".", extension].concat();
-
-    path.with_file_name(new_filename)
+fn print_node_update(name: PermuteNodeName, event: PermuteNodeEvent) {
+    match event {
+        PermuteNodeEvent::NodeProcessStarted => {
+            println!("{} {}", get_processor_display_name(name), "started")
+        }
+        PermuteNodeEvent::NodeProcessComplete => {
+            println!("{} {}", get_processor_display_name(name), "complete")
+        }
+    }
 }
