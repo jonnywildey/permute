@@ -57,11 +57,17 @@ fn main() {
         permutations: args.permutations,
         permutation_depth: args.permutation_depth,
         processor_pool: processor_pool,
-        update_permute_node_progress: print_node_update,
+
+        update_permute_node_progress,
+        update_set_processors,
     });
 }
 
-fn print_node_update(name: PermuteNodeName, event: PermuteNodeEvent) {
+fn update_permute_node_progress(
+    permutation: Permutation,
+    name: PermuteNodeName,
+    event: PermuteNodeEvent,
+) {
     match event {
         PermuteNodeEvent::NodeProcessStarted => {
             println!("{} {}", get_processor_display_name(name), "started")
@@ -70,4 +76,15 @@ fn print_node_update(name: PermuteNodeName, event: PermuteNodeEvent) {
             println!("{} {}", get_processor_display_name(name), "complete")
         }
     }
+}
+
+fn update_set_processors(permutation: Permutation, processors: Vec<PermuteNodeName>) {
+    let pretty_processors = processors
+        .iter()
+        .map(|p| get_processor_display_name(*p))
+        .collect::<Vec<String>>();
+    println!(
+        "Permutating {} Processors {:#?}",
+        permutation.output, pretty_processors
+    );
 }

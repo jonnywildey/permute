@@ -4,39 +4,54 @@ use rand::prelude::*;
 pub struct GetProcessorNodeParams {
     pub normalise_at_end: bool,
     pub depth: usize,
-    pub processor_functions: Vec<ProcessorFn>,
+    pub processor_pool: Vec<PermuteNodeName>,
 }
 
 pub fn generate_processor_sequence(
     GetProcessorNodeParams {
         normalise_at_end,
         depth,
-        processor_functions,
+        processor_pool,
     }: GetProcessorNodeParams,
-) -> Vec<ProcessorFn> {
+) -> Vec<PermuteNodeName> {
     let mut rng = thread_rng();
 
     let processor_count = rng.gen_range(2..5);
-    let mut processors: Vec<ProcessorFn> = vec![];
+    let mut processors: Vec<PermuteNodeName> = vec![];
 
     for _ in 0..processor_count {
-        processors.push(processor_functions[rng.gen_range(0..processor_functions.len())])
+        processors.push(processor_pool[rng.gen_range(0..processor_pool.len())])
     }
     if depth > 0 {
         processors = [
             generate_processor_sequence(GetProcessorNodeParams {
                 depth: depth - 1,
                 normalise_at_end: false,
-                processor_functions: processor_functions,
+                processor_pool,
             }),
             processors,
         ]
         .concat();
     }
     if normalise_at_end {
-        processors.push(normalise);
+        processors.push(PermuteNodeName::Normalise);
     }
+
     processors
+}
+
+pub fn get_processor_function(name: PermuteNodeName) -> ProcessorFn {
+    match name {
+        PermuteNodeName::Reverse => reverse,
+        PermuteNodeName::Chorus => random_chorus,
+        PermuteNodeName::DoubleSpeed => double_speed,
+        PermuteNodeName::Flutter => random_flutter,
+        PermuteNodeName::HalfSpeed => half_speed,
+        PermuteNodeName::MetallicDelay => random_metallic_delay,
+        PermuteNodeName::RhythmicDelay => random_rhythmic_delay,
+        PermuteNodeName::Wow => random_wow,
+        PermuteNodeName::Normalise => normalise,
+    }
 }
 
 // Random processors
@@ -44,6 +59,7 @@ pub fn generate_processor_sequence(
 pub fn random_metallic_delay(params: ProcessorParams) -> ProcessorParams {
     let update_progress = params.update_progress;
     update_progress(
+        params.permutation.clone(),
         PermuteNodeName::MetallicDelay,
         PermuteNodeEvent::NodeProcessStarted,
     );
@@ -57,8 +73,9 @@ pub fn random_metallic_delay(params: ProcessorParams) -> ProcessorParams {
         wet_gain_factor: rng.gen_range(0.3..1_f64),
     };
 
-    let new_params = delay_line(params, delay_params);
+    let new_params = delay_line(params.clone(), delay_params);
     update_progress(
+        params.permutation.clone(),
         PermuteNodeName::MetallicDelay,
         PermuteNodeEvent::NodeProcessComplete,
     );
@@ -67,7 +84,9 @@ pub fn random_metallic_delay(params: ProcessorParams) -> ProcessorParams {
 
 pub fn random_rhythmic_delay(params: ProcessorParams) -> ProcessorParams {
     let update_progress = params.update_progress;
+    let permutation = params.permutation.clone();
     update_progress(
+        params.permutation.clone(),
         PermuteNodeName::RhythmicDelay,
         PermuteNodeEvent::NodeProcessStarted,
     );
@@ -84,6 +103,7 @@ pub fn random_rhythmic_delay(params: ProcessorParams) -> ProcessorParams {
 
     let new_params = delay_line(params, delay_params);
     update_progress(
+        permutation,
         PermuteNodeName::RhythmicDelay,
         PermuteNodeEvent::NodeProcessComplete,
     );
@@ -92,12 +112,15 @@ pub fn random_rhythmic_delay(params: ProcessorParams) -> ProcessorParams {
 
 pub fn half_speed(params: ProcessorParams) -> ProcessorParams {
     let update_progress = params.update_progress;
+    let permutation = params.permutation.clone();
     update_progress(
+        params.permutation.clone(),
         PermuteNodeName::HalfSpeed,
         PermuteNodeEvent::NodeProcessStarted,
     );
     let new_samples = change_speed(params, 0.5_f64);
     update_progress(
+        permutation,
         PermuteNodeName::HalfSpeed,
         PermuteNodeEvent::NodeProcessComplete,
     );
@@ -105,12 +128,15 @@ pub fn half_speed(params: ProcessorParams) -> ProcessorParams {
 }
 pub fn double_speed(params: ProcessorParams) -> ProcessorParams {
     let update_progress = params.update_progress;
+    let permutation = params.permutation.clone();
     update_progress(
+        params.permutation.clone(),
         PermuteNodeName::DoubleSpeed,
         PermuteNodeEvent::NodeProcessStarted,
     );
     let new_samples = change_speed(params, 2_f64);
     update_progress(
+        permutation,
         PermuteNodeName::DoubleSpeed,
         PermuteNodeEvent::NodeProcessComplete,
     );
@@ -119,7 +145,12 @@ pub fn double_speed(params: ProcessorParams) -> ProcessorParams {
 
 pub fn random_wow(params: ProcessorParams) -> ProcessorParams {
     let update_progress = params.update_progress;
-    update_progress(PermuteNodeName::Wow, PermuteNodeEvent::NodeProcessStarted);
+    let permutation = params.permutation.clone();
+    update_progress(
+        params.permutation.clone(),
+        PermuteNodeName::Wow,
+        PermuteNodeEvent::NodeProcessStarted,
+    );
     let mut rng = thread_rng();
 
     let new_samples = vibrato(
@@ -129,12 +160,18 @@ pub fn random_wow(params: ProcessorParams) -> ProcessorParams {
             depth: rng.gen_range(0.3_f64..0.7_f64),
         },
     );
-    update_progress(PermuteNodeName::Wow, PermuteNodeEvent::NodeProcessComplete);
+    update_progress(
+        permutation,
+        PermuteNodeName::Wow,
+        PermuteNodeEvent::NodeProcessComplete,
+    );
     new_samples
 }
 pub fn random_flutter(params: ProcessorParams) -> ProcessorParams {
     let update_progress = params.update_progress;
+    let permutation = params.permutation.clone();
     update_progress(
+        params.permutation.clone(),
         PermuteNodeName::Flutter,
         PermuteNodeEvent::NodeProcessStarted,
     );
@@ -148,6 +185,7 @@ pub fn random_flutter(params: ProcessorParams) -> ProcessorParams {
         },
     );
     update_progress(
+        permutation,
         PermuteNodeName::Flutter,
         PermuteNodeEvent::NodeProcessComplete,
     );
@@ -156,7 +194,9 @@ pub fn random_flutter(params: ProcessorParams) -> ProcessorParams {
 
 pub fn random_chorus(params: ProcessorParams) -> ProcessorParams {
     let update_progress = params.update_progress;
+    let permutation = params.permutation.clone();
     update_progress(
+        params.permutation.clone(),
         PermuteNodeName::Chorus,
         PermuteNodeEvent::NodeProcessStarted,
     );
@@ -184,6 +224,7 @@ pub fn random_chorus(params: ProcessorParams) -> ProcessorParams {
         },
     );
     update_progress(
+        permutation,
         PermuteNodeName::Chorus,
         PermuteNodeEvent::NodeProcessComplete,
     );

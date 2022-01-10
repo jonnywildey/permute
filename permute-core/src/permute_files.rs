@@ -3,6 +3,10 @@ use std::path::Path;
 use crate::process::*;
 use crate::random_process::*;
 
+pub type UpdatePermuteNodeProgress =
+    fn(permutation: Permutation, name: PermuteNodeName, event: PermuteNodeEvent);
+pub type UpdateSetProcessors = fn(permutation: Permutation, processors: Vec<PermuteNodeName>);
+
 #[derive(Debug, Clone)]
 pub struct PermuteFilesParams {
     pub files: Vec<String>,
@@ -12,7 +16,9 @@ pub struct PermuteFilesParams {
     pub permutations: usize,
     pub permutation_depth: usize,
     pub processor_pool: Vec<PermuteNodeName>,
-    pub update_permute_node_progress: fn(name: PermuteNodeName, event: PermuteNodeEvent),
+
+    pub update_permute_node_progress: UpdatePermuteNodeProgress,
+    pub update_set_processors: UpdateSetProcessors,
 }
 
 pub fn permute_files(params: PermuteFilesParams) {
@@ -33,10 +39,11 @@ fn permute_file(
         permutation_depth,
         processor_pool,
         update_permute_node_progress,
+        update_set_processors,
     }: PermuteFilesParams,
     file: String,
 ) {
-    let mut reader = hound::WavReader::open(file).expect("Error opening file");
+    let mut reader = hound::WavReader::open(file.clone()).expect("Error opening file");
     let spec = reader.spec();
 
     let processor_spec = hound::WavSpec {
@@ -71,28 +78,33 @@ fn permute_file(
 
     let sample_length = samples_64.len();
 
-    let processor_params = ProcessorParams {
-        samples: samples_64,
-        spec: processor_spec,
-        sample_length: sample_length,
-        update_progress: update_permute_node_progress,
-    };
-
-    let output = output;
     for i in 1..=permutations {
-        let output_i = generate_file_name(output.clone(), i);
-        println!("Permutating {:?}", output_i);
+        let permutation = Permutation {
+            file: file.clone(),
+            permutation_index: i,
+            output: output.clone(),
+        };
+        let processor_params = ProcessorParams {
+            samples: samples_64.clone(),
+            spec: processor_spec,
+            sample_length: sample_length,
+            permutation: permutation.clone(),
+            update_progress: update_permute_node_progress,
+        };
 
-        let processor_functions = processor_pool
-            .iter()
-            .map(|n| get_processor_function(*n))
-            .collect();
+        let output_i = generate_file_name(output.clone(), i);
 
         let processors = generate_processor_sequence(GetProcessorNodeParams {
             depth: permutation_depth,
             normalise_at_end: true,
-            processor_functions: processor_functions,
+            processor_pool: processor_pool.clone(),
         });
+        update_set_processors(permutation.clone(), processors.clone());
+
+        let processors = processors
+            .iter()
+            .map(|n| get_processor_function(*n))
+            .collect();
 
         let output_params = run_processors(RunProcessorsParams {
             processor_params: processor_params.clone(),
@@ -133,19 +145,6 @@ pub fn run_processors(
         .fold(processor_params, |params, processor| processor(params))
 }
 
-pub fn get_processor_function(name: PermuteNodeName) -> ProcessorFn {
-    match name {
-        PermuteNodeName::Reverse => reverse,
-        PermuteNodeName::Chorus => random_chorus,
-        PermuteNodeName::DoubleSpeed => double_speed,
-        PermuteNodeName::Flutter => random_flutter,
-        PermuteNodeName::HalfSpeed => half_speed,
-        PermuteNodeName::MetallicDelay => random_metallic_delay,
-        PermuteNodeName::RhythmicDelay => random_rhythmic_delay,
-        PermuteNodeName::Wow => random_wow,
-    }
-}
-
 pub fn get_processor_display_name(name: PermuteNodeName) -> String {
     match name {
         PermuteNodeName::Reverse => String::from("Reverse"),
@@ -156,5 +155,6 @@ pub fn get_processor_display_name(name: PermuteNodeName) -> String {
         PermuteNodeName::MetallicDelay => String::from("Metallic delay"),
         PermuteNodeName::RhythmicDelay => String::from("Rhythmic delay"),
         PermuteNodeName::Wow => String::from("Wow"),
+        PermuteNodeName::Normalise => String::from("Normalise"),
     }
 }
