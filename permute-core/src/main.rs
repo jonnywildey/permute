@@ -65,19 +65,16 @@ fn main() {
 
 fn update_permute_node_progress(
     permutation: Permutation,
-    name: PermuteNodeName,
+    _: PermuteNodeName,
     event: PermuteNodeEvent,
 ) {
     match event {
-        PermuteNodeEvent::NodeProcessStarted => {
-            // println!("{} {}", get_processor_display_name(name), "started")
-        }
+        PermuteNodeEvent::NodeProcessStarted => {}
         PermuteNodeEvent::NodeProcessComplete => {
-            // println!("{} {}", get_processor_display_name(name), "complete");
             let percentage_progress: f64 = ((permutation.node_index as f64 + 1.0)
-                / permutation.processor_pool.len() as f64)
+                / permutation.processors.len() as f64)
                 * 100.0;
-            println!("{}%", percentage_progress,)
+            println!("{}%", percentage_progress.round())
         }
     }
 }

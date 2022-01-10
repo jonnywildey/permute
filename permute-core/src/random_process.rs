@@ -230,3 +230,20 @@ pub fn random_chorus(params: ProcessorParams) -> ProcessorParams {
     );
     new_samples
 }
+
+pub fn normalise(params: ProcessorParams) -> ProcessorParams {
+    let update_progress = params.update_progress;
+    let permutation = params.permutation.clone();
+    update_progress(
+        permutation.clone(),
+        PermuteNodeName::Normalise,
+        PermuteNodeEvent::NodeProcessStarted,
+    );
+    let new_samples = ceiling(params, 1_f64);
+    update_progress(
+        permutation,
+        PermuteNodeName::Normalise,
+        PermuteNodeEvent::NodeProcessComplete,
+    );
+    new_samples
+}

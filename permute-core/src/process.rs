@@ -21,7 +21,8 @@ pub struct Permutation {
     pub permutation_index: usize,
     pub output: String,
     pub processor_pool: Vec<PermuteNodeName>,
-    pub node_index: i32,
+    pub processors: Vec<PermuteNodeName>,
+    pub node_index: usize,
 }
 
 #[derive(Debug, Clone)]
@@ -162,10 +163,6 @@ pub fn gain(
         update_progress,
         permutation,
     };
-}
-
-pub fn normalise(params: ProcessorParams) -> ProcessorParams {
-    ceiling(params, 1_f64)
 }
 
 pub fn ceiling(

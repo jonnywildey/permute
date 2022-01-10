@@ -79,12 +79,26 @@ fn permute_file(
     let sample_length = samples_64.len();
 
     for i in 1..=permutations {
+        let output_i = generate_file_name(output.clone(), i);
+
+        let processors = generate_processor_sequence(GetProcessorNodeParams {
+            depth: permutation_depth,
+            normalise_at_end: true,
+            processor_pool: processor_pool.clone(),
+        });
+
+        let processor_fns = processors
+            .iter()
+            .map(|n| get_processor_function(*n))
+            .collect();
+
         let permutation = Permutation {
             file: file.clone(),
             permutation_index: i,
             output: output.clone(),
             processor_pool: processor_pool.clone(),
-            node_index: -1, // easier to add 1
+            processors: processors.clone(),
+            node_index: 0,
         };
         let processor_params = ProcessorParams {
             samples: samples_64.clone(),
@@ -93,24 +107,11 @@ fn permute_file(
             permutation: permutation.clone(),
             update_progress: update_permute_node_progress,
         };
-
-        let output_i = generate_file_name(output.clone(), i);
-
-        let processors = generate_processor_sequence(GetProcessorNodeParams {
-            depth: permutation_depth,
-            normalise_at_end: true,
-            processor_pool: processor_pool.clone(),
-        });
-        update_set_processors(permutation.clone(), processors.clone());
-
-        let processors = processors
-            .iter()
-            .map(|n| get_processor_function(*n))
-            .collect();
+        update_set_processors(permutation.clone(), processors);
 
         let output_params = run_processors(RunProcessorsParams {
             processor_params: processor_params.clone(),
-            processors: processors,
+            processors: processor_fns,
         });
         let mut pro_writer = hound::WavWriter::create(output_i, spec).expect("Error in output");
 
@@ -142,38 +143,25 @@ pub fn run_processors(
         processor_params,
     }: RunProcessorsParams,
 ) -> ProcessorParams {
-    processors.iter().fold(
-        processor_params,
-        |ProcessorParams {
-             permutation:
-                 Permutation {
-                     file,
-                     permutation_index,
-                     output,
-                     processor_pool,
-                     node_index,
-                 },
-             sample_length,
-             update_progress,
-             samples,
-             spec,
-         },
-         processor| {
-            processor(ProcessorParams {
+    processors
+        .iter()
+        .fold(processor_params, |params, processor| {
+            let new_params = processor(params);
+            ProcessorParams {
                 permutation: Permutation {
-                    file,
-                    node_index: node_index + 1,
-                    output,
-                    permutation_index,
-                    processor_pool,
+                    file: new_params.permutation.file,
+                    node_index: new_params.permutation.node_index + 1,
+                    output: new_params.permutation.output,
+                    permutation_index: new_params.permutation.permutation_index,
+                    processor_pool: new_params.permutation.processor_pool,
+                    processors: new_params.permutation.processors,
                 },
-                sample_length,
-                samples,
-                spec,
-                update_progress,
-            })
-        },
-    )
+                sample_length: new_params.sample_length,
+                samples: new_params.samples,
+                spec: new_params.spec,
+                update_progress: new_params.update_progress,
+            }
+        })
 }
 
 pub fn get_processor_display_name(name: PermuteNodeName) -> String {
