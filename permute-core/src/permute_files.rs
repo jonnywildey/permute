@@ -96,7 +96,7 @@ fn permute_file(
         let permutation = Permutation {
             file: file.clone(),
             permutation_index: i,
-            output: output.clone(),
+            output: output_i.clone(),
             processor_pool: processor_pool.clone(),
             processors: processors.clone(),
             original_sample_rate: spec.sample_rate,
@@ -125,13 +125,16 @@ fn permute_file(
     }
 }
 
-fn generate_file_name(output: String, permutation_count: usize) -> std::path::PathBuf {
+fn generate_file_name(output: String, permutation_count: usize) -> String {
     let path = Path::new(&output);
     let file_stem = path.file_stem().unwrap_or_default().to_str().unwrap_or("");
     let extension = path.extension().unwrap_or_default().to_str().unwrap_or("");
     let new_filename = [file_stem, &permutation_count.to_string(), ".", extension].concat();
 
     path.with_file_name(new_filename)
+        .into_os_string()
+        .into_string()
+        .unwrap()
 }
 
 pub struct RunProcessorsParams {

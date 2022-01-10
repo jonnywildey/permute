@@ -174,6 +174,8 @@ pub fn delay_line(
         wet_gain_factor,
     }: DelayLineParams,
 ) -> ProcessorParams {
+    // Ensure sample length matches channel count
+    let delay_sample_length = delay_sample_length - (delay_sample_length % spec.channels as usize);
     let mut new_samples = vec![0_f64; sample_length];
 
     for i in delay_sample_length..sample_length {
