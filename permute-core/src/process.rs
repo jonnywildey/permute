@@ -1,12 +1,47 @@
 use biquad::*;
-use hound::WavSpec;
 use std::f64::consts::PI;
+
+pub type ProcessorFn = fn(ProcessorParams) -> ProcessorParams;
 
 #[derive(Clone)]
 pub struct ProcessorParams {
     pub spec: hound::WavSpec,
     pub samples: Vec<f64>,
     pub sample_length: usize,
+    pub permutation: Permutation,
+
+    pub update_progress:
+        fn(permutation: Permutation, name: PermuteNodeName, event: PermuteNodeEvent),
+}
+
+#[derive(Clone)]
+
+pub struct Permutation {
+    pub file: String,
+    pub permutation_index: usize,
+    pub output: String,
+    pub processor_pool: Vec<PermuteNodeName>,
+    pub processors: Vec<PermuteNodeName>,
+    pub node_index: usize,
+}
+
+#[derive(Debug, Clone)]
+pub enum PermuteNodeEvent {
+    NodeProcessStarted,
+    NodeProcessComplete,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum PermuteNodeName {
+    Reverse,
+    RhythmicDelay,
+    MetallicDelay,
+    HalfSpeed,
+    DoubleSpeed,
+    Wow,
+    Flutter,
+    Chorus,
+    Normalise,
 }
 
 pub fn reverse(
@@ -14,18 +49,32 @@ pub fn reverse(
         samples,
         sample_length,
         spec,
+        update_progress,
+        permutation,
     }: ProcessorParams,
 ) -> ProcessorParams {
+    update_progress(
+        permutation.clone(),
+        PermuteNodeName::Reverse,
+        PermuteNodeEvent::NodeProcessStarted,
+    );
     let mut new_samples = samples.clone();
 
     for i in 0..sample_length {
         new_samples[i] = samples[sample_length - 1 - i]
     }
 
+    update_progress(
+        permutation.clone(),
+        PermuteNodeName::Reverse,
+        PermuteNodeEvent::NodeProcessComplete,
+    );
     return ProcessorParams {
         samples: new_samples,
         spec: spec,
         sample_length: sample_length,
+        update_progress,
+        permutation,
     };
 }
 
@@ -41,6 +90,8 @@ pub fn delay_line(
         samples,
         sample_length,
         spec,
+        update_progress,
+        permutation,
     }: ProcessorParams,
     DelayLineParams {
         feedback_factor,
@@ -72,6 +123,8 @@ pub fn delay_line(
         samples: new_samples,
         spec: spec,
         sample_length: sample_length,
+        update_progress,
+        permutation,
     };
     let new_delay_params = DelayLineParams {
         feedback_factor: new_feedback_factor,
@@ -92,6 +145,8 @@ pub fn gain(
         samples,
         sample_length,
         spec,
+        update_progress,
+        permutation,
     }: ProcessorParams,
     gain_factor: f64,
 ) -> ProcessorParams {
@@ -105,11 +160,9 @@ pub fn gain(
         samples: new_samples,
         spec: spec,
         sample_length: sample_length,
+        update_progress,
+        permutation,
     };
-}
-
-pub fn normalise(params: ProcessorParams) -> ProcessorParams {
-    ceiling(params, 1_f64)
 }
 
 pub fn ceiling(
@@ -117,6 +170,8 @@ pub fn ceiling(
         samples,
         sample_length,
         spec,
+        update_progress,
+        permutation,
     }: ProcessorParams,
     ceiling: f64,
 ) -> ProcessorParams {
@@ -140,6 +195,8 @@ pub fn ceiling(
         samples: new_samples,
         spec: spec,
         sample_length: sample_length,
+        update_progress,
+        permutation,
     };
 }
 
@@ -175,6 +232,8 @@ pub fn change_speed(
         samples,
         sample_length,
         spec,
+        update_progress,
+        permutation,
     }: ProcessorParams,
     speed: f64,
 ) -> ProcessorParams {
@@ -204,6 +263,8 @@ pub fn change_speed(
         samples: new_samples,
         spec: spec,
         sample_length: new_sample_length,
+        update_progress,
+        permutation,
     };
 }
 
@@ -245,6 +306,8 @@ pub fn vibrato(
         samples,
         sample_length,
         spec,
+        update_progress,
+        permutation,
     }: ProcessorParams,
     VibratoParams { speed_hz, depth }: VibratoParams,
 ) -> ProcessorParams {
@@ -284,6 +347,8 @@ pub fn vibrato(
         samples: interleave_samples,
         spec: spec,
         sample_length: interleave_sample_length,
+        update_progress,
+        permutation,
     };
 }
 
@@ -300,8 +365,9 @@ pub fn chorus(
     }: ChorusParams,
 ) -> ProcessorParams {
     let dry_samples = params.samples.clone();
+    let update_progress = params.update_progress;
 
-    let delayed = delay_line(params, delay_params);
+    let delayed = delay_line(params.clone(), delay_params);
     let vibratod = vibrato(delayed, vibrato_params);
 
     let summed = sum(vec![
@@ -319,6 +385,8 @@ pub fn chorus(
         sample_length: summed.len(),
         samples: summed,
         spec: vibratod.spec,
+        update_progress: update_progress,
+        permutation: params.permutation,
     };
 }
 
@@ -335,6 +403,8 @@ pub fn filter(
         samples,
         sample_length,
         spec,
+        update_progress,
+        permutation,
     }: ProcessorParams,
     FilterParams {
         filter_type,
@@ -361,5 +431,7 @@ pub fn filter(
         samples: new_samples,
         spec: spec,
         sample_length: sample_length,
+        update_progress,
+        permutation,
     };
 }
