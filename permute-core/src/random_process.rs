@@ -6,6 +6,7 @@ pub struct GetProcessorNodeParams {
     pub high_sample_rate: bool,
     pub depth: usize,
     pub processor_pool: Vec<PermuteNodeName>,
+    pub processor_count: Option<i32>,
 }
 
 pub fn generate_processor_sequence(
@@ -14,12 +15,12 @@ pub fn generate_processor_sequence(
         high_sample_rate,
         depth,
         processor_pool,
+        processor_count,
     }: GetProcessorNodeParams,
 ) -> Vec<PermuteNodeName> {
     let mut rng = thread_rng();
 
-    // let processor_count = rng.gen_range(2..5);
-    let processor_count = 1;
+    let processor_count = processor_count.unwrap_or(rng.gen_range(2..5));
     let mut processors: Vec<PermuteNodeName> = vec![];
 
     for _ in 0..processor_count {
@@ -32,6 +33,7 @@ pub fn generate_processor_sequence(
                 normalise_at_end: false,
                 processor_pool,
                 high_sample_rate: false,
+                processor_count: Some(processor_count),
             }),
             processors,
         ]

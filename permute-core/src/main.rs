@@ -35,6 +35,9 @@ struct PermuteArgs {
     /// Whether to run fx at a high sample rate
     #[structopt(long = "highSampleRate")]
     high_sample_rate: bool,
+    /// How many processes to pick from per depth. If not included a random value from 2-5 will be used
+    #[structopt(long = "processor", default_value = "0")]
+    processor_count: i32,
 }
 
 fn main() {
@@ -55,6 +58,11 @@ fn main() {
         PermuteNodeName::Chorus,
     ];
 
+    let processor_count: Option<i32> = match args.processor_count {
+        0 => None,
+        _ => Some(args.processor_count),
+    };
+
     permute_files(PermuteFilesParams {
         files: vec![args.file],
         output: args.output,
@@ -67,6 +75,7 @@ fn main() {
         normalise_at_end: args.normalise,
         update_permute_node_progress,
         update_set_processors,
+        processor_count,
     });
 }
 

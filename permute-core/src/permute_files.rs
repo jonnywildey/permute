@@ -18,6 +18,7 @@ pub struct PermuteFilesParams {
     pub processor_pool: Vec<PermuteNodeName>,
     pub normalise_at_end: bool,
     pub high_sample_rate: bool,
+    pub processor_count: Option<i32>,
 
     pub update_permute_node_progress: UpdatePermuteNodeProgress,
     pub update_set_processors: UpdateSetProcessors,
@@ -44,6 +45,7 @@ fn permute_file(
         normalise_at_end,
         update_permute_node_progress,
         update_set_processors,
+        processor_count,
     }: PermuteFilesParams,
     file: String,
 ) {
@@ -90,6 +92,7 @@ fn permute_file(
             normalise_at_end,
             high_sample_rate,
             processor_pool: processor_pool.clone(),
+            processor_count,
         });
 
         let processor_fns = processors
@@ -121,7 +124,14 @@ fn permute_file(
         });
         let mut pro_writer = hound::WavWriter::create(output_i, spec).expect("Error in output");
 
-        for s in output_params.samples {
+        for mut s in output_params.samples {
+            // overload protection
+            if s >= 1.0 {
+                s = 1.0;
+            }
+            if s <= -1.0 {
+                s = -1.0;
+            }
             let t = (s * denormalise_factor) as i32;
             pro_writer.write_sample(t).expect("Error writing file");
         }
