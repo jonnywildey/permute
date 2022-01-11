@@ -62,9 +62,12 @@ pub fn reverse(
         PermuteNodeEvent::NodeProcessStarted,
     );
     let mut new_samples = samples.clone();
+    let channels = spec.channels as i32;
 
     for i in 0..sample_length {
-        new_samples[i] = samples[sample_length - 1 - i]
+        let channel_offset: i32 = (channels * -1 + 1) + 2 * (i as i32 % channels);
+        let sample_i: i32 = sample_length as i32 - 1 - i as i32 + channel_offset;
+        new_samples[i] = samples[sample_i as usize];
     }
 
     update_progress(

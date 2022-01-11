@@ -18,7 +18,8 @@ pub fn generate_processor_sequence(
 ) -> Vec<PermuteNodeName> {
     let mut rng = thread_rng();
 
-    let processor_count = rng.gen_range(2..5);
+    // let processor_count = rng.gen_range(2..5);
+    let processor_count = 1;
     let mut processors: Vec<PermuteNodeName> = vec![];
 
     for _ in 0..processor_count {
