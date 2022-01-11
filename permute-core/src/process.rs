@@ -22,6 +22,7 @@ pub struct Permutation {
     pub output: String,
     pub processor_pool: Vec<PermuteNodeName>,
     pub processors: Vec<PermuteNodeName>,
+    pub original_sample_rate: u32,
     pub node_index: usize,
 }
 
@@ -42,6 +43,8 @@ pub enum PermuteNodeName {
     Flutter,
     Chorus,
     Normalise,
+    SampleRateConversionHigh,
+    SampleRateConversionOriginal,
 }
 
 pub fn reverse(
@@ -59,9 +62,12 @@ pub fn reverse(
         PermuteNodeEvent::NodeProcessStarted,
     );
     let mut new_samples = samples.clone();
+    let channels = spec.channels as i32;
 
     for i in 0..sample_length {
-        new_samples[i] = samples[sample_length - 1 - i]
+        let channel_offset: i32 = (channels * -1 + 1) + 2 * (i as i32 % channels);
+        let sample_i: i32 = sample_length as i32 - 1 - i as i32 + channel_offset;
+        new_samples[i] = samples[sample_i as usize];
     }
 
     update_progress(
@@ -85,6 +91,77 @@ pub struct DelayLineParams {
     pub wet_gain_factor: f64,
 }
 
+pub fn change_sample_rate(params: ProcessorParams, new_sample_rate: u32) -> ProcessorParams {
+    if params.spec.sample_rate == new_sample_rate {
+        return params;
+    }
+    let mut new_params = params.clone();
+    let speed = params.spec.sample_rate as f64 / new_sample_rate as f64;
+
+    if speed >= 2.0 {
+        new_params = multi_channel_filter(
+            new_params,
+            FilterParams {
+                filter_type: FilterType::LowPass,
+                frequency: (new_sample_rate / 2) as f64,
+                q: None,
+            },
+        );
+    }
+
+    let resampled = change_speed(new_params, speed);
+
+    resampled
+}
+
+pub fn change_sample_rate_high(params: ProcessorParams) -> ProcessorParams {
+    let new_params = params.clone();
+    let update_progress = params.update_progress;
+    let permutation = params.permutation;
+    update_progress(
+        permutation.clone(),
+        PermuteNodeName::SampleRateConversionHigh,
+        PermuteNodeEvent::NodeProcessStarted,
+    );
+
+    let new_sample_rate = match params.spec.sample_rate {
+        0..=48000 => params.spec.sample_rate * 4,
+        48001..=96000 => params.spec.sample_rate * 2,
+        _ => params.spec.sample_rate,
+    };
+
+    let mut new_params = change_sample_rate(new_params, new_sample_rate);
+    new_params.permutation.original_sample_rate = params.spec.sample_rate;
+    new_params.spec.sample_rate = new_sample_rate;
+
+    update_progress(
+        new_params.permutation.clone(),
+        PermuteNodeName::SampleRateConversionHigh,
+        PermuteNodeEvent::NodeProcessComplete,
+    );
+    new_params
+}
+
+pub fn change_sample_rate_original(params: ProcessorParams) -> ProcessorParams {
+    let new_params = params.clone();
+    let update_progress = params.update_progress;
+    let permutation = params.permutation;
+    update_progress(
+        permutation.clone(),
+        PermuteNodeName::SampleRateConversionOriginal,
+        PermuteNodeEvent::NodeProcessStarted,
+    );
+
+    let new_params = change_sample_rate(new_params, permutation.original_sample_rate);
+
+    update_progress(
+        new_params.permutation.clone(),
+        PermuteNodeName::SampleRateConversionOriginal,
+        PermuteNodeEvent::NodeProcessComplete,
+    );
+    new_params
+}
+
 pub fn delay_line(
     ProcessorParams {
         samples,
@@ -100,6 +177,8 @@ pub fn delay_line(
         wet_gain_factor,
     }: DelayLineParams,
 ) -> ProcessorParams {
+    // Ensure sample length matches channel count
+    let delay_sample_length = delay_sample_length - (delay_sample_length % spec.channels as usize);
     let mut new_samples = vec![0_f64; sample_length];
 
     for i in delay_sample_length..sample_length {
@@ -311,7 +390,8 @@ pub fn vibrato(
     }: ProcessorParams,
     VibratoParams { speed_hz, depth }: VibratoParams,
 ) -> ProcessorParams {
-    let adjusted_depth = depth.powf(2_f64) * 512_f64; // ideally 1 should be a somewhat usable value
+    // let adjusted_depth = depth.powf(2_f64) * 512_f64; // ideally 1 should be a somewhat usable value
+    let adjusted_depth = depth * spec.sample_rate as f64 * 2_f64.powf(-7.0);
     let channel_samples = split_channels(samples, spec.channels);
     let mut new_channel_samples: Vec<Vec<f64>> = vec![];
 
@@ -328,14 +408,19 @@ pub fn vibrato(
             cos_amplitude = (i as f64 / spec.sample_rate as f64 * 2.0 * PI * speed_hz).cos();
             speed = 1_f64 + cos_amplitude;
 
-            ptr1 = ((i as f64 - 1_f64) + (speed * adjusted_depth)).floor() as usize;
+            let offset_f = (i as f64 - 1_f64) + (speed * adjusted_depth);
+            let offset = offset_f.floor() as usize;
+            let frac = offset_f - offset as f64;
+
+            ptr1 = offset;
             ptr2 = ptr1 + 1;
 
+            // Can't guarantee sped up samples will go slightly over original length
             if ptr2 >= channel_length {
                 break;
             }
 
-            ns[i] = cs[ptr1] + ((cs[ptr2] - cs[ptr1]) * speed);
+            ns[i] = cs[ptr1] + (cs[ptr2] - cs[ptr1]) * frac;
         }
         new_channel_samples.push(ns);
     }
@@ -392,10 +477,49 @@ pub fn chorus(
 
 pub type FilterType<T> = Type<T>;
 
+#[derive(Clone)]
 pub struct FilterParams {
     pub frequency: f64,
     pub q: Option<f64>,
     pub filter_type: FilterType<f64>,
+}
+
+pub fn multi_channel_filter(
+    params: ProcessorParams,
+    filter_params: FilterParams,
+) -> ProcessorParams {
+    let copied_params = params.clone();
+    let channel_samples = split_channels(params.samples, params.spec.channels);
+
+    let split_params = channel_samples
+        .iter()
+        .map(|cs| {
+            filter(
+                ProcessorParams {
+                    permutation: copied_params.permutation.clone(),
+                    sample_length: cs.len(),
+                    samples: cs.to_vec(),
+                    spec: copied_params.spec.clone(),
+                    update_progress: copied_params.update_progress,
+                },
+                filter_params.clone(),
+            )
+        })
+        .collect::<Vec<ProcessorParams>>();
+
+    let split_samples = split_params
+        .iter()
+        .map(|ss| ss.samples.to_vec())
+        .collect::<Vec<Vec<f64>>>();
+
+    let interleaved_samples = interleave_channels(split_samples);
+    ProcessorParams {
+        permutation: copied_params.permutation,
+        sample_length: interleaved_samples.len(),
+        samples: interleaved_samples,
+        spec: copied_params.spec,
+        update_progress: copied_params.update_progress,
+    }
 }
 
 pub fn filter(

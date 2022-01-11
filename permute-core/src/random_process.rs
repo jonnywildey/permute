@@ -3,35 +3,45 @@ use rand::prelude::*;
 
 pub struct GetProcessorNodeParams {
     pub normalise_at_end: bool,
+    pub high_sample_rate: bool,
     pub depth: usize,
     pub processor_pool: Vec<PermuteNodeName>,
+    pub processor_count: Option<i32>,
 }
 
 pub fn generate_processor_sequence(
     GetProcessorNodeParams {
         normalise_at_end,
+        high_sample_rate,
         depth,
         processor_pool,
+        processor_count,
     }: GetProcessorNodeParams,
 ) -> Vec<PermuteNodeName> {
     let mut rng = thread_rng();
 
-    let processor_count = rng.gen_range(2..5);
+    let processor_count = processor_count.unwrap_or(rng.gen_range(2..5));
     let mut processors: Vec<PermuteNodeName> = vec![];
 
     for _ in 0..processor_count {
         processors.push(processor_pool[rng.gen_range(0..processor_pool.len())])
     }
-    if depth > 0 {
+    if depth > 1 {
         processors = [
             generate_processor_sequence(GetProcessorNodeParams {
                 depth: depth - 1,
                 normalise_at_end: false,
                 processor_pool,
+                high_sample_rate: false,
+                processor_count: Some(processor_count),
             }),
             processors,
         ]
         .concat();
+    }
+    if high_sample_rate {
+        processors.insert(0, PermuteNodeName::SampleRateConversionHigh);
+        processors.push(PermuteNodeName::SampleRateConversionOriginal);
     }
     if normalise_at_end {
         processors.push(PermuteNodeName::Normalise);
@@ -51,6 +61,8 @@ pub fn get_processor_function(name: PermuteNodeName) -> ProcessorFn {
         PermuteNodeName::RhythmicDelay => random_rhythmic_delay,
         PermuteNodeName::Wow => random_wow,
         PermuteNodeName::Normalise => normalise,
+        PermuteNodeName::SampleRateConversionHigh => change_sample_rate_high,
+        PermuteNodeName::SampleRateConversionOriginal => change_sample_rate_original,
     }
 }
 

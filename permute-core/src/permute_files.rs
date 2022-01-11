@@ -16,6 +16,9 @@ pub struct PermuteFilesParams {
     pub permutations: usize,
     pub permutation_depth: usize,
     pub processor_pool: Vec<PermuteNodeName>,
+    pub normalise_at_end: bool,
+    pub high_sample_rate: bool,
+    pub processor_count: Option<i32>,
 
     pub update_permute_node_progress: UpdatePermuteNodeProgress,
     pub update_set_processors: UpdateSetProcessors,
@@ -38,8 +41,11 @@ fn permute_file(
         permutations,
         permutation_depth,
         processor_pool,
+        high_sample_rate,
+        normalise_at_end,
         update_permute_node_progress,
         update_set_processors,
+        processor_count,
     }: PermuteFilesParams,
     file: String,
 ) {
@@ -83,8 +89,10 @@ fn permute_file(
 
         let processors = generate_processor_sequence(GetProcessorNodeParams {
             depth: permutation_depth,
-            normalise_at_end: true,
+            normalise_at_end,
+            high_sample_rate,
             processor_pool: processor_pool.clone(),
+            processor_count,
         });
 
         let processor_fns = processors
@@ -95,9 +103,10 @@ fn permute_file(
         let permutation = Permutation {
             file: file.clone(),
             permutation_index: i,
-            output: output.clone(),
+            output: output_i.clone(),
             processor_pool: processor_pool.clone(),
             processors: processors.clone(),
+            original_sample_rate: spec.sample_rate,
             node_index: 0,
         };
         let processor_params = ProcessorParams {
@@ -115,7 +124,14 @@ fn permute_file(
         });
         let mut pro_writer = hound::WavWriter::create(output_i, spec).expect("Error in output");
 
-        for s in output_params.samples {
+        for mut s in output_params.samples {
+            // overload protection
+            if s >= 1.0 {
+                s = 1.0;
+            }
+            if s <= -1.0 {
+                s = -1.0;
+            }
             let t = (s * denormalise_factor) as i32;
             pro_writer.write_sample(t).expect("Error writing file");
         }
@@ -123,13 +139,16 @@ fn permute_file(
     }
 }
 
-fn generate_file_name(output: String, permutation_count: usize) -> std::path::PathBuf {
+fn generate_file_name(output: String, permutation_count: usize) -> String {
     let path = Path::new(&output);
     let file_stem = path.file_stem().unwrap_or_default().to_str().unwrap_or("");
     let extension = path.extension().unwrap_or_default().to_str().unwrap_or("");
     let new_filename = [file_stem, &permutation_count.to_string(), ".", extension].concat();
 
     path.with_file_name(new_filename)
+        .into_os_string()
+        .into_string()
+        .unwrap()
 }
 
 pub struct RunProcessorsParams {
@@ -155,6 +174,7 @@ pub fn run_processors(
                     permutation_index: new_params.permutation.permutation_index,
                     processor_pool: new_params.permutation.processor_pool,
                     processors: new_params.permutation.processors,
+                    original_sample_rate: new_params.permutation.original_sample_rate,
                 },
                 sample_length: new_params.sample_length,
                 samples: new_params.samples,
@@ -175,5 +195,7 @@ pub fn get_processor_display_name(name: PermuteNodeName) -> String {
         PermuteNodeName::RhythmicDelay => String::from("Rhythmic delay"),
         PermuteNodeName::Wow => String::from("Wow"),
         PermuteNodeName::Normalise => String::from("Normalise"),
+        PermuteNodeName::SampleRateConversionHigh => String::from("Sample rate conversion high"),
+        PermuteNodeName::SampleRateConversionOriginal => String::from("Sample rate conversion low"),
     }
 }
