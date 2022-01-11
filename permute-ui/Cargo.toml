@@ -1,0 +1,17 @@
+[package]
+name = "permute-ui"
+version = "0.1.0"
+authors = ["Jonny Wildey <jonnywildey@gmail.com>"]
+edition = "2021"
+exclude = ["index.node"]
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+permute = { path = "../permute-core" }
+
+[dependencies.neon]
+version = "0.9"
+default-features = false
+features = ["napi-6"]
