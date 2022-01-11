@@ -29,6 +29,12 @@ struct PermuteArgs {
     /// How much the file is permuted. Numbers larger than 5 will take a long time to process
     #[structopt(long = "depth", short, default_value = "1")]
     permutation_depth: usize,
+    /// Whether to normalise at end
+    #[structopt(long)]
+    normalise: bool,
+    /// Whether to run fx at a high sample rate
+    #[structopt(long = "highSampleRate")]
+    high_sample_rate: bool,
 }
 
 fn main() {
@@ -39,14 +45,14 @@ fn main() {
     );
 
     let processor_pool: Vec<PermuteNodeName> = vec![
-        // PermuteNodeName::Reverse,
+        PermuteNodeName::Reverse,
         PermuteNodeName::MetallicDelay,
         PermuteNodeName::RhythmicDelay,
-        // PermuteNodeName::HalfSpeed,
-        // PermuteNodeName::DoubleSpeed,
-        // PermuteNodeName::Wow,
-        // PermuteNodeName::Flutter,
-        // PermuteNodeName::Chorus,
+        PermuteNodeName::HalfSpeed,
+        PermuteNodeName::DoubleSpeed,
+        PermuteNodeName::Wow,
+        PermuteNodeName::Flutter,
+        PermuteNodeName::Chorus,
     ];
 
     permute_files(PermuteFilesParams {
@@ -57,7 +63,8 @@ fn main() {
         permutations: args.permutations,
         permutation_depth: args.permutation_depth,
         processor_pool: processor_pool,
-
+        high_sample_rate: args.high_sample_rate,
+        normalise_at_end: args.normalise,
         update_permute_node_progress,
         update_set_processors,
     });

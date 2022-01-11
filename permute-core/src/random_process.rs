@@ -24,7 +24,7 @@ pub fn generate_processor_sequence(
     for _ in 0..processor_count {
         processors.push(processor_pool[rng.gen_range(0..processor_pool.len())])
     }
-    if depth > 0 {
+    if depth > 1 {
         processors = [
             generate_processor_sequence(GetProcessorNodeParams {
                 depth: depth - 1,

@@ -16,6 +16,8 @@ pub struct PermuteFilesParams {
     pub permutations: usize,
     pub permutation_depth: usize,
     pub processor_pool: Vec<PermuteNodeName>,
+    pub normalise_at_end: bool,
+    pub high_sample_rate: bool,
 
     pub update_permute_node_progress: UpdatePermuteNodeProgress,
     pub update_set_processors: UpdateSetProcessors,
@@ -38,6 +40,8 @@ fn permute_file(
         permutations,
         permutation_depth,
         processor_pool,
+        high_sample_rate,
+        normalise_at_end,
         update_permute_node_progress,
         update_set_processors,
     }: PermuteFilesParams,
@@ -83,8 +87,8 @@ fn permute_file(
 
         let processors = generate_processor_sequence(GetProcessorNodeParams {
             depth: permutation_depth,
-            normalise_at_end: true,
-            high_sample_rate: true,
+            normalise_at_end,
+            high_sample_rate,
             processor_pool: processor_pool.clone(),
         });
 

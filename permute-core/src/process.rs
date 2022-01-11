@@ -387,7 +387,8 @@ pub fn vibrato(
     }: ProcessorParams,
     VibratoParams { speed_hz, depth }: VibratoParams,
 ) -> ProcessorParams {
-    let adjusted_depth = depth.powf(2_f64) * 512_f64; // ideally 1 should be a somewhat usable value
+    // let adjusted_depth = depth.powf(2_f64) * 512_f64; // ideally 1 should be a somewhat usable value
+    let adjusted_depth = depth * spec.sample_rate as f64 * 2_f64.powf(-7.0);
     let channel_samples = split_channels(samples, spec.channels);
     let mut new_channel_samples: Vec<Vec<f64>> = vec![];
 
@@ -404,14 +405,19 @@ pub fn vibrato(
             cos_amplitude = (i as f64 / spec.sample_rate as f64 * 2.0 * PI * speed_hz).cos();
             speed = 1_f64 + cos_amplitude;
 
-            ptr1 = ((i as f64 - 1_f64) + (speed * adjusted_depth)).floor() as usize;
+            let offset_f = (i as f64 - 1_f64) + (speed * adjusted_depth);
+            let offset = offset_f.floor() as usize;
+            let frac = offset_f - offset as f64;
+
+            ptr1 = offset;
             ptr2 = ptr1 + 1;
 
+            // Can't guarantee sped up samples will go slightly over original length
             if ptr2 >= channel_length {
                 break;
             }
 
-            ns[i] = cs[ptr1] + ((cs[ptr2] - cs[ptr1]) * speed);
+            ns[i] = cs[ptr1] + (cs[ptr2] - cs[ptr1]) * frac;
         }
         new_channel_samples.push(ns);
     }
