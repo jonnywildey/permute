@@ -169,6 +169,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "once_cell"
+version = "1.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "da32515d9f6e6e489d7bc9d84c71b060db7247dc035bbe44eac88cf87486d8d5"
+
+[[package]]
 name = "permute"
 version = "0.1.0"
 dependencies = [
@@ -183,6 +189,7 @@ name = "permute-ui"
 version = "0.1.0"
 dependencies = [
  "neon",
+ "once_cell",
  "permute",
 ]
 

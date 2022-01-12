@@ -1,25 +1,9 @@
-const p = require('.');
+const permuteLibrary = require("./permute-library");
 
-p.init();
 
-class Permute {
-  constructor() {
-    this.permute = p.init();
-  }
+permuteLibrary.registerUpdates((counter) => {
+  console.log(counter);
+  permuteLibrary.increment();
+});
 
-  getState() {
-    p.getState(this.permute);
-  }
 
-  run() {
-    p.run(this.permute);
-  }
-}
-
-const permute = new Permute();
-
-const state = permute.getState();
-
-console.log(state);
-
-permute.run();
