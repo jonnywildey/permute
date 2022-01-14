@@ -1,12 +1,13 @@
 mod sharedstate;
 
 use neon::prelude::*;
+use permute::process::*;
 use sharedstate::*;
 use std::fmt::Error;
 use std::sync::mpsc;
 use std::thread;
 
-type ProcessorCallback = Box<dyn FnOnce(&Channel) + Send>;
+type ProcessorCallback = Box<dyn FnOnce(&Channel, SharedState) + Send>;
 
 // Wraps a SQLite connection a channel, allowing concurrent access
 struct Processor {
@@ -15,10 +16,10 @@ struct Processor {
 
 // Messages sent on the database channel
 enum ProcessorMessage {
-    Run(ProcessorCallback),
+    Run,
     AddFile(String),
     // Callback to be executed
-    Callback(ProcessorCallback),
+    SetStateCallback(ProcessorCallback),
     // Indicates that the thread should be stopped and connection closed
     Cancel,
 }
@@ -60,13 +61,13 @@ impl Processor {
             // the thread.
             while let Ok(message) = rx.recv() {
                 match message {
-                    ProcessorMessage::Callback(f) => {
+                    ProcessorMessage::SetStateCallback(f) => {
                         // The connection and channel are owned by the thread, but _lent_ to
                         // the callback. The callback has exclusive access to the connection
                         // for the duration of the callback.
-                        f(&channel);
+                        f(&channel, state.clone());
                     }
-                    ProcessorMessage::Run(f) => {
+                    ProcessorMessage::Run => {
                         println!("start");
                         state.run_process();
                         println!("done")
@@ -89,18 +90,16 @@ impl Processor {
         self.tx.send(ProcessorMessage::Cancel)
     }
 
-    fn send(
+    fn set_state_callback(
         &self,
-        callback: impl FnOnce(&Channel) + Send + 'static,
+        callback: impl FnOnce(&Channel, SharedState) + Send + 'static,
     ) -> Result<(), mpsc::SendError<ProcessorMessage>> {
-        self.tx.send(ProcessorMessage::Callback(Box::new(callback)))
+        self.tx
+            .send(ProcessorMessage::SetStateCallback(Box::new(callback)))
     }
 
-    fn run(
-        &self,
-        callback: impl FnOnce(&Channel) + Send + 'static,
-    ) -> Result<(), mpsc::SendError<ProcessorMessage>> {
-        self.tx.send(ProcessorMessage::Run(Box::new(callback)))
+    fn run(&self) -> Result<(), mpsc::SendError<ProcessorMessage>> {
+        self.tx.send(ProcessorMessage::Run)
     }
 
     fn add_file(&self, file: String) -> Result<(), mpsc::SendError<ProcessorMessage>> {
@@ -114,9 +113,9 @@ impl Processor {
     // Create a new instance of `Processor` and place it inside a `JsBox`
     // JavaScript can hold a reference to a `JsBox`, but the contents are opaque
     fn js_new(mut cx: FunctionContext) -> JsResult<JsBox<Processor>> {
-        let db = Processor::new(&mut cx).or_else(|err| cx.throw_error(err.to_string()))?;
+        let processor = Processor::new(&mut cx).or_else(|err| cx.throw_error(err.to_string()))?;
 
-        Ok(cx.boxed(db))
+        Ok(cx.boxed(processor))
     }
 
     // Manually close a database connection
@@ -136,36 +135,30 @@ impl Processor {
 
     // Inserts a `name` into the database
     // Accepts a `name` and a `callback` as parameters
-    fn js_insert(mut cx: FunctionContext) -> JsResult<JsUndefined> {
-        // Get the first argument as a `JsString` and convert to a Rust `String`
-        let name = cx.argument::<JsString>(0)?.value(&mut cx);
-
-        // Get the second argument as a `JsFunction`
-        let callback = cx.argument::<JsFunction>(1)?.root(&mut cx);
+    fn js_set_state_callback(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+        // Get the first argument as a `JsFunction`
+        let callback = cx.argument::<JsFunction>(0)?.root(&mut cx);
 
         // Get the `this` value as a `JsBox<Database>`
-        let db = cx
+        let processor = cx
             .this()
             .downcast_or_throw::<JsBox<Processor>, _>(&mut cx)?;
 
-        db.send(move |channel| {
-            // do a thing
+        processor
+            .set_state_callback(move |channel, state| {
+                channel.send(move |mut cx| {
+                    let callback = callback.into_inner(&mut cx);
+                    let this = cx.undefined();
 
-            channel.send(move |mut cx| {
-                let callback = callback.into_inner(&mut cx);
-                let this = cx.undefined();
-                // let args: Vec<Handle<JsValue>> = match result {
-                //     Ok(id) => vec![cx.null().upcast(), cx.number(id as f64).upcast()],
-                //     Err(err) => vec![cx.error(err.to_string())?.upcast()],
-                // };
-                let args = vec![cx.undefined()];
+                    let js_state = format!("{:#?}", state);
+                    let args = vec![cx.string(js_state)];
 
-                callback.call(&mut cx, this, args)?;
+                    callback.call(&mut cx, this, args)?;
 
-                Ok(())
-            });
-        })
-        .or_else(|err| cx.throw_error(err.to_string()))?;
+                    Ok(())
+                });
+            })
+            .or_else(|err| cx.throw_error(err.to_string()))?;
 
         // This function does not have a return value
         Ok(cx.undefined())
@@ -173,35 +166,14 @@ impl Processor {
 
     // Run process
     fn js_run_process(mut cx: FunctionContext) -> JsResult<JsUndefined> {
-        // Get the first argument as a `JsString` and convert to a Rust `String`
-        // let name = cx.argument::<JsString>(0)?.value(&mut cx);
-
-        // Get the second argument as a `JsFunction`
-        let callback = cx.argument::<JsFunction>(0)?.root(&mut cx);
-
         // Get the `this` value as a `JsBox<Database>`
-        let db = cx
+        let processor = cx
             .this()
             .downcast_or_throw::<JsBox<Processor>, _>(&mut cx)?;
 
-        db.run(move |channel| {
-            // do a thing
-
-            channel.send(move |mut cx| {
-                let callback = callback.into_inner(&mut cx);
-                let this = cx.undefined();
-                // let args: Vec<Handle<JsValue>> = match result {
-                //     Ok(id) => vec![cx.null().upcast(), cx.number(id as f64).upcast()],
-                //     Err(err) => vec![cx.error(err.to_string())?.upcast()],
-                // };
-                let args = vec![cx.undefined()];
-
-                callback.call(&mut cx, this, args)?;
-
-                Ok(())
-            });
-        })
-        .or_else(|err| cx.throw_error(err.to_string()))?;
+        processor
+            .run()
+            .or_else(|err| cx.throw_error(err.to_string()))?;
 
         // This function does not have a return value
         Ok(cx.undefined())
@@ -226,59 +198,59 @@ impl Processor {
 
     // Get a `name` by `id` value
     // Accepts an `id` and callback as parameters
-    fn js_get_by_id(mut cx: FunctionContext) -> JsResult<JsUndefined> {
-        // Get the first argument as a `JsNumber` and convert to an `f64`
-        let id = cx.argument::<JsNumber>(0)?.value(&mut cx);
+    // fn js_get_by_id(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+    //     // Get the first argument as a `JsNumber` and convert to an `f64`
+    //     let id = cx.argument::<JsNumber>(0)?.value(&mut cx);
 
-        // Get the second argument as a `JsFunction`
-        let callback = cx.argument::<JsFunction>(1)?.root(&mut cx);
+    //     // Get the second argument as a `JsFunction`
+    //     let callback = cx.argument::<JsFunction>(1)?.root(&mut cx);
 
-        // Get the `this` value as a `JsBox<Database>`
-        let db = cx
-            .this()
-            .downcast_or_throw::<JsBox<Processor>, _>(&mut cx)?;
+    //     // Get the `this` value as a `JsBox<Database>`
+    //     let db = cx
+    //         .this()
+    //         .downcast_or_throw::<JsBox<Processor>, _>(&mut cx)?;
 
-        db.send(move |channel| {
-            // let result: Result<String, _> = conn
-            //     .prepare("SELECT name FROM person WHERE id = ?")
-            //     .and_then(|mut stmt| stmt.query_row(rusqlite::params![id], |row| row.get(0)));
+    //     db.set_state_callback(move |channel| {
+    //         // let result: Result<String, _> = conn
+    //         //     .prepare("SELECT name FROM person WHERE id = ?")
+    //         //     .and_then(|mut stmt| stmt.query_row(rusqlite::params![id], |row| row.get(0)));
 
-            channel.send(move |mut cx| {
-                let callback = callback.into_inner(&mut cx);
-                let this = cx.undefined();
-                // let args: Vec<Handle<JsValue>> = match result {
-                //     // Convert the name to a `JsString` on success and upcast to a `JsValue`
-                //     Ok(name) => vec![cx.null().upcast(), cx.string(name).upcast()],
+    //         channel.send(move |mut cx| {
+    //             let callback = callback.into_inner(&mut cx);
+    //             let this = cx.undefined();
+    //             // let args: Vec<Handle<JsValue>> = match result {
+    //             //     // Convert the name to a `JsString` on success and upcast to a `JsValue`
+    //             //     Ok(name) => vec![cx.null().upcast(), cx.string(name).upcast()],
 
-                //     // If the row was not found, return `undefined` as a success instead
-                //     // of throwing an exception
-                //     Err(rusqlite::Error::QueryReturnedNoRows) => {
-                //         vec![cx.null().upcast(), cx.undefined().upcast()]
-                //     }
+    //             //     // If the row was not found, return `undefined` as a success instead
+    //             //     // of throwing an exception
+    //             //     Err(rusqlite::Error::QueryReturnedNoRows) => {
+    //             //         vec![cx.null().upcast(), cx.undefined().upcast()]
+    //             //     }
 
-                //     // Convert the error to a JavaScript exception on failure
-                //     Err(err) => vec![cx.error(err.to_string())?.upcast()],
-                // };
-                let args = vec![cx.undefined()];
+    //             //     // Convert the error to a JavaScript exception on failure
+    //             //     Err(err) => vec![cx.error(err.to_string())?.upcast()],
+    //             // };
+    //             let args = vec![cx.undefined()];
 
-                callback.call(&mut cx, this, args)?;
+    //             callback.call(&mut cx, this, args)?;
 
-                Ok(())
-            });
-        })
-        .or_else(|err| cx.throw_error(err.to_string()))?;
+    //             Ok(())
+    //         });
+    //     })
+    //     .or_else(|err| cx.throw_error(err.to_string()))?;
 
-        // This function does not have a return value
-        Ok(cx.undefined())
-    }
+    //     // This function does not have a return value
+    //     Ok(cx.undefined())
+    // }
 }
 
 #[neon::main]
 fn main(mut cx: ModuleContext) -> NeonResult<()> {
     cx.export_function("databaseNew", Processor::js_new)?;
     cx.export_function("databaseClose", Processor::js_cancel)?;
-    cx.export_function("databaseInsert", Processor::js_insert)?;
-    cx.export_function("databaseGetById", Processor::js_get_by_id)?;
+    cx.export_function("setStateCallback", Processor::js_set_state_callback)?;
+    // cx.export_function("databaseGetById", Processor::js_get_by_id)?;
     cx.export_function("runProcess", Processor::js_run_process)?;
     cx.export_function("addFile", Processor::js_add_file)?;
 

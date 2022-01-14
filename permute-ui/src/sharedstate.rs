@@ -66,7 +66,15 @@ impl SharedState {
     }
 
     pub fn add_file(&mut self, file: String) {
-        &self.files.push(file);
+        let _ = &self.files.push(file);
+    }
+
+    pub fn set_update_permute_node_progress(&mut self, f: UpdatePermuteNodeProgress) {
+        self.update_permute_node_progress = f;
+    }
+
+    pub fn set_update_set_processors(&mut self, f: UpdateSetProcessors) {
+        self.update_set_processors = f;
     }
 
     pub fn run_process(&self) {
