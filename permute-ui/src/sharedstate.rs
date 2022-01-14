@@ -1,3 +1,5 @@
+use std::sync::mpsc;
+
 use neon::prelude::*;
 use permute::permute_files::*;
 use permute::process::*;
@@ -15,12 +17,11 @@ pub struct SharedState {
     pub high_sample_rate: bool,
     pub processor_count: Option<i32>,
 
-    pub update_permute_node_progress: UpdatePermuteNodeProgress,
-    pub update_set_processors: UpdateSetProcessors,
+    pub update_sender: mpsc::Sender<PermuteUpdate>,
 }
 
 impl SharedState {
-    pub fn init() -> Self {
+    pub fn init(update_sender: mpsc::Sender<PermuteUpdate>) -> Self {
         Self {
             files: vec![],
             high_sample_rate: false,
@@ -33,8 +34,7 @@ impl SharedState {
             permutation_depth: 1,
             permutations: 3,
             processor_count: None,
-            update_permute_node_progress: |_, _, _| {},
-            update_set_processors: |_, _| {},
+            update_sender,
             processor_pool: vec![
                 PermuteNodeName::Reverse,
                 PermuteNodeName::MetallicDelay,
@@ -60,21 +60,12 @@ impl SharedState {
             permutations: self.permutations,
             processor_count: self.processor_count,
             processor_pool: self.processor_pool.clone(),
-            update_permute_node_progress: self.update_permute_node_progress,
-            update_set_processors: self.update_set_processors,
+            update_sender: self.update_sender.to_owned(),
         }
     }
 
     pub fn add_file(&mut self, file: String) {
         let _ = &self.files.push(file);
-    }
-
-    pub fn set_update_permute_node_progress(&mut self, f: UpdatePermuteNodeProgress) {
-        self.update_permute_node_progress = f;
-    }
-
-    pub fn set_update_set_processors(&mut self, f: UpdateSetProcessors) {
-        self.update_set_processors = f;
     }
 
     pub fn run_process(&self) {

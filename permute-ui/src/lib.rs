@@ -1,7 +1,7 @@
 mod sharedstate;
 
 use neon::prelude::*;
-use permute::process::*;
+use permute::permute_files::*;
 use sharedstate::*;
 use std::fmt::Error;
 use std::sync::mpsc;
@@ -49,7 +49,8 @@ impl Processor {
         let channel = cx.channel();
 
         // process
-        let mut state = SharedState::init();
+        let (permuteTx, permuteRx) = mpsc::channel::<PermuteUpdate>();
+        let mut state = SharedState::init(permuteTx);
         let mut state_callback: ProcessorCallback = Box::new(|_, _| {});
 
         // Spawn a thread for processing database queries
@@ -79,6 +80,32 @@ impl Processor {
                     }
                     // Immediately close the connection, even if there are pending messages
                     ProcessorMessage::Cancel => break,
+                }
+            }
+        });
+
+        thread::spawn(move || {
+            while let Ok(message) = permuteRx.recv() {
+                match message {
+                    PermuteUpdate::UpdatePermuteNodeCompleted(permutation, _, _) => {
+                        let percentage_progress: f64 = ((permutation.node_index as f64 + 1.0)
+                            / permutation.processors.len() as f64)
+                            * 100.0;
+                        println!("{}%", percentage_progress.round());
+                        // state_callback(&mut channel, state.clone());
+                    }
+                    PermuteUpdate::UpdatePermuteNodeStarted(_, _, _) => {}
+                    PermuteUpdate::UpdateSetProcessors(permutation, processors) => {
+                        let pretty_processors = processors
+                            .iter()
+                            .map(|p| get_processor_display_name(*p))
+                            .collect::<Vec<String>>();
+                        println!(
+                            "Permutating {} Processors {:#?}",
+                            permutation.output, pretty_processors
+                        );
+                        // state_callback(&channel, state);
+                    }
                 }
             }
         });
