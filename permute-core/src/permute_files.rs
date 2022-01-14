@@ -1,11 +1,14 @@
 use std::path::Path;
+use std::sync::mpsc;
 
 use crate::process::*;
 use crate::random_process::*;
 
-pub type UpdatePermuteNodeProgress =
-    fn(permutation: Permutation, name: PermuteNodeName, event: PermuteNodeEvent);
-pub type UpdateSetProcessors = fn(permutation: Permutation, processors: Vec<PermuteNodeName>);
+pub enum PermuteUpdate {
+    UpdatePermuteNodeStarted(Permutation, PermuteNodeName, PermuteNodeEvent),
+    UpdatePermuteNodeCompleted(Permutation, PermuteNodeName, PermuteNodeEvent),
+    UpdateSetProcessors(Permutation, Vec<PermuteNodeName>),
+}
 
 #[derive(Debug, Clone)]
 pub struct PermuteFilesParams {
@@ -20,8 +23,7 @@ pub struct PermuteFilesParams {
     pub high_sample_rate: bool,
     pub processor_count: Option<i32>,
 
-    pub update_permute_node_progress: UpdatePermuteNodeProgress,
-    pub update_set_processors: UpdateSetProcessors,
+    pub update_sender: mpsc::Sender<PermuteUpdate>,
 }
 
 pub fn permute_files(params: PermuteFilesParams) {
@@ -43,8 +45,7 @@ fn permute_file(
         processor_pool,
         high_sample_rate,
         normalise_at_end,
-        update_permute_node_progress,
-        update_set_processors,
+        update_sender,
         processor_count,
     }: PermuteFilesParams,
     file: String,
@@ -114,9 +115,12 @@ fn permute_file(
             spec: processor_spec,
             sample_length: sample_length,
             permutation: permutation.clone(),
-            update_progress: update_permute_node_progress,
+            update_sender: update_sender.to_owned(),
         };
-        update_set_processors(permutation.clone(), processors);
+        update_sender.send(PermuteUpdate::UpdateSetProcessors(
+            permutation.clone(),
+            processors,
+        ));
 
         let output_params = run_processors(RunProcessorsParams {
             processor_params: processor_params.clone(),
@@ -165,7 +169,7 @@ pub fn run_processors(
     processors
         .iter()
         .fold(processor_params, |params, processor| {
-            let new_params = processor(params);
+            let new_params = processor(&params);
             ProcessorParams {
                 permutation: Permutation {
                     file: new_params.permutation.file,
@@ -179,7 +183,7 @@ pub fn run_processors(
                 sample_length: new_params.sample_length,
                 samples: new_params.samples,
                 spec: new_params.spec,
-                update_progress: new_params.update_progress,
+                update_sender: new_params.update_sender,
             }
         })
 }

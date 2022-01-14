@@ -49,7 +49,8 @@ impl Processor {
         let channel = cx.channel();
 
         // process
-        let mut state = SharedState::default();
+        let mut state = SharedState::init();
+        let mut state_callback: ProcessorCallback = Box::new(|_, _| {});
 
         // Spawn a thread for processing database queries
         // This will not block the JavaScript main thread and will continue executing
@@ -65,7 +66,8 @@ impl Processor {
                         // The connection and channel are owned by the thread, but _lent_ to
                         // the callback. The callback has exclusive access to the connection
                         // for the duration of the callback.
-                        f(&channel, state.clone());
+                        // f(&channel, state.clone());
+                        state_callback = f;
                     }
                     ProcessorMessage::Run => {
                         println!("start");

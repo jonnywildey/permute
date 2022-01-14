@@ -20,7 +20,7 @@ pub struct SharedState {
 }
 
 impl SharedState {
-    pub fn default() -> Self {
+    pub fn init() -> Self {
         Self {
             files: vec![],
             high_sample_rate: false,
