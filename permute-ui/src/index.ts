@@ -6,46 +6,40 @@ export type PermuteState = any;
 
 export type GetStateCallback = (state: PermuteState) => void;
 
-// Wrapper class for the boxed `Processor` for idiomatic JavaScript usage
-class PermuteProcessor {
-  private permuteLibrary: any;
-  private pollHandle?: NodeJS.Timer;
+/**
+ * Wrapper for the boxed `Processor`
+ */
+function createPermuteProcessor() {
+  const permuteLibrary = init();
+  let pollHandle: NodeJS.Timer | undefined = undefined;
 
-
-  constructor() {
-    this.permuteLibrary = init();
-    this.pollHandle = undefined;
-  }
-
-  cancel() {
-    cancel.call(this.permuteLibrary);
-  }
-
-  pollForStateUpdates(cb: GetStateCallback) {
-    this.pollHandle = setInterval(() => { });
-  }
-
-  runProcess(cb: GetStateCallback) {
-    this.pollHandle = setInterval(() => {
-      getStateCallback.call(this.permuteLibrary, cb);
-    });
-    return runProcess.call(this.permuteLibrary, (state: PermuteState) => {
-      clearInterval(this.pollHandle!);
-      cb(state);
-    }, PERMUTE_POLL_LATENCY);
-  }
-
-  addFile(file: string) {
-    return addFile.call(this.permuteLibrary, file);
-  }
-
-  getStateCallback(cb: GetStateCallback) {
-    return getStateCallback.call(this.permuteLibrary, cb);
+  return {
+    cancel() {
+      cancel.call(permuteLibrary);
+    },
+    pollForStateUpdates(cb: GetStateCallback) {
+      pollHandle = setInterval(() => { });
+    },
+    runProcess(cb: GetStateCallback) {
+      pollHandle = setInterval(() => {
+        getStateCallback.call(permuteLibrary, cb);
+      });
+      return runProcess.call(permuteLibrary, (state: PermuteState) => {
+        clearInterval(pollHandle!);
+        cb(state);
+      }, PERMUTE_POLL_LATENCY);
+    },
+    addFile(file: string) {
+      return addFile.call(permuteLibrary, file);
+    },
+    getStateCallback(cb: GetStateCallback) {
+      return getStateCallback.call(permuteLibrary, cb);
+    }
   }
 }
 
 const run = async () => {
-  const processor = new PermuteProcessor();
+  const processor = createPermuteProcessor();
   processor.addFile("/Users/jonnywildey/rustcode/permute/permute-core/examples/vibebeep24.wav");
   processor.getStateCallback((state) => {
     console.log(state);
