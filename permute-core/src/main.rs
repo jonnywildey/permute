@@ -5,7 +5,6 @@ mod random_process;
 use std::{sync::mpsc, thread};
 
 use permute_files::*;
-use process::*;
 use structopt::StructOpt;
 
 use crate::process::PermuteNodeName;

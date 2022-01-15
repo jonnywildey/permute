@@ -5,7 +5,7 @@ use crate::permute_files::PermuteUpdate;
 
 pub type ProcessorFn = fn(&ProcessorParams) -> ProcessorParams;
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct ProcessorParams {
     pub spec: hound::WavSpec,
     pub samples: Vec<f64>,
@@ -15,7 +15,7 @@ pub struct ProcessorParams {
     pub update_sender: mpsc::Sender<PermuteUpdate>,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 
 pub struct Permutation {
     pub file: String,

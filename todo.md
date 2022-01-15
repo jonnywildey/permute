@@ -7,6 +7,7 @@
 - [Iced](https://github.com/iced-rs/iced)
 - [Dioxus](https://github.com/DioxusLabs/dioxus)
 
+Chakra-ui component library
 
 ## Features
 - Hi quality mode (run at 192k) (Somewhat working)
