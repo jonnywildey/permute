@@ -4,9 +4,10 @@
   "description": "",
   "main": "index.node",
   "scripts": {
-    "build": "cargo-cp-artifact -nc permute-library/index.node -- cargo build --message-format=json-render-diagnostics",
-    "build-debug": "npm run build --",
-    "build-release": "npm run build -- --release",
+    "build": "npm run build-release && npm run build-ts",
+    "build-release": "cargo-cp-artifact -nc permute-library/index.node -- cargo build --message-format=json-render-diagnostics --release && tsc --build --clean",
+    "build-debug": "cargo-cp-artifact -nc permute-library/index.node -- cargo build --message-format=json-render-diagnostics",
+    "build-ts": "tsc --build --clean && tsc",
     "install": "npm run build-release",
     "test": "cargo test",
     "process": "npm run build-release && node index.js"
@@ -14,6 +15,10 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@types/node": "^17.0.8",
     "cargo-cp-artifact": "^0.1"
+  },
+  "dependencies": {
+    "typescript": "^4.5.4"
   }
 }

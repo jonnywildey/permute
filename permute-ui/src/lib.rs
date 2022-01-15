@@ -80,14 +80,6 @@ impl Processor {
                     PermuteUpdate::UpdatePermuteNodeStarted(_, _, _) => {}
                     PermuteUpdate::UpdateSetProcessors(permutation, processors) => {
                         state.add_output_progress(permutation, processors);
-                        // let pretty_processors = processors
-                        //     .iter()
-                        //     .map(|p| get_processor_display_name(*p))
-                        //     .collect::<Vec<String>>();
-                        // println!(
-                        //     "Permutating {} Processors {:#?}",
-                        //     permutation.output, pretty_processors
-                        // );
                     }
                 }
             }
