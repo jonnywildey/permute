@@ -33,8 +33,10 @@ ipcMain.on('ipc-example', async (event, arg) => {
   event.reply('ipc-example', msgTemplate('pong'));
 });
 
-ipcMain.on('open-output-dialog', async (event, arg) => {
-  dialog.showOpenDialog({properties: ['openDirectory']})
+ipcMain.on('open-output-dialog', async (event) => {
+  const result = await dialog.showOpenDialog({properties: ['openDirectory']});
+  console.log(result.filePaths);
+  event.reply('open-output-dialog', result.filePaths);
 });
 
 if (process.env.NODE_ENV === 'production') {

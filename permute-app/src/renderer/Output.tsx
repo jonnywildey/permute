@@ -1,11 +1,12 @@
 import { Button, GridItem, Heading, Input } from "@chakra-ui/react";
 
-
 export const Output: React.FC = () => {
-  const onClick = () => {
-    debugger;
-    const directory = window.electron.ipcRenderer.openOutputDialog();
-    console.log(directory);
+  const onClick = async () => {
+     window.electron.ipcRenderer.openOutputDialog((arg) => {
+      // eslint-disable-next-line no-console
+      console.log(arg);
+    });
+      
   }
   
   return <GridItem rowSpan={9} colSpan={3} bg='tomato'>

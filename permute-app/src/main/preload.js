@@ -2,8 +2,9 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electron', {
   ipcRenderer: {
-    openOutputDialog() {
-      ipcRenderer.invoke('open-output-dialog');
+    openOutputDialog(f) {
+      ipcRenderer.once('open-output-dialog', (event, ...args) => f(...args));
+      ipcRenderer.send('open-output-dialog');
     },
     myPing() {
       ipcRenderer.send('ipc-example', 'ping');
@@ -16,7 +17,7 @@ contextBridge.exposeInMainWorld('electron', {
       }
     },
     once(channel, func) {
-      const validChannels = ['ipc-example'];
+      const validChannels = ['ipc-example', 'open-output-dialog'];
       if (validChannels.includes(channel)) {
         // Deliberately strip event as it includes `sender`
         ipcRenderer.once(channel, (event, ...args) => func(...args));
