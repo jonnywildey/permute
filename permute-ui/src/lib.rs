@@ -4,7 +4,8 @@ use neon::prelude::*;
 use permute::permute_files::*;
 use sharedstate::*;
 use std::fmt::Error;
-use std::sync::mpsc;
+use std::rc::Rc;
+use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
 
 type ProcessorCallback = Box<dyn FnOnce(&Channel, SharedState) + Send>;
@@ -16,95 +17,77 @@ struct Processor {
 
 // Messages sent on the database channel
 enum ProcessorMessage {
-    Run,
+    Run(ProcessorCallback),
     AddFile(String),
-    // Callback to be executed
-    SetStateCallback(ProcessorCallback),
-    // Indicates that the thread should be stopped and connection closed
+    GetStateCallback(ProcessorCallback),
     Cancel,
 }
 
-// Clean-up when Database is garbage collected, could go here
-// but, it's not needed,
 impl Finalize for Processor {}
 
 // Internal implementation
 impl Processor {
-    // Creates a new instance of `Database`
+    // Creates a new instance of `Processor`
     //
-    // 1. Creates a channel
-    // 2. Spawns a thread and moves the channel receiver and connection to it
-    // 3. On a separate thread, read closures off the channel and execute with access
+    // 1. Creates a js/processor channel
+    // 2. Creates a permute/processor channel
+    // 3. Spawns a thread and moves the channel receiver and connection to it
+    // 4. On a separate thread, read closures off the channel and execute with access
     //    to the connection.
     fn new<'a, C>(cx: &mut C) -> Result<Self, Error>
     where
         C: Context<'a>,
     {
-        // Channel for sending callbacks to execute on the sqlite connection thread
+        // Channel for sending callbacks to execute on the processor connection thread
         let (tx, rx) = mpsc::channel::<ProcessorMessage>();
-        // Create an `Channel` for calling back to JavaScript. It is more efficient
-        // to create a single channel and re-use it for all database callbacks.
-        // The JavaScript process will not exit as long as this channel has not been
-        // dropped.
         let channel = cx.channel();
 
         // process
-        let (permuteTx, permuteRx) = mpsc::channel::<PermuteUpdate>();
-        let mut state = SharedState::init(permuteTx);
-        let mut state_callback: ProcessorCallback = Box::new(|_, _| {});
+        let (permute_tx, permute_rx) = mpsc::channel::<PermuteUpdate>();
+        let state = Arc::new(Mutex::new(SharedState::init(permute_tx)));
 
-        // Spawn a thread for processing database queries
-        // This will not block the JavaScript main thread and will continue executing
-        // concurrently.
+        // process thread
+        let js_state = Arc::clone(&state);
         thread::spawn(move || {
-            // Blocks until a callback is available
-            // When the instance of `Database` is dropped, the channel will be closed
-            // and `rx.recv()` will return an `Err`, ending the loop and terminating
-            // the thread.
             while let Ok(message) = rx.recv() {
+                let mut state = js_state.lock().unwrap();
                 match message {
-                    ProcessorMessage::SetStateCallback(f) => {
-                        // The connection and channel are owned by the thread, but _lent_ to
-                        // the callback. The callback has exclusive access to the connection
-                        // for the duration of the callback.
-                        // f(&channel, state.clone());
-                        state_callback = f;
+                    ProcessorMessage::GetStateCallback(f) => {
+                        f(&channel, state.clone());
                     }
-                    ProcessorMessage::Run => {
-                        println!("start");
+                    ProcessorMessage::Run(f) => {
                         state.run_process();
-                        println!("done")
+                        f(&channel, state.clone());
                     }
                     ProcessorMessage::AddFile(file) => {
                         state.add_file(file);
                     }
-                    // Immediately close the connection, even if there are pending messages
                     ProcessorMessage::Cancel => break,
                 }
             }
         });
 
+        let process_state = Arc::clone(&state);
+
+        // // processor/shared state updates thread.
         thread::spawn(move || {
-            while let Ok(message) = permuteRx.recv() {
+            while let Ok(message) = permute_rx.recv() {
+                let mut state = process_state.lock().unwrap();
                 match message {
                     PermuteUpdate::UpdatePermuteNodeCompleted(permutation, _, _) => {
-                        let percentage_progress: f64 = ((permutation.node_index as f64 + 1.0)
-                            / permutation.processors.len() as f64)
-                            * 100.0;
-                        println!("{}%", percentage_progress.round());
-                        // state_callback(&mut channel, state.clone());
+                        state.update_output_progress(permutation);
                     }
                     PermuteUpdate::UpdatePermuteNodeStarted(_, _, _) => {}
                     PermuteUpdate::UpdateSetProcessors(permutation, processors) => {
-                        let pretty_processors = processors
-                            .iter()
-                            .map(|p| get_processor_display_name(*p))
-                            .collect::<Vec<String>>();
-                        println!(
-                            "Permutating {} Processors {:#?}",
-                            permutation.output, pretty_processors
-                        );
-                        // state_callback(&channel, state);
+                        state.add_output_progress(permutation, processors);
+                        // let pretty_processors = processors
+                        //     .iter()
+                        //     .map(|p| get_processor_display_name(*p))
+                        //     .collect::<Vec<String>>();
+                        // println!(
+                        //     "Permutating {} Processors {:#?}",
+                        //     permutation.output, pretty_processors
+                        // );
                     }
                 }
             }
@@ -113,8 +96,6 @@ impl Processor {
         Ok(Self { tx })
     }
 
-    // Idiomatic rust would take an owned `self` to prevent use after close
-    // However, it's not possible to prevent JavaScript from continuing to hold a closed database
     fn cancel(&self) -> Result<(), mpsc::SendError<ProcessorMessage>> {
         self.tx.send(ProcessorMessage::Cancel)
     }
@@ -124,11 +105,14 @@ impl Processor {
         callback: impl FnOnce(&Channel, SharedState) + Send + 'static,
     ) -> Result<(), mpsc::SendError<ProcessorMessage>> {
         self.tx
-            .send(ProcessorMessage::SetStateCallback(Box::new(callback)))
+            .send(ProcessorMessage::GetStateCallback(Box::new(callback)))
     }
 
-    fn run(&self) -> Result<(), mpsc::SendError<ProcessorMessage>> {
-        self.tx.send(ProcessorMessage::Run)
+    fn run(
+        &self,
+        callback: impl FnOnce(&Channel, SharedState) + Send + 'static,
+    ) -> Result<(), mpsc::SendError<ProcessorMessage>> {
+        self.tx.send(ProcessorMessage::Run(Box::new(callback)))
     }
 
     fn add_file(&self, file: String) -> Result<(), mpsc::SendError<ProcessorMessage>> {
@@ -137,21 +121,15 @@ impl Processor {
 }
 
 // Methods exposed to JavaScript
-// The `JsBox` boxed `Database` is expected as the `this` value on all methods except `js_new`
 impl Processor {
     // Create a new instance of `Processor` and place it inside a `JsBox`
     // JavaScript can hold a reference to a `JsBox`, but the contents are opaque
-    fn js_new(mut cx: FunctionContext) -> JsResult<JsBox<Processor>> {
+    fn js_init(mut cx: FunctionContext) -> JsResult<JsBox<Processor>> {
         let processor = Processor::new(&mut cx).or_else(|err| cx.throw_error(err.to_string()))?;
 
         Ok(cx.boxed(processor))
     }
 
-    // Manually close a database connection
-    // After calling `close`, all other methods will fail
-    // It is not necessary to call `close` since the database will be closed when the wrapping
-    // `JsBox` is garbage collected. However, calling `close` allows the process to exit
-    // immediately instead of waiting on garbage collection. This is useful in tests.
     fn js_cancel(mut cx: FunctionContext) -> JsResult<JsUndefined> {
         // Get the `this` value as a `JsBox<Database>`
         cx.this()
@@ -162,13 +140,9 @@ impl Processor {
         Ok(cx.undefined())
     }
 
-    // Inserts a `name` into the database
-    // Accepts a `name` and a `callback` as parameters
-    fn js_set_state_callback(mut cx: FunctionContext) -> JsResult<JsUndefined> {
-        // Get the first argument as a `JsFunction`
+    fn js_get_state_callback(mut cx: FunctionContext) -> JsResult<JsUndefined> {
         let callback = cx.argument::<JsFunction>(0)?.root(&mut cx);
 
-        // Get the `this` value as a `JsBox<Database>`
         let processor = cx
             .this()
             .downcast_or_throw::<JsBox<Processor>, _>(&mut cx)?;
@@ -187,32 +161,43 @@ impl Processor {
                     Ok(())
                 });
             })
-            .or_else(|err| cx.throw_error(err.to_string()))?;
+            .or_else(|err| cx.throw_error(err.to_string()))
+            .unwrap();
 
-        // This function does not have a return value
         Ok(cx.undefined())
     }
 
     // Run process
     fn js_run_process(mut cx: FunctionContext) -> JsResult<JsUndefined> {
-        // Get the `this` value as a `JsBox<Database>`
+        let callback = cx.argument::<JsFunction>(0)?.root(&mut cx);
+
         let processor = cx
             .this()
             .downcast_or_throw::<JsBox<Processor>, _>(&mut cx)?;
 
         processor
-            .run()
-            .or_else(|err| cx.throw_error(err.to_string()))?;
+            .run(move |channel, state| {
+                channel.send(move |mut cx| {
+                    let callback = callback.into_inner(&mut cx);
+                    let this = cx.undefined();
 
-        // This function does not have a return value
+                    let js_state = format!("{:#?}", state);
+                    let args = vec![cx.string(js_state)];
+
+                    callback.call(&mut cx, this, args)?;
+
+                    Ok(())
+                });
+            })
+            .or_else(|err| cx.throw_error(err.to_string()))
+            .unwrap();
+
         Ok(cx.undefined())
     }
 
     fn js_add_file(mut cx: FunctionContext) -> JsResult<JsUndefined> {
-        // Get the first argument as a `JsString` and convert to a Rust `String`
         let file = cx.argument::<JsString>(0)?.value(&mut cx);
 
-        // Get the `this` value as a `JsBox<Database>`
         let processor = cx
             .this()
             .downcast_or_throw::<JsBox<Processor>, _>(&mut cx)?;
@@ -221,65 +206,15 @@ impl Processor {
             .add_file(file)
             .or_else(|err| cx.throw_error(err.to_string()))?;
 
-        // This function does not have a return value
         Ok(cx.undefined())
     }
-
-    // Get a `name` by `id` value
-    // Accepts an `id` and callback as parameters
-    // fn js_get_by_id(mut cx: FunctionContext) -> JsResult<JsUndefined> {
-    //     // Get the first argument as a `JsNumber` and convert to an `f64`
-    //     let id = cx.argument::<JsNumber>(0)?.value(&mut cx);
-
-    //     // Get the second argument as a `JsFunction`
-    //     let callback = cx.argument::<JsFunction>(1)?.root(&mut cx);
-
-    //     // Get the `this` value as a `JsBox<Database>`
-    //     let db = cx
-    //         .this()
-    //         .downcast_or_throw::<JsBox<Processor>, _>(&mut cx)?;
-
-    //     db.set_state_callback(move |channel| {
-    //         // let result: Result<String, _> = conn
-    //         //     .prepare("SELECT name FROM person WHERE id = ?")
-    //         //     .and_then(|mut stmt| stmt.query_row(rusqlite::params![id], |row| row.get(0)));
-
-    //         channel.send(move |mut cx| {
-    //             let callback = callback.into_inner(&mut cx);
-    //             let this = cx.undefined();
-    //             // let args: Vec<Handle<JsValue>> = match result {
-    //             //     // Convert the name to a `JsString` on success and upcast to a `JsValue`
-    //             //     Ok(name) => vec![cx.null().upcast(), cx.string(name).upcast()],
-
-    //             //     // If the row was not found, return `undefined` as a success instead
-    //             //     // of throwing an exception
-    //             //     Err(rusqlite::Error::QueryReturnedNoRows) => {
-    //             //         vec![cx.null().upcast(), cx.undefined().upcast()]
-    //             //     }
-
-    //             //     // Convert the error to a JavaScript exception on failure
-    //             //     Err(err) => vec![cx.error(err.to_string())?.upcast()],
-    //             // };
-    //             let args = vec![cx.undefined()];
-
-    //             callback.call(&mut cx, this, args)?;
-
-    //             Ok(())
-    //         });
-    //     })
-    //     .or_else(|err| cx.throw_error(err.to_string()))?;
-
-    //     // This function does not have a return value
-    //     Ok(cx.undefined())
-    // }
 }
 
 #[neon::main]
 fn main(mut cx: ModuleContext) -> NeonResult<()> {
-    cx.export_function("databaseNew", Processor::js_new)?;
-    cx.export_function("databaseClose", Processor::js_cancel)?;
-    cx.export_function("setStateCallback", Processor::js_set_state_callback)?;
-    // cx.export_function("databaseGetById", Processor::js_get_by_id)?;
+    cx.export_function("init", Processor::js_init)?;
+    cx.export_function("cancel", Processor::js_cancel)?;
+    cx.export_function("getStateCallback", Processor::js_get_state_callback)?;
     cx.export_function("runProcess", Processor::js_run_process)?;
     cx.export_function("addFile", Processor::js_add_file)?;
 

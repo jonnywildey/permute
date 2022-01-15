@@ -13,43 +13,55 @@
 
 
 "use strict";
-const { databaseNew, databaseClose, runProcess, addFile, setStateCallback } = require("./permute-library");
+const { init, cancel, runProcess, addFile, getStateCallback } = require("./permute-library");
 
 
 
 // Wrapper class for the boxed `Database` for idiomatic JavaScript usage
 class Processor {
   constructor() {
-    this.db = databaseNew();
+    this.permuteLibrary = init();
+    this.pollHandle = undefined;
   }
 
-  close() {
-    databaseClose.call(this.db);
+  cancel() {
+    cancel.call(this.permuteLibrary);
   }
 
-  runProcess() {
-    return runProcess.call(this.db);
+  pollForStateUpdates(cb) {
+    this.pollHandle = setInterval(() => { });
+  }
+
+  runProcess(cb) {
+    this.pollHandle = setInterval(() => {
+      getStateCallback.call(this.permuteLibrary, cb);
+    });
+    return runProcess.call(this.permuteLibrary, (state) => {
+      clearInterval(this.pollHandle);
+      cb(state);
+    }, 50);
   }
 
   addFile(file) {
-    return addFile.call(this.db, file);
+    return addFile.call(this.permuteLibrary, file);
   }
 
-  setStateCallback(cb) {
-    return setStateCallback.call(this.db, cb);
+  getStateCallback(cb) {
+    return getStateCallback.call(this.permuteLibrary, cb);
   }
 }
 
-const runDb = async () => {
+const run = async () => {
   const processor = new Processor();
   processor.addFile("/Users/jonnywildey/rustcode/permute/permute-core/examples/vibebeep24.wav");
-  processor.setStateCallback((state) => {
+  processor.getStateCallback((state) => {
     console.log(state);
   });
-  processor.runProcess();
+  processor.runProcess((state) => {
+    console.log("woo", state)
+  });
 }
 
-runDb();
+run();
 
-setTimeout(() => { }, 30000);
 

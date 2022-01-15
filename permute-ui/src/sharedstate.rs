@@ -6,6 +6,7 @@ use permute::process::*;
 
 #[derive(Debug, Clone)]
 pub struct SharedState {
+    // permute file params
     pub files: Vec<String>,
     pub output: String,
     pub input_trail: f64,
@@ -18,6 +19,8 @@ pub struct SharedState {
     pub processor_count: Option<i32>,
 
     pub update_sender: mpsc::Sender<PermuteUpdate>,
+
+    pub permutation_outputs: Vec<OutputProgress>,
 }
 
 impl SharedState {
@@ -45,6 +48,7 @@ impl SharedState {
                 PermuteNodeName::Flutter,
                 PermuteNodeName::Chorus,
             ],
+            permutation_outputs: vec![],
         }
     }
 
@@ -68,40 +72,48 @@ impl SharedState {
         let _ = &self.files.push(file);
     }
 
-    pub fn run_process(&self) {
+    pub fn add_output_progress(
+        &mut self,
+        permutation: Permutation,
+        processors: Vec<PermuteNodeName>,
+    ) {
+        let output = permutation.output.clone();
+        let _ = &self.permutation_outputs.push(OutputProgress {
+            output,
+            permutation: permutation.clone(),
+            processors,
+            progress: 0,
+        });
+    }
+
+    pub fn update_output_progress(&mut self, permutation: Permutation) {
+        let percentage_progress: f64 =
+            ((permutation.node_index as f64 + 1.0) / permutation.processors.len() as f64) * 100.0;
+
+        for op in self.permutation_outputs.iter_mut() {
+            if op.output == permutation.output {
+                op.progress = percentage_progress as i32;
+                op.permutation = permutation.clone();
+            }
+        }
+    }
+
+    pub fn run_process(&mut self) {
+        self.permutation_outputs = vec![];
         let permute_params = Self::to_permute_params(&self);
+
         permute_files(permute_params);
     }
 }
 
 impl Finalize for SharedState {}
 
-// fn update(tx: mpsc::Sender<SharedStateType>) {
-//     thread::spawn(move || {
-//         for _ in 1..10 {
-//             add_file();
-//             let value = get_state();
-//             tx.send(value).unwrap();
-//             // callback.call(&mut cx, cx.undefined(), [cx.number(value)]);
-//             thread::sleep(Duration::from_millis(1000));
-//         }
-//     });
-// }
+#[derive(Debug, Clone)]
+pub struct OutputProgress {
+    pub output: String,
+    pub progress: i32,
+    pub permutation: Permutation,
+    pub processors: Vec<PermuteNodeName>,
+}
 
-// #[neon::main]
-// fn main(mut cx: ModuleContext) -> NeonResult<()> {
-//     // thread::spawn(|| {
-//     //     for _ in 1..10 {
-//     //         increment();
-//     //         thread::sleep(Duration::from_millis(1000));
-//     //     }
-//     // });
-//     let c = cx.channel();
-
-//     cx.export_function("addFile", js_add_file)?;
-//     cx.export_function("getState", js_get_state)?;
-//     cx.export_function("registerUpdates", js_register_updates)?;
-//     cx.export_function("runProcess", js_run_process)?;
-
-//     Ok(())
-// }
+impl Finalize for OutputProgress {}
