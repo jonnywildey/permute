@@ -2,8 +2,9 @@ mod permute_files;
 mod process;
 mod random_process;
 
+use std::{sync::mpsc, thread};
+
 use permute_files::*;
-use process::*;
 use structopt::StructOpt;
 
 use crate::process::PermuteNodeName;
@@ -63,45 +64,43 @@ fn main() {
         _ => Some(args.processor_count),
     };
 
-    permute_files(PermuteFilesParams {
-        files: vec![args.file],
-        output: args.output,
-        input_trail: args.input_trail,
-        output_trail: args.output_trail,
-        permutations: args.permutations,
-        permutation_depth: args.permutation_depth,
-        processor_pool: processor_pool,
-        high_sample_rate: args.high_sample_rate,
-        normalise_at_end: args.normalise,
-        update_permute_node_progress,
-        update_set_processors,
-        processor_count,
-    });
-}
+    let (tx, rx) = mpsc::channel::<PermuteUpdate>();
 
-fn update_permute_node_progress(
-    permutation: Permutation,
-    _: PermuteNodeName,
-    event: PermuteNodeEvent,
-) {
-    match event {
-        PermuteNodeEvent::NodeProcessStarted => {}
-        PermuteNodeEvent::NodeProcessComplete => {
-            let percentage_progress: f64 = ((permutation.node_index as f64 + 1.0)
-                / permutation.processors.len() as f64)
-                * 100.0;
-            println!("{}%", percentage_progress.round())
+    let handle = thread::spawn(move || {
+        permute_files(PermuteFilesParams {
+            files: vec![args.file],
+            output: args.output,
+            input_trail: args.input_trail,
+            output_trail: args.output_trail,
+            permutations: args.permutations,
+            permutation_depth: args.permutation_depth,
+            processor_pool: processor_pool,
+            high_sample_rate: args.high_sample_rate,
+            normalise_at_end: args.normalise,
+            update_sender: tx,
+            processor_count,
+        });
+    });
+
+    while let Ok(message) = rx.recv() {
+        match message {
+            PermuteUpdate::UpdatePermuteNodeCompleted(permutation, _, _) => {
+                let percentage_progress: f64 = ((permutation.node_index as f64 + 1.0)
+                    / permutation.processors.len() as f64)
+                    * 100.0;
+                println!("{}%", percentage_progress.round());
+            }
+            PermuteUpdate::UpdatePermuteNodeStarted(_, _, _) => {}
+            PermuteUpdate::UpdateSetProcessors(permutation, processors) => {
+                let pretty_processors = processors
+                    .iter()
+                    .map(|p| get_processor_display_name(*p))
+                    .collect::<Vec<String>>();
+                println!(
+                    "Permutating {} Processors {:#?}",
+                    permutation.output, pretty_processors
+                );
+            }
         }
     }
-}
-
-fn update_set_processors(permutation: Permutation, processors: Vec<PermuteNodeName>) {
-    let pretty_processors = processors
-        .iter()
-        .map(|p| get_processor_display_name(*p))
-        .collect::<Vec<String>>();
-    println!(
-        "Permutating {} Processors {:#?}",
-        permutation.output, pretty_processors
-    );
 }

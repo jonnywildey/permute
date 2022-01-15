@@ -5,14 +5,16 @@
 - [Neon electron app](https://github.com/neon-bindings/neon) [Example](https://keminglabs.com/blog/building-a-fast-electron-app-with-rust/)
 - [Druid](https://linebender.org/druid/)
 - [Iced](https://github.com/iced-rs/iced)
+- [Dioxus](https://github.com/DioxusLabs/dioxus)
 
+Chakra-ui component library
 
 ## Features
-- Hi quality mode (run at 192k)
-- Add node path vector to params, so we can log names
-- Separate out cli layer and core layer
-- UI
-- overload option rather than normalise
+- Hi quality mode (run at 192k) (Somewhat working)
+- Add node path vector to params, so we can log names (T)
+- Separate out cli layer and core layer (T)
+- UI 
+- overload option rather than normalise (T)
 
 ## FX Ideas
 
