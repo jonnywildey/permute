@@ -1,4 +1,4 @@
-use crate::process::*;
+use crate::{permute_files::PermuteUpdate, process::*};
 use rand::prelude::*;
 
 pub struct GetProcessorNodeParams {
@@ -68,13 +68,13 @@ pub fn get_processor_function(name: PermuteNodeName) -> ProcessorFn {
 
 // Random processors
 
-pub fn random_metallic_delay(params: ProcessorParams) -> ProcessorParams {
-    let update_progress = params.update_progress;
-    update_progress(
+pub fn random_metallic_delay(params: &ProcessorParams) -> ProcessorParams {
+    let update_sender = params.update_sender.to_owned();
+    update_sender.send(PermuteUpdate::UpdatePermuteNodeStarted(
         params.permutation.clone(),
         PermuteNodeName::MetallicDelay,
         PermuteNodeEvent::NodeProcessStarted,
-    );
+    ));
     let mut rng = thread_rng();
 
     let sec_10 = (params.spec.sample_rate as f64 * 0.1) as usize;
@@ -85,23 +85,23 @@ pub fn random_metallic_delay(params: ProcessorParams) -> ProcessorParams {
         wet_gain_factor: rng.gen_range(0.3..1_f64),
     };
 
-    let new_params = delay_line(params.clone(), delay_params);
-    update_progress(
+    let new_params = delay_line(&params.clone(), &delay_params);
+    update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
         params.permutation.clone(),
         PermuteNodeName::MetallicDelay,
         PermuteNodeEvent::NodeProcessComplete,
-    );
+    ));
     new_params
 }
 
-pub fn random_rhythmic_delay(params: ProcessorParams) -> ProcessorParams {
-    let update_progress = params.update_progress;
+pub fn random_rhythmic_delay(params: &ProcessorParams) -> ProcessorParams {
+    let update_sender = params.update_sender.to_owned();
     let permutation = params.permutation.clone();
-    update_progress(
+    update_sender.send(PermuteUpdate::UpdatePermuteNodeStarted(
         params.permutation.clone(),
         PermuteNodeName::RhythmicDelay,
         PermuteNodeEvent::NodeProcessStarted,
-    );
+    ));
     let mut rng = thread_rng();
 
     let sec_10 = (params.spec.sample_rate as f64 * 0.1) as usize;
@@ -113,105 +113,105 @@ pub fn random_rhythmic_delay(params: ProcessorParams) -> ProcessorParams {
         wet_gain_factor: 1_f64,
     };
 
-    let new_params = delay_line(params, delay_params);
-    update_progress(
+    let new_params = delay_line(&params, &delay_params);
+    update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
         permutation,
         PermuteNodeName::RhythmicDelay,
         PermuteNodeEvent::NodeProcessComplete,
-    );
+    ));
     new_params
 }
 
-pub fn half_speed(params: ProcessorParams) -> ProcessorParams {
-    let update_progress = params.update_progress;
+pub fn half_speed(params: &ProcessorParams) -> ProcessorParams {
+    let update_sender = params.update_sender.to_owned();
     let permutation = params.permutation.clone();
-    update_progress(
+    update_sender.send(PermuteUpdate::UpdatePermuteNodeStarted(
         params.permutation.clone(),
         PermuteNodeName::HalfSpeed,
         PermuteNodeEvent::NodeProcessStarted,
-    );
-    let new_samples = change_speed(params, 0.5_f64);
-    update_progress(
+    ));
+    let new_samples = change_speed(params.to_owned(), 0.5_f64);
+    update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
         permutation,
         PermuteNodeName::HalfSpeed,
         PermuteNodeEvent::NodeProcessComplete,
-    );
+    ));
     new_samples
 }
-pub fn double_speed(params: ProcessorParams) -> ProcessorParams {
-    let update_progress = params.update_progress;
+pub fn double_speed(params: &ProcessorParams) -> ProcessorParams {
+    let update_sender = params.update_sender.to_owned();
     let permutation = params.permutation.clone();
-    update_progress(
+    update_sender.send(PermuteUpdate::UpdatePermuteNodeStarted(
         params.permutation.clone(),
         PermuteNodeName::DoubleSpeed,
         PermuteNodeEvent::NodeProcessStarted,
-    );
-    let new_samples = change_speed(params, 2_f64);
-    update_progress(
+    ));
+    let new_samples = change_speed(params.to_owned(), 2_f64);
+    update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
         permutation,
         PermuteNodeName::DoubleSpeed,
         PermuteNodeEvent::NodeProcessComplete,
-    );
+    ));
     new_samples
 }
 
-pub fn random_wow(params: ProcessorParams) -> ProcessorParams {
-    let update_progress = params.update_progress;
+pub fn random_wow(params: &ProcessorParams) -> ProcessorParams {
+    let update_sender = params.update_sender.to_owned();
     let permutation = params.permutation.clone();
-    update_progress(
+    update_sender.send(PermuteUpdate::UpdatePermuteNodeStarted(
         params.permutation.clone(),
         PermuteNodeName::Wow,
         PermuteNodeEvent::NodeProcessStarted,
-    );
+    ));
     let mut rng = thread_rng();
 
     let new_samples = vibrato(
-        params,
+        params.to_owned(),
         VibratoParams {
             speed_hz: rng.gen_range(0.2_f64..1.6_f64),
             depth: rng.gen_range(0.3_f64..0.7_f64),
         },
     );
-    update_progress(
+    update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
         permutation,
         PermuteNodeName::Wow,
         PermuteNodeEvent::NodeProcessComplete,
-    );
+    ));
     new_samples
 }
-pub fn random_flutter(params: ProcessorParams) -> ProcessorParams {
-    let update_progress = params.update_progress;
+pub fn random_flutter(params: &ProcessorParams) -> ProcessorParams {
+    let update_sender = params.update_sender.to_owned();
     let permutation = params.permutation.clone();
-    update_progress(
+    update_sender.send(PermuteUpdate::UpdatePermuteNodeStarted(
         params.permutation.clone(),
         PermuteNodeName::Flutter,
         PermuteNodeEvent::NodeProcessStarted,
-    );
+    ));
     let mut rng = thread_rng();
 
     let new_samples = vibrato(
-        params,
+        params.to_owned(),
         VibratoParams {
             speed_hz: rng.gen_range(3_f64..20_f64),
             depth: rng.gen_range(0.05_f64..0.5_f64),
         },
     );
-    update_progress(
+    update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
         permutation,
         PermuteNodeName::Flutter,
         PermuteNodeEvent::NodeProcessComplete,
-    );
+    ));
     new_samples
 }
 
-pub fn random_chorus(params: ProcessorParams) -> ProcessorParams {
-    let update_progress = params.update_progress;
+pub fn random_chorus(params: &ProcessorParams) -> ProcessorParams {
+    let update_sender = params.update_sender.to_owned();
     let permutation = params.permutation.clone();
-    update_progress(
+    update_sender.send(PermuteUpdate::UpdatePermuteNodeStarted(
         params.permutation.clone(),
         PermuteNodeName::Chorus,
         PermuteNodeEvent::NodeProcessStarted,
-    );
+    ));
     let mut rng = thread_rng();
 
     let millis_low = (params.spec.sample_rate as f64 / 1000_f64 * 4_f64) as usize;
@@ -229,33 +229,33 @@ pub fn random_chorus(params: ProcessorParams) -> ProcessorParams {
     };
 
     let new_samples = chorus(
-        params,
+        params.to_owned(),
         ChorusParams {
             delay_params,
             vibrato_params,
         },
     );
-    update_progress(
+    update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
         permutation,
         PermuteNodeName::Chorus,
         PermuteNodeEvent::NodeProcessComplete,
-    );
+    ));
     new_samples
 }
 
-pub fn normalise(params: ProcessorParams) -> ProcessorParams {
-    let update_progress = params.update_progress;
+pub fn normalise(params: &ProcessorParams) -> ProcessorParams {
+    let update_sender = params.update_sender.to_owned();
     let permutation = params.permutation.clone();
-    update_progress(
+    update_sender.send(PermuteUpdate::UpdatePermuteNodeStarted(
         permutation.clone(),
         PermuteNodeName::Normalise,
         PermuteNodeEvent::NodeProcessStarted,
-    );
-    let new_samples = ceiling(params, 1_f64);
-    update_progress(
+    ));
+    let new_samples = ceiling(params.to_owned(), 1_f64);
+    update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
         permutation,
         PermuteNodeName::Normalise,
         PermuteNodeEvent::NodeProcessComplete,
-    );
+    ));
     new_samples
 }
