@@ -2,6 +2,9 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electron', {
   ipcRenderer: {
+    openOutputDialog() {
+      ipcRenderer.invoke('open-output-dialog');
+    },
     myPing() {
       ipcRenderer.send('ipc-example', 'ping');
     },

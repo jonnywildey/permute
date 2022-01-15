@@ -1,50 +1,52 @@
 import { MemoryRouter as Router, Routes, Route } from 'react-router-dom';
-import icon from '../../assets/icon.svg';
+// import icon from '../../assets/icon.svg';
 import './App.css';
+import { ChakraProvider, chakra, Box, extendTheme, Grid, GridItem } from '@chakra-ui/react';
 
 const Hello = () => {
   return (
-    <div>
-      <div className="Hello">
-        <img width="200px" alt="icon" src={icon} />
-      </div>
-      <h1>electron-react-boilerplate</h1>
-      <div className="Hello">
-        <a
-          href="https://electron-react-boilerplate.js.org/"
-          target="_blank"
-          rel="noreferrer"
-        >
-          <button type="button">
-            <span role="img" aria-label="books">
-              📚
-            </span>
-            Read our docs
-          </button>
-        </a>
-        <a
-          href="https://github.com/sponsors/electron-react-boilerplate"
-          target="_blank"
-          rel="noreferrer"
-        >
-          <button type="button">
-            <span role="img" aria-label="books">
-              🙏
-            </span>
-            Donate
-          </button>
-        </a>
-      </div>
-    </div>
+    <Box bgGradient='linear(to-r, green.200, pink.500)' w="100%" h="100vh">
+      <Grid
+  h='100vh'
+  templateRows='repeat(12, 1fr)'
+  templateColumns='repeat(12, 1fr)'
+  gap={0}
+>
+    <TopBar />
+      <Files />
+  <GridItem rowSpan={9} colSpan={6}  bg='papayawhip' />
+  <Output />
+  <GridItem rowSpan={2} colSpan={12} bg='purple' />
+</Grid>
+    </Box>
   );
 };
 
+
+import { createBreakpoints } from '@chakra-ui/theme-tools'
+import { Files } from './Files';
+import { TopBar } from './TopBar';
+import { Output } from './Output';
+
+const theme = extendTheme(
+
+     createBreakpoints({
+      sm: '1200em',
+      md: '1200em',
+      lg: '1200em',
+      xl: '1200em',
+      '2xl': '1200em',
+  })
+);
+
 export default function App() {
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<Hello />} />
-      </Routes>
-    </Router>
+    <ChakraProvider theme={theme}>
+      <Router>
+        <Routes>
+          <Route path="/" element={<Hello />} />
+        </Routes>
+      </Router>
+    </ChakraProvider>
   );
 }
