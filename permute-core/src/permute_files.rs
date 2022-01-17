@@ -1,5 +1,7 @@
 use std::path::Path;
 use std::sync::mpsc;
+use std::thread;
+use std::thread::JoinHandle;
 
 use crate::process::*;
 use crate::random_process::*;
@@ -8,6 +10,7 @@ pub enum PermuteUpdate {
     UpdatePermuteNodeStarted(Permutation, PermuteNodeName, PermuteNodeEvent),
     UpdatePermuteNodeCompleted(Permutation, PermuteNodeName, PermuteNodeEvent),
     UpdateSetProcessors(Permutation, Vec<PermuteNodeName>),
+    ProcessComplete,
 }
 
 #[derive(Debug, Clone)]
@@ -26,12 +29,18 @@ pub struct PermuteFilesParams {
     pub update_sender: mpsc::Sender<PermuteUpdate>,
 }
 
-pub fn permute_files(params: PermuteFilesParams) {
-    let copied_params = params.clone();
-    let files = params.files;
-    for i in 0..files.len() {
-        permute_file(copied_params.clone(), files[i].clone())
-    }
+pub fn permute_files(params: PermuteFilesParams) -> JoinHandle<()> {
+    thread::spawn(|| {
+        let copied_params = params.clone();
+        let files = params.files;
+        for i in 0..files.len() {
+            permute_file(copied_params.clone(), files[i].clone());
+        }
+        params
+            .update_sender
+            .send(PermuteUpdate::ProcessComplete)
+            .unwrap();
+    })
 }
 
 fn permute_file(
@@ -117,7 +126,7 @@ fn permute_file(
             permutation: permutation.clone(),
             update_sender: update_sender.to_owned(),
         };
-        update_sender.send(PermuteUpdate::UpdateSetProcessors(
+        let _ = update_sender.send(PermuteUpdate::UpdateSetProcessors(
             permutation.clone(),
             processors,
         ));

@@ -4,9 +4,9 @@ use neon::prelude::*;
 use permute::permute_files::*;
 use sharedstate::*;
 use std::fmt::Error;
-use std::rc::Rc;
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
+use std::time::Duration;
 
 type ProcessorCallback = Box<dyn FnOnce(&Channel, SharedState) + Send>;
 
@@ -80,6 +80,9 @@ impl Processor {
                     PermuteUpdate::UpdatePermuteNodeStarted(_, _, _) => {}
                     PermuteUpdate::UpdateSetProcessors(permutation, processors) => {
                         state.add_output_progress(permutation, processors);
+                    }
+                    PermuteUpdate::ProcessComplete => {
+                        state.set_finished();
                     }
                 }
             }

@@ -1,6 +1,6 @@
 const { init, cancel, runProcess, addFile, getStateCallback } = require("../permute-library");
 
-const PERMUTE_POLL_LATENCY = 50;
+const PERMUTE_POLL_LATENCY = 200;
 
 export type PermuteState = any;
 
@@ -17,17 +17,16 @@ export function createPermuteProcessor() {
     cancel() {
       cancel.call(permuteLibrary);
     },
-    pollForStateUpdates(cb: GetStateCallback) {
-      pollHandle = setInterval(() => { });
-    },
-    runProcess(cb: GetStateCallback) {
+    runProcess(updateFn: GetStateCallback) {
       pollHandle = setInterval(() => {
-        getStateCallback.call(permuteLibrary, cb);
-      });
-      return runProcess.call(permuteLibrary, (state: PermuteState) => {
-        clearInterval(pollHandle!);
-        cb(state);
+        getStateCallback.call(permuteLibrary, (state: PermuteState) => {
+          if (state.finished) {
+            clearInterval(pollHandle!);
+          }
+          updateFn(state);
+        });
       }, PERMUTE_POLL_LATENCY);
+      return runProcess.call(permuteLibrary);
     },
     addFile(file: string) {
       return addFile.call(permuteLibrary, file);
@@ -37,18 +36,4 @@ export function createPermuteProcessor() {
     }
   }
 }
-
-// const run = async () => {
-//   const processor = createPermuteProcessor();
-//   processor.addFile("/Users/jonnywildey/rustcode/permute/permute-core/examples/vibebeep24.wav");
-//   processor.getStateCallback((state) => {
-//     console.log(state);
-//   });
-//   processor.runProcess((state) => {
-//     console.log("woo", state)
-//   });
-// }
-
-// run();
-
 

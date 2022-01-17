@@ -1,4 +1,7 @@
 use std::sync::mpsc;
+use std::thread;
+use std::thread::JoinHandle;
+use std::time::Duration;
 
 use neon::prelude::*;
 use permute::permute_files::*;
@@ -19,7 +22,7 @@ pub struct SharedState {
     pub processor_count: Option<i32>,
 
     pub update_sender: mpsc::Sender<PermuteUpdate>,
-
+    pub finished: bool,
     pub permutation_outputs: Vec<OutputProgress>,
 }
 
@@ -48,6 +51,7 @@ impl SharedState {
                 PermuteNodeName::Flutter,
                 PermuteNodeName::Chorus,
             ],
+            finished: false,
             permutation_outputs: vec![],
         }
     }
@@ -87,22 +91,32 @@ impl SharedState {
     }
 
     pub fn update_output_progress(&mut self, permutation: Permutation) {
+        println!("here");
         let percentage_progress: f64 =
             ((permutation.node_index as f64 + 1.0) / permutation.processors.len() as f64) * 100.0;
 
-        for op in self.permutation_outputs.iter_mut() {
-            if op.output == permutation.output {
+        let op = self
+            .permutation_outputs
+            .iter_mut()
+            .find(|op| op.output == permutation.output);
+        match op {
+            Some(op) => {
                 op.progress = percentage_progress as i32;
                 op.permutation = permutation.clone();
             }
+            None => {}
         }
     }
 
-    pub fn run_process(&mut self) {
+    pub fn set_finished(&mut self) {
+        self.finished = true;
+    }
+
+    pub fn run_process(&mut self) -> JoinHandle<()> {
         self.permutation_outputs = vec![];
         let permute_params = Self::to_permute_params(&self);
 
-        permute_files(permute_params);
+        permute_files(permute_params)
     }
 }
 

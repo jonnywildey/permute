@@ -57,7 +57,7 @@ pub fn reverse(
         permutation,
     }: &ProcessorParams,
 ) -> ProcessorParams {
-    update_sender.send(PermuteUpdate::UpdatePermuteNodeStarted(
+    let _ = update_sender.send(PermuteUpdate::UpdatePermuteNodeStarted(
         permutation.clone(),
         PermuteNodeName::Reverse,
         PermuteNodeEvent::NodeProcessStarted,
@@ -71,7 +71,7 @@ pub fn reverse(
         new_samples[i] = samples[sample_i as usize];
     }
 
-    update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
+    let _ = update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
         permutation.clone(),
         PermuteNodeName::Reverse,
         PermuteNodeEvent::NodeProcessComplete,
@@ -119,7 +119,7 @@ pub fn change_sample_rate_high(params: &ProcessorParams) -> ProcessorParams {
     let new_params = params.clone();
     let update_sender = params.update_sender.to_owned();
     let permutation = params.permutation.to_owned();
-    update_sender.send(PermuteUpdate::UpdatePermuteNodeStarted(
+    let _ = update_sender.send(PermuteUpdate::UpdatePermuteNodeStarted(
         permutation.clone(),
         PermuteNodeName::SampleRateConversionHigh,
         PermuteNodeEvent::NodeProcessStarted,
@@ -135,7 +135,7 @@ pub fn change_sample_rate_high(params: &ProcessorParams) -> ProcessorParams {
     new_params.permutation.original_sample_rate = params.spec.sample_rate;
     new_params.spec.sample_rate = new_sample_rate;
 
-    update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
+    let _ = update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
         new_params.permutation.clone(),
         PermuteNodeName::SampleRateConversionHigh,
         PermuteNodeEvent::NodeProcessComplete,
@@ -148,7 +148,7 @@ pub fn change_sample_rate_original(params: &ProcessorParams) -> ProcessorParams 
     let update_sender = params.update_sender.to_owned();
 
     let permutation = params.permutation.to_owned();
-    update_sender.send(PermuteUpdate::UpdatePermuteNodeStarted(
+    let _ = update_sender.send(PermuteUpdate::UpdatePermuteNodeStarted(
         permutation.clone(),
         PermuteNodeName::SampleRateConversionOriginal,
         PermuteNodeEvent::NodeProcessStarted,
@@ -156,7 +156,7 @@ pub fn change_sample_rate_original(params: &ProcessorParams) -> ProcessorParams 
 
     let new_params = change_sample_rate(new_params, permutation.original_sample_rate);
 
-    update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
+    let _ = update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
         new_params.permutation.clone(),
         PermuteNodeName::SampleRateConversionOriginal,
         PermuteNodeEvent::NodeProcessComplete,
@@ -386,7 +386,7 @@ pub struct VibratoParams {
 pub fn vibrato(
     ProcessorParams {
         samples,
-        sample_length,
+        sample_length: _,
         spec,
         update_sender,
         permutation,
@@ -446,7 +446,7 @@ pub struct ChorusParams {
 }
 
 pub fn chorus(
-    mut params: ProcessorParams,
+    params: ProcessorParams,
     ChorusParams {
         delay_params,
         vibrato_params,

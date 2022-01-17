@@ -185,7 +185,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "permute-ui"
+name = "permute-node"
 version = "0.1.0"
 dependencies = [
  "neon",
