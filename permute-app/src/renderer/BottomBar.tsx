@@ -2,9 +2,13 @@ import { GridItem, Button } from "@chakra-ui/react";
 
 
 export const BottomBar: React.FC = () => {
+
+  const update = (state) => {
+    console.log(state);
+  }
   
-  const onClick = () => {
-    console.log("Clicked run");
+  const onClick = async () => {
+     window.Electron.ipcRenderer.runProcessor(update, update);
   }
 
   return (

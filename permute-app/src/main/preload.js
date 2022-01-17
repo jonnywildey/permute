@@ -6,6 +6,20 @@ contextBridge.exposeInMainWorld('Electron', {
       ipcRenderer.once('open-output-dialog', (event, ...args) => f(...args));
       ipcRenderer.send('open-output-dialog');
     },
+    runProcessor(updateFn, completeFn) {
+      const listener = (event, ...args) => {
+        console.log("update");
+        updateFn(...args)
+      };
+      ipcRenderer.on('run-processor-update', listener);
+      ipcRenderer.once('run-processor-ended', (event, ...args) => {
+        console.log("ended");
+        ipcRenderer.removeListener('run-processor-update', listener);
+        completeFn(...args)
+      });
+      ipcRenderer.send('run-processor');
+
+    },
     myPing() {
       ipcRenderer.send('ipc-example', 'ping');
     },
