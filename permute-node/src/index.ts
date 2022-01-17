@@ -9,7 +9,7 @@ export type GetStateCallback = (state: PermuteState) => void;
 /**
  * Wrapper for the boxed `Processor`
  */
-function createPermuteProcessor() {
+export function createPermuteProcessor() {
   const permuteLibrary = init();
   let pollHandle: NodeJS.Timer | undefined = undefined;
 
@@ -38,17 +38,17 @@ function createPermuteProcessor() {
   }
 }
 
-const run = async () => {
-  const processor = createPermuteProcessor();
-  processor.addFile("/Users/jonnywildey/rustcode/permute/permute-core/examples/vibebeep24.wav");
-  processor.getStateCallback((state) => {
-    console.log(state);
-  });
-  processor.runProcess((state) => {
-    console.log("woo", state)
-  });
-}
+// const run = async () => {
+//   const processor = createPermuteProcessor();
+//   processor.addFile("/Users/jonnywildey/rustcode/permute/permute-core/examples/vibebeep24.wav");
+//   processor.getStateCallback((state) => {
+//     console.log(state);
+//   });
+//   processor.runProcess((state) => {
+//     console.log("woo", state)
+//   });
+// }
 
-run();
+// run();
 
 

@@ -1,7 +1,7 @@
 import { MemoryRouter as Router, Routes, Route } from 'react-router-dom';
 // import icon from '../../assets/icon.svg';
 import './App.css';
-import { ChakraProvider, chakra, Box, extendTheme, Grid, GridItem } from '@chakra-ui/react';
+import { ChakraProvider, Box, extendTheme, Grid, GridItem } from '@chakra-ui/react';
 
 const Hello = () => {
   return (

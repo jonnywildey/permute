@@ -1,10 +1,14 @@
-import { Button, GridItem, Heading, Input } from "@chakra-ui/react";
+import { Button, GridItem, Heading } from "@chakra-ui/react";
+
+import { createPermuteProcessor } from "../../../permute-node";
 
 export const Output: React.FC = () => {
   const onClick = async () => {
-     window.electron.ipcRenderer.openOutputDialog((arg) => {
+     window.Electron.ipcRenderer.openOutputDialog((arg) => {
       // eslint-disable-next-line no-console
       console.log(arg);
+
+      createPermuteProcessor();
     });
       
   }

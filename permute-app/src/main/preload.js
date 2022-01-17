@@ -1,6 +1,6 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
-contextBridge.exposeInMainWorld('electron', {
+contextBridge.exposeInMainWorld('Electron', {
   ipcRenderer: {
     openOutputDialog(f) {
       ipcRenderer.once('open-output-dialog', (event, ...args) => f(...args));
