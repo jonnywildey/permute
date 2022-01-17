@@ -16,7 +16,7 @@ const Hello = () => {
       <Files />
   <GridItem rowSpan={9} colSpan={6}  bg='papayawhip' />
   <Output />
-  <GridItem rowSpan={2} colSpan={12} bg='purple' />
+  <BottomBar />
 </Grid>
     </Box>
   );
@@ -27,6 +27,7 @@ import { createBreakpoints } from '@chakra-ui/theme-tools'
 import { Files } from './Files';
 import { TopBar } from './TopBar';
 import { Output } from './Output';
+import { BottomBar } from './BottomBar';
 
 const theme = extendTheme(
 
