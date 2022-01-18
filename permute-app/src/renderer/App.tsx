@@ -1,9 +1,23 @@
-import { MemoryRouter as Router, Routes, Route } from 'react-router-dom';
 // import icon from '../../assets/icon.svg';
 import './App.css';
-import { ChakraProvider, Box, extendTheme, Grid, GridItem } from '@chakra-ui/react';
+import { ChakraProvider, Box, Grid, GridItem } from '@chakra-ui/react';
+import { Files } from './Files';
+import { TopBar } from './TopBar';
+import { Output } from './Output';
+import { BottomBar } from './BottomBar';
+import { theme } from './theme';
+import type { IPermuteState } from "permute-node";
+import { useState } from 'react';
 
-const Hello = () => {
+const Content = () => {
+  const [state, setState] = useState<IPermuteState>({ files: [] } as any);
+
+  const refreshState = async () => {
+    const state = await window.Electron.ipcRenderer.getState();
+    console.log(state);
+    setState(state);
+  }
+
   return (
     <Box bgGradient='linear(to-r, green.200, pink.500)' w="100%" h="100vh">
       <Grid
@@ -13,7 +27,7 @@ const Hello = () => {
   gap={0}
 >
     <TopBar />
-      <Files />
+      <Files files={state.files} refreshState={refreshState} />
   <GridItem rowSpan={9} colSpan={6}  bg='papayawhip' />
   <Output />
   <BottomBar />
@@ -22,32 +36,10 @@ const Hello = () => {
   );
 };
 
-
-import { createBreakpoints } from '@chakra-ui/theme-tools'
-import { Files } from './Files';
-import { TopBar } from './TopBar';
-import { Output } from './Output';
-import { BottomBar } from './BottomBar';
-
-const theme = extendTheme(
-
-     createBreakpoints({
-      sm: '1200em',
-      md: '1200em',
-      lg: '1200em',
-      xl: '1200em',
-      '2xl': '1200em',
-  })
-);
-
 export default function App() {
   return (
     <ChakraProvider theme={theme}>
-      <Router>
-        <Routes>
-          <Route path="/" element={<Hello />} />
-        </Routes>
-      </Router>
+      <Content />
     </ChakraProvider>
   );
 }

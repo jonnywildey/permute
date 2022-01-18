@@ -3,9 +3,8 @@ import { Button, GridItem, Heading } from "@chakra-ui/react";
 
 export const Output: React.FC = () => {
   const onClick = async () => {
-     window.Electron.ipcRenderer.openOutputDialog((arg) => {
-      // eslint-disable-next-line no-console
-      console.log(arg);
+     window.Electron.ipcRenderer.openOutputDialog(([output]) => {
+      window.Electron.ipcRenderer.setOutput(output);
     });
   }
   

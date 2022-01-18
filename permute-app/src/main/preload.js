@@ -20,22 +20,17 @@ contextBridge.exposeInMainWorld('Electron', {
       ipcRenderer.send('run-processor');
 
     },
-    myPing() {
-      ipcRenderer.send('ipc-example', 'ping');
+    addFile(file) {
+      ipcRenderer.send('add-file', file);
     },
-    on(channel, func) {
-      const validChannels = ['ipc-example'];
-      if (validChannels.includes(channel)) {
-        // Deliberately strip event as it includes `sender`
-        ipcRenderer.on(channel, (event, ...args) => func(...args));
-      }
+    setOutput(output) {
+      ipcRenderer.send('set-output', output);
     },
-    once(channel, func) {
-      const validChannels = ['ipc-example', 'open-output-dialog'];
-      if (validChannels.includes(channel)) {
-        // Deliberately strip event as it includes `sender`
-        ipcRenderer.once(channel, (event, ...args) => func(...args));
-      }
-    },
+    getState() {
+      return new Promise((res) => {
+        ipcRenderer.once('get-state', (event, ...args) => res(...args));
+        ipcRenderer.send('get-state');
+      });
+    }
   },
 });

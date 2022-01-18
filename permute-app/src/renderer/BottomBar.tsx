@@ -8,7 +8,7 @@ export const BottomBar: React.FC = () => {
   }
   
   const onClick = async () => {
-     window.Electron.ipcRenderer.runProcessor(update, update);
+     window.Electron.ipcRenderer.runProcessor(update);
   }
 
   return (
