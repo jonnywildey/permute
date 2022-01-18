@@ -82,7 +82,6 @@ impl Processor {
                     }
                     PermuteUpdate::ProcessComplete => {
                         state.set_finished();
-                        break;
                     }
                 }
             }
