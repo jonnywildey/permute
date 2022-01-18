@@ -2,7 +2,7 @@ const {
   init, cancel, runProcess, addFile,
   getStateCallback, setOutput } = require("../permute-library");
 
-const PERMUTE_POLL_LATENCY = 200;
+const PERMUTE_POLL_LATENCY = 20;
 
 export interface IPermuteState {
   output: string,

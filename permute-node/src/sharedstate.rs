@@ -29,12 +29,12 @@ impl SharedState {
         Self {
             files: vec![],
             high_sample_rate: false,
-            input_trail: 2.0,
+            input_trail: 0.0,
             normalise_at_end: true,
             output: String::from(
                 "/Users/jonnywildey/rustcode/permute/permute-core/renders/vibebeepui.wav",
             ),
-            output_trail: 0.0,
+            output_trail: 2.0,
             permutation_depth: 1,
             permutations: 3,
             processor_count: None,
@@ -49,7 +49,7 @@ impl SharedState {
                 PermuteNodeName::Flutter,
                 PermuteNodeName::Chorus,
             ],
-            finished: false,
+            finished: true,
             permutation_outputs: vec![],
         }
     }
@@ -115,6 +115,7 @@ impl SharedState {
 
     pub fn run_process(&mut self) -> JoinHandle<()> {
         self.permutation_outputs = vec![];
+        self.finished = false;
         let permute_params = Self::to_permute_params(&self);
 
         permute_files(permute_params)
