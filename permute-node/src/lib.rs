@@ -6,18 +6,18 @@ use sharedstate::*;
 use std::fmt::Error;
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
-use std::time::Duration;
 
 type ProcessorCallback = Box<dyn FnOnce(&Channel, SharedState) + Send>;
 
 // Wraps a SQLite connection a channel, allowing concurrent access
 struct Processor {
     tx: mpsc::Sender<ProcessorMessage>,
+    permute_tx: mpsc::Sender<PermuteUpdate>,
 }
 
 // Messages sent on the database channel
 enum ProcessorMessage {
-    Run(ProcessorCallback),
+    Run,
     AddFile(String),
     GetStateCallback(ProcessorCallback),
     Cancel,
@@ -44,7 +44,7 @@ impl Processor {
 
         // process
         let (permute_tx, permute_rx) = mpsc::channel::<PermuteUpdate>();
-        let state = Arc::new(Mutex::new(SharedState::init(permute_tx)));
+        let state = Arc::new(Mutex::new(SharedState::init(permute_tx.clone())));
 
         // process thread
         let js_state = Arc::clone(&state);
@@ -55,9 +55,8 @@ impl Processor {
                     ProcessorMessage::GetStateCallback(f) => {
                         f(&channel, state.clone());
                     }
-                    ProcessorMessage::Run(f) => {
+                    ProcessorMessage::Run => {
                         state.run_process();
-                        f(&channel, state.clone());
                     }
                     ProcessorMessage::AddFile(file) => {
                         state.add_file(file);
@@ -83,12 +82,13 @@ impl Processor {
                     }
                     PermuteUpdate::ProcessComplete => {
                         state.set_finished();
+                        break;
                     }
                 }
             }
         });
 
-        Ok(Self { tx })
+        Ok(Self { tx, permute_tx })
     }
 
     fn cancel(&self) -> Result<(), mpsc::SendError<ProcessorMessage>> {
@@ -103,11 +103,8 @@ impl Processor {
             .send(ProcessorMessage::GetStateCallback(Box::new(callback)))
     }
 
-    fn run(
-        &self,
-        callback: impl FnOnce(&Channel, SharedState) + Send + 'static,
-    ) -> Result<(), mpsc::SendError<ProcessorMessage>> {
-        self.tx.send(ProcessorMessage::Run(Box::new(callback)))
+    fn run(&self) -> Result<(), mpsc::SendError<ProcessorMessage>> {
+        self.tx.send(ProcessorMessage::Run)
     }
 
     fn add_file(&self, file: String) -> Result<(), mpsc::SendError<ProcessorMessage>> {
@@ -148,8 +145,51 @@ impl Processor {
                     let callback = callback.into_inner(&mut cx);
                     let this = cx.undefined();
 
-                    let js_state = format!("{:#?}", state);
-                    let args = vec![cx.string(js_state)];
+                    let output = cx.string(state.output.clone());
+                    let finished = cx.boolean(state.finished);
+                    let high_sample_rate = cx.boolean(state.high_sample_rate);
+                    let input_trail = cx.number(state.input_trail);
+                    let output_trail = cx.number(state.output_trail);
+                    let permutations = cx.number(state.permutations as u32);
+                    let permutation_depth = cx.number(state.permutation_depth as u32);
+                    let processor_count = cx.number(state.processor_count.unwrap_or(0) as u32);
+                    let normalise_at_end = cx.boolean(state.normalise_at_end);
+
+                    let files = cx.empty_array();
+                    for i in 0..state.files.len() {
+                        let str = cx.string(state.files[i].clone());
+                        files.set(&mut cx, i as u32, str)?;
+                    }
+                    let processor_pool = cx.empty_array();
+                    for i in 0..state.processor_pool.len() {
+                        let str = cx.string(get_processor_display_name(state.processor_pool[i]));
+                        processor_pool.set(&mut cx, i as u32, str)?;
+                    }
+                    let permutation_outputs = cx.empty_array();
+                    for i in 0..state.permutation_outputs.len() {
+                        let output_obj = cx.empty_object();
+                        let output = cx.string(state.permutation_outputs[i].output.clone());
+                        output_obj.set(&mut cx, "output", output)?;
+                        let progress = cx.number(state.permutation_outputs[i].progress);
+                        output_obj.set(&mut cx, "progress", progress)?;
+                        permutation_outputs.set(&mut cx, i as u32, output_obj)?;
+                    }
+
+                    let obj = cx.empty_object();
+                    obj.set(&mut cx, "output", output)?;
+                    obj.set(&mut cx, "finished", finished)?;
+                    obj.set(&mut cx, "highSampleRate", high_sample_rate)?;
+                    obj.set(&mut cx, "inputTrail", input_trail)?;
+                    obj.set(&mut cx, "outputTrail", output_trail)?;
+                    obj.set(&mut cx, "files", files)?;
+                    obj.set(&mut cx, "permutations", permutations)?;
+                    obj.set(&mut cx, "permutationDepth", permutation_depth)?;
+                    obj.set(&mut cx, "processorCount", processor_count)?;
+                    obj.set(&mut cx, "processorPool", processor_pool)?;
+                    obj.set(&mut cx, "normaliseAtEnd", normalise_at_end)?;
+                    obj.set(&mut cx, "permutationOutputs", permutation_outputs)?;
+
+                    let args = vec![obj];
 
                     callback.call(&mut cx, this, args)?;
 
@@ -164,28 +204,13 @@ impl Processor {
 
     // Run process
     fn js_run_process(mut cx: FunctionContext) -> JsResult<JsUndefined> {
-        let callback = cx.argument::<JsFunction>(0)?.root(&mut cx);
-
         let processor = cx
             .this()
             .downcast_or_throw::<JsBox<Processor>, _>(&mut cx)?;
 
         processor
-            .run(move |channel, state| {
-                channel.send(move |mut cx| {
-                    let callback = callback.into_inner(&mut cx);
-                    let this = cx.undefined();
-
-                    let js_state = format!("{:#?}", state);
-                    let args = vec![cx.string(js_state)];
-
-                    callback.call(&mut cx, this, args)?;
-
-                    Ok(())
-                });
-            })
-            .or_else(|err| cx.throw_error(err.to_string()))
-            .unwrap();
+            .run()
+            .or_else(|err| cx.throw_error(err.to_string()))?;
 
         Ok(cx.undefined())
     }

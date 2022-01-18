@@ -1,7 +1,5 @@
 use std::sync::mpsc;
-use std::thread;
 use std::thread::JoinHandle;
-use std::time::Duration;
 
 use neon::prelude::*;
 use permute::permute_files::*;
@@ -91,7 +89,6 @@ impl SharedState {
     }
 
     pub fn update_output_progress(&mut self, permutation: Permutation) {
-        println!("here");
         let percentage_progress: f64 =
             ((permutation.node_index as f64 + 1.0) / permutation.processors.len() as f64) * 100.0;
 

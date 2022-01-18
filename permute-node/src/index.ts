@@ -2,9 +2,27 @@ const { init, cancel, runProcess, addFile, getStateCallback } = require("../perm
 
 const PERMUTE_POLL_LATENCY = 200;
 
-export type PermuteState = any;
+export interface IPermuteState {
+  output: string,
+  finished: boolean,
+  highSampleRate: boolean,
+  inputTrail: number,
+  outputTrail: 0,
+  files: string[],
+  permutations: number,
+  permutationDepth: number,
+  processorCount: number,
+  processorPool: string[],
+  normaliseAtEnd: boolean,
+  permutationOutputs: IPermutationOutput[];
+};
 
-export type GetStateCallback = (state: PermuteState) => void;
+export interface IPermutationOutput {
+  output: string;
+  progress: number;
+}
+
+export type GetStateCallback = (state: IPermuteState) => void;
 
 /**
  * Wrapper for the boxed `Processor`
@@ -19,7 +37,7 @@ export function createPermuteProcessor() {
     },
     runProcess(updateFn: GetStateCallback) {
       pollHandle = setInterval(() => {
-        getStateCallback.call(permuteLibrary, (state: PermuteState) => {
+        getStateCallback.call(permuteLibrary, (state: IPermuteState) => {
           if (state.finished) {
             clearInterval(pollHandle!);
           }

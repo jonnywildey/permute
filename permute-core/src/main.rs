@@ -101,6 +101,7 @@ fn main() {
                     permutation.output, pretty_processors
                 );
             }
+            PermuteUpdate::ProcessComplete => {}
         }
     }
 }
