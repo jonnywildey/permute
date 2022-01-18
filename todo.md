@@ -1,5 +1,8 @@
 # Permute
 
+###
+- Rename finished to processing
+
 
 ## UI
 - [Neon electron app](https://github.com/neon-bindings/neon) [Example](https://keminglabs.com/blog/building-a-fast-electron-app-with-rust/)

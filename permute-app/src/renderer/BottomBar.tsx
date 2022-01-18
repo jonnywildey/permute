@@ -1,5 +1,5 @@
 import { GridItem, Button } from "@chakra-ui/react";
-import type { IPermutationOutput } from "permute-node/build";
+import type { IPermutationOutput } from "permute-node";
 
 export interface IBottomBarProps {
   runProcessor: () => void;
