@@ -74,6 +74,18 @@ impl SharedState {
         let _ = &self.files.push(file);
     }
 
+    pub fn add_processor(&mut self, name: String) {
+        let processor = get_processor_from_display_name(&name).unwrap();
+        if self.processor_pool.iter().all(|p| *p != processor) {
+            let _ = &self.processor_pool.push(processor);
+        }
+    }
+
+    pub fn remove_processor(&mut self, name: String) {
+        let processor = get_processor_from_display_name(&name).unwrap();
+        self.processor_pool.retain(|p| *p != processor);
+    }
+
     pub fn set_output(&mut self, output: String) {
         self.output = output;
     }

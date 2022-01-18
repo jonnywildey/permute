@@ -18,6 +18,8 @@ struct Processor {
 enum ProcessorMessage {
     Run,
     AddFile(String),
+    AddProcessor(String),
+    RemoveProcessor(String),
     SetOutput(String),
     GetStateCallback(ProcessorCallback),
     Cancel,
@@ -60,6 +62,12 @@ impl Processor {
                     }
                     ProcessorMessage::AddFile(file) => {
                         state.add_file(file);
+                    }
+                    ProcessorMessage::AddProcessor(name) => {
+                        state.add_processor(name);
+                    }
+                    ProcessorMessage::RemoveProcessor(name) => {
+                        state.remove_processor(name);
                     }
                     ProcessorMessage::SetOutput(output) => {
                         state.set_output(output);
@@ -111,6 +119,14 @@ impl Processor {
 
     fn add_file(&self, file: String) -> Result<(), mpsc::SendError<ProcessorMessage>> {
         self.tx.send(ProcessorMessage::AddFile(file))
+    }
+
+    fn add_processor(&self, name: String) -> Result<(), mpsc::SendError<ProcessorMessage>> {
+        self.tx.send(ProcessorMessage::AddProcessor(name))
+    }
+
+    fn remove_processor(&self, name: String) -> Result<(), mpsc::SendError<ProcessorMessage>> {
+        self.tx.send(ProcessorMessage::RemoveProcessor(name))
     }
 
     fn set_output(&self, file: String) -> Result<(), mpsc::SendError<ProcessorMessage>> {
@@ -235,6 +251,34 @@ impl Processor {
         Ok(cx.undefined())
     }
 
+    fn js_add_processor(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+        let name = cx.argument::<JsString>(0)?.value(&mut cx);
+
+        let processor = cx
+            .this()
+            .downcast_or_throw::<JsBox<Processor>, _>(&mut cx)?;
+
+        processor
+            .add_processor(name)
+            .or_else(|err| cx.throw_error(err.to_string()))?;
+
+        Ok(cx.undefined())
+    }
+
+    fn js_remove_processor(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+        let name = cx.argument::<JsString>(0)?.value(&mut cx);
+
+        let processor = cx
+            .this()
+            .downcast_or_throw::<JsBox<Processor>, _>(&mut cx)?;
+
+        processor
+            .remove_processor(name)
+            .or_else(|err| cx.throw_error(err.to_string()))?;
+
+        Ok(cx.undefined())
+    }
+
     fn js_set_output(mut cx: FunctionContext) -> JsResult<JsUndefined> {
         let file = cx.argument::<JsString>(0)?.value(&mut cx);
 
@@ -257,6 +301,8 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
     cx.export_function("getStateCallback", Processor::js_get_state_callback)?;
     cx.export_function("runProcess", Processor::js_run_process)?;
     cx.export_function("addFile", Processor::js_add_file)?;
+    cx.export_function("addProcessor", Processor::js_add_processor)?;
+    cx.export_function("removeProcessor", Processor::js_remove_processor)?;
     cx.export_function("setOutput", Processor::js_set_output)?;
 
     Ok(())

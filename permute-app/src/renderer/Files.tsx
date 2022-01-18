@@ -25,7 +25,7 @@ export const Files: React.FC<IFilesProps> = ({ files, refreshState }) => {
     <Box key={file}>{file}</Box>
   ))
   
-  return <GridItem rowSpan={9} colSpan={3} bg='tomato'>
+  return <GridItem rowSpan={9} colSpan={3} bg='yellow.50'>
     <Heading textAlign="center" size="lg">Files</Heading>
 
     <Input type="file" multiple onDrop={onDrop} onChange={onChange} />

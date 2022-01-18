@@ -33,7 +33,7 @@ pub enum PermuteNodeEvent {
     NodeProcessComplete,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum PermuteNodeName {
     Reverse,
     RhythmicDelay,

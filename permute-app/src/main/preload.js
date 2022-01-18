@@ -8,12 +8,12 @@ contextBridge.exposeInMainWorld('Electron', {
     },
     runProcessor(updateFn, completeFn) {
       const listener = (event, ...args) => {
-        console.log("update");
+        // console.log("update");
         updateFn(...args)
       };
       ipcRenderer.on('run-processor-update', listener);
       ipcRenderer.once('run-processor-ended', (event, ...args) => {
-        console.log("ended");
+        // console.log("ended");
         ipcRenderer.removeListener('run-processor-update', listener);
         completeFn(...args)
       });
@@ -22,6 +22,12 @@ contextBridge.exposeInMainWorld('Electron', {
     },
     addFile(file) {
       ipcRenderer.send('add-file', file);
+    },
+    removeProcessor(name) {
+      ipcRenderer.send('remove-processor', name);
+    },
+    addProcessor(name) {
+      ipcRenderer.send('add-processor', name);
     },
     setOutput(output) {
       ipcRenderer.send('set-output', output);

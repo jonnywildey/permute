@@ -20,6 +20,14 @@ ipcMain.on('add-file', async (_, file) => {
   processor.addFile(file);
 });
 
+ipcMain.on('add-processor', async (_, name) => {
+  processor.addProcessor(name);
+});
+
+ipcMain.on('remove-processor', async (_, name) => {
+  processor.removeProcessor(name);
+});
+
 ipcMain.on('set-output', async (_, file) => {
   processor.setOutput(file);
 });

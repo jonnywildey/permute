@@ -12,8 +12,8 @@ export const BottomBar: React.FC<IBottomBarProps> = ({ permutationOutputs, runPr
   const progress = permutationOutputs[permutationOutputs.length - 1]?.progress;
   return (
   <>
-  <GridItem rowSpan={2} colSpan={9} bg='purple' />
-    <GridItem rowSpan={2} colSpan={3} bg='purple'>
+  <GridItem rowSpan={2} colSpan={9} bg='cyan.100' borderTop="0.5px solid" borderTopColor="cyan.200" />
+    <GridItem rowSpan={2} colSpan={3} bg='cyan.100' borderTop="0.5px solid" borderTopColor="cyan.200">
          <Button onClick={runProcessor} disabled={!finished}>{finished ? "Run" : progress}</Button>
       </GridItem>
   </>

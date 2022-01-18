@@ -13,7 +13,7 @@ export const Output: React.FC<IOutputProps> = ({ output, refreshState }) => {
     });
   }
   
-  return <GridItem rowSpan={9} colSpan={3} bg='tomato'>
+  return <GridItem rowSpan={9} colSpan={3} bg='red.50'>
     <Heading textAlign="center" size="lg">Output</Heading>
 
     <Button onClick={onClick}>Select Output</Button>

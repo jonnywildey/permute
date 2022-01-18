@@ -1,5 +1,6 @@
 const {
   init, cancel, runProcess, addFile,
+  addProcessor, removeProcessor,
   getStateCallback, setOutput } = require("../permute-library");
 
 const PERMUTE_POLL_LATENCY = 20;
@@ -55,6 +56,12 @@ export function createPermuteProcessor() {
     },
     addFile(file: string) {
       return addFile.call(permuteLibrary, file);
+    },
+    addProcessor(name: string) {
+      return addProcessor.call(permuteLibrary, name);
+    },
+    removeProcessor(name: string) {
+      return removeProcessor.call(permuteLibrary, name);
     },
     setOutput(output: string) {
       return setOutput.call(permuteLibrary, output);

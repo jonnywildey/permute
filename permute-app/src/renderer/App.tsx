@@ -8,28 +8,51 @@ import { BottomBar } from './BottomBar';
 import { theme } from './theme';
 import type { IPermuteState } from "permute-node";
 import { useEffect, useState } from 'react';
+import { Processors } from './Processors';
+
+export interface IAppState {
+  permuteState: IPermuteState;
+  allProcessors: string[];
+}
+
+const defaultAppState: IAppState = {
+  permuteState: { files: [], permutationOutputs: [] } as any,
+  allProcessors: [],
+}
 
 const Content = () => {
-  const [state, setState] = useState<IPermuteState>({ files: [], permutationOutputs: [] } as any);
+  const [state, setState] = useState<IAppState>(defaultAppState);
 
   const refreshState = async () => {
-    const state = await window.Electron.ipcRenderer.getState();
-    console.log(state);
-    setState(state);
+    const permuteState = await window.Electron.ipcRenderer.getState();
+    setState({ ...state, permuteState });
   };
-
-  useEffect(() => { refreshState(); }, []);
-
+  useEffect(() => { 
+    const setup = async () => {
+      const permuteState: IPermuteState = await window.Electron.ipcRenderer.getState();
+      setState({
+        allProcessors: permuteState.processorPool,
+        permuteState,
+      });
+    }
+    setup();
+  }, []);
 
   const runProcessor = async () => {
-    const update = (state: IPermuteState) => {
-      setState(state);
+     window.Electron.ipcRenderer.runProcessor(refreshState);
+  }
+
+  const setProcessorEnabled = (name: string, enable: boolean) => {
+    if (enable) {
+      window.Electron.ipcRenderer.addProcessor(name);
+    } else {
+      window.Electron.ipcRenderer.removeProcessor(name);
     }
-     window.Electron.ipcRenderer.runProcessor(update);
+    refreshState();
   }
 
   return (
-    <Box bgGradient='linear(to-r, green.200, pink.500)' w="100%" h="100vh">
+    <Box w="100%" h="100vh">
       <Grid
   h='100vh'
   templateRows='repeat(12, 1fr)'
@@ -37,10 +60,11 @@ const Content = () => {
   gap={0}
 >
     <TopBar />
-      <Files files={state.files} refreshState={refreshState} />
-  <GridItem rowSpan={9} colSpan={6}  bg='papayawhip' />
-  <Output output={state.output} refreshState={refreshState}/>
-  <BottomBar permutationOutputs={state.permutationOutputs} runProcessor={runProcessor} finished={state.finished}  />
+
+      <Files files={state.permuteState.files} refreshState={refreshState} />
+   <Processors allProcessors={state.allProcessors} processorPool={state.permuteState.processorPool} setProcessorEnabled={setProcessorEnabled} />
+  <Output output={state.permuteState.output} refreshState={refreshState}/>
+  <BottomBar permutationOutputs={state.permuteState.permutationOutputs} runProcessor={runProcessor} finished={state.permuteState.finished}  />
 </Grid>
     </Box>
   );
