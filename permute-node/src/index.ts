@@ -1,4 +1,6 @@
-const { init, cancel, runProcess, addFile, getStateCallback } = require("../permute-library");
+const {
+  init, cancel, runProcess, addFile,
+  getStateCallback, setOutput } = require("../permute-library");
 
 const PERMUTE_POLL_LATENCY = 200;
 
@@ -31,6 +33,11 @@ export function createPermuteProcessor() {
   const permuteLibrary = init();
   let pollHandle: NodeJS.Timer | undefined = undefined;
 
+  const getStateCb = (cb: GetStateCallback) => {
+    return getStateCallback.call(permuteLibrary, cb);
+  };
+
+
   return {
     cancel() {
       cancel.call(permuteLibrary);
@@ -49,8 +56,14 @@ export function createPermuteProcessor() {
     addFile(file: string) {
       return addFile.call(permuteLibrary, file);
     },
-    getStateCallback(cb: GetStateCallback) {
-      return getStateCallback.call(permuteLibrary, cb);
+    setOutput(output: string) {
+      return setOutput.call(permuteLibrary, output);
+    },
+    getStateCallback,
+    async getState(): Promise<IPermuteState> {
+      return new Promise(res => getStateCb((state) => {
+        res(state);
+      }))
     }
   }
 }

@@ -95,8 +95,7 @@ fn permute_file(
     let sample_length = samples_64.len();
 
     for i in 1..=permutations {
-        let output_i = generate_file_name(output.clone(), i);
-
+        let output_i = generate_file_name(file.clone(), output.clone(), i);
         let processors = generate_processor_sequence(GetProcessorNodeParams {
             depth: permutation_depth,
             normalise_at_end,
@@ -152,16 +151,23 @@ fn permute_file(
     }
 }
 
-fn generate_file_name(output: String, permutation_count: usize) -> String {
-    let path = Path::new(&output);
-    let file_stem = path.file_stem().unwrap_or_default().to_str().unwrap_or("");
-    let extension = path.extension().unwrap_or_default().to_str().unwrap_or("");
+fn generate_file_name(file: String, output: String, permutation_count: usize) -> String {
+    let mut dir_path = Path::new(&output).canonicalize().unwrap();
+    let file_path = Path::new(&file);
+    let file_stem = file_path
+        .file_stem()
+        .unwrap_or_default()
+        .to_str()
+        .unwrap_or("");
+    let extension = file_path
+        .extension()
+        .unwrap_or_default()
+        .to_str()
+        .unwrap_or("");
     let new_filename = [file_stem, &permutation_count.to_string(), ".", extension].concat();
 
-    path.with_file_name(new_filename)
-        .into_os_string()
-        .into_string()
-        .unwrap()
+    dir_path.push(new_filename);
+    dir_path.into_os_string().into_string().unwrap()
 }
 
 pub struct RunProcessorsParams {

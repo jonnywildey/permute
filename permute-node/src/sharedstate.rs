@@ -74,6 +74,10 @@ impl SharedState {
         let _ = &self.files.push(file);
     }
 
+    pub fn set_output(&mut self, output: String) {
+        self.output = output;
+    }
+
     pub fn add_output_progress(
         &mut self,
         permutation: Permutation,

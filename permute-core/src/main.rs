@@ -66,7 +66,7 @@ fn main() {
 
     let (tx, rx) = mpsc::channel::<PermuteUpdate>();
 
-    let handle = thread::spawn(move || {
+    thread::spawn(move || {
         permute_files(PermuteFilesParams {
             files: vec![args.file],
             output: args.output,

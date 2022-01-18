@@ -12,13 +12,13 @@ type ProcessorCallback = Box<dyn FnOnce(&Channel, SharedState) + Send>;
 // Wraps a SQLite connection a channel, allowing concurrent access
 struct Processor {
     tx: mpsc::Sender<ProcessorMessage>,
-    permute_tx: mpsc::Sender<PermuteUpdate>,
 }
 
 // Messages sent on the database channel
 enum ProcessorMessage {
     Run,
     AddFile(String),
+    SetOutput(String),
     GetStateCallback(ProcessorCallback),
     Cancel,
 }
@@ -44,7 +44,7 @@ impl Processor {
 
         // process
         let (permute_tx, permute_rx) = mpsc::channel::<PermuteUpdate>();
-        let state = Arc::new(Mutex::new(SharedState::init(permute_tx.clone())));
+        let state = Arc::new(Mutex::new(SharedState::init(permute_tx)));
 
         // process thread
         let js_state = Arc::clone(&state);
@@ -60,6 +60,9 @@ impl Processor {
                     }
                     ProcessorMessage::AddFile(file) => {
                         state.add_file(file);
+                    }
+                    ProcessorMessage::SetOutput(output) => {
+                        state.set_output(output);
                     }
                     ProcessorMessage::Cancel => break,
                 }
@@ -87,7 +90,7 @@ impl Processor {
             }
         });
 
-        Ok(Self { tx, permute_tx })
+        Ok(Self { tx })
     }
 
     fn cancel(&self) -> Result<(), mpsc::SendError<ProcessorMessage>> {
@@ -108,6 +111,10 @@ impl Processor {
 
     fn add_file(&self, file: String) -> Result<(), mpsc::SendError<ProcessorMessage>> {
         self.tx.send(ProcessorMessage::AddFile(file))
+    }
+
+    fn set_output(&self, file: String) -> Result<(), mpsc::SendError<ProcessorMessage>> {
+        self.tx.send(ProcessorMessage::SetOutput(file))
     }
 }
 
@@ -227,6 +234,20 @@ impl Processor {
 
         Ok(cx.undefined())
     }
+
+    fn js_set_output(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+        let file = cx.argument::<JsString>(0)?.value(&mut cx);
+
+        let processor = cx
+            .this()
+            .downcast_or_throw::<JsBox<Processor>, _>(&mut cx)?;
+
+        processor
+            .set_output(file)
+            .or_else(|err| cx.throw_error(err.to_string()))?;
+
+        Ok(cx.undefined())
+    }
 }
 
 #[neon::main]
@@ -236,6 +257,7 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
     cx.export_function("getStateCallback", Processor::js_get_state_callback)?;
     cx.export_function("runProcess", Processor::js_run_process)?;
     cx.export_function("addFile", Processor::js_add_file)?;
+    cx.export_function("setOutput", Processor::js_set_output)?;
 
     Ok(())
 }
