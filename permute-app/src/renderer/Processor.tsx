@@ -10,5 +10,10 @@ export interface IProcessorProps {
 export const Processor: React.FC<IProcessorProps> = ({
   enabled, name, onClick
 }) => (
-  <Button disabled={!enabled} onClick={onClick} >{name}</Button>
+  <Button 
+    key={name}
+    bg={enabled ? "green.300" : "green.100"} 
+    onClick={onClick} 
+    width="100%"
+    >{name}</Button>
 ) 
