@@ -2,6 +2,13 @@
 
 ###
 - Rename finished to processing
+- trail options
+- normalise options
+- add description
+- limit files to wav
+- sound fx???
+- preview inputs
+- store previous settings
 
 
 ## UI
@@ -10,7 +17,6 @@
 - [Iced](https://github.com/iced-rs/iced)
 - [Dioxus](https://github.com/DioxusLabs/dioxus)
 
-Chakra-ui component library
 
 ## Features
 - Hi quality mode (run at 192k) (Somewhat working)
@@ -18,6 +24,7 @@ Chakra-ui component library
 - Separate out cli layer and core layer (T)
 - UI 
 - overload option rather than normalise (T)
+- mps and aiff support
 
 ## FX Ideas
 
