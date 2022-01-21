@@ -8,30 +8,31 @@ export interface IProcessorsProps {
 }
 
 export const Processors: React.FC<IProcessorsProps> = ({ allProcessors, processorPool, setProcessorEnabled }) => {
-    const processors = allProcessors.map( (ap) => {
-    const enabled = processorPool.some( pp => pp === ap );
+  const processors = allProcessors.map((ap) => {
+    const enabled = processorPool.some(pp => pp === ap);
     const onClick = () => setProcessorEnabled(ap, !enabled);
 
     return <Processor
-       name={ap}
-       enabled={enabled}
-       onClick={onClick}
+      name={ap}
+      enabled={enabled}
+      onClick={onClick}
     />
   });
   return (
-    <GridItem 
-    rowSpan={9} 
-    colSpan={6}  
-    bg='gray.50' 
-    padding="4"
+    <GridItem
+      rowSpan={17}
+      colSpan={6}
+      bg='gray.50'
+      padding="4"
     >
       <Grid
-  templateRows={`repeat(${Math.floor(allProcessors.length / 3)}, 1fr)`}
-  templateColumns='repeat(3, 1fr)'
-  gap={5}
+        templateRows={`repeat(${Math.floor(allProcessors.length / 3)}, 1fr)`}
+        templateColumns='repeat(3, 1fr)'
+        gap={5}
+        pt={3}
       >
-      {processors}
+        {processors}
       </Grid>
-      </GridItem>
+    </GridItem>
   );
 }

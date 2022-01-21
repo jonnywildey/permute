@@ -94,6 +94,8 @@ fn permute_file(
 
     let sample_length = samples_64.len();
 
+    let mut generated_processors: Vec<(Vec<ProcessorFn>, ProcessorParams)> = vec![];
+
     for i in 1..=permutations {
         let output_i = generate_file_name(file.clone(), output.clone(), i);
         let processors = generate_processor_sequence(GetProcessorNodeParams {
@@ -130,11 +132,16 @@ fn permute_file(
             processors,
         ));
 
+        generated_processors.push((processor_fns, processor_params));
+    }
+
+    for (processor_fns, processor_params) in generated_processors.iter() {
+        let output = processor_params.permutation.output.clone();
         let output_params = run_processors(RunProcessorsParams {
             processor_params: processor_params.clone(),
-            processors: processor_fns,
+            processors: processor_fns.to_vec(),
         });
-        let mut pro_writer = hound::WavWriter::create(output_i, spec).expect("Error in output");
+        let mut pro_writer = hound::WavWriter::create(output, spec).expect("Error in output");
 
         for mut s in output_params.samples {
             // overload protection
@@ -218,6 +225,7 @@ pub fn get_processor_display_name(name: PermuteNodeName) -> String {
         PermuteNodeName::SampleRateConversionOriginal => String::from("Sample rate conversion low"),
     }
 }
+
 pub fn get_processor_from_display_name(name: &str) -> Result<PermuteNodeName, String> {
     match name {
         "Reverse" => Ok(PermuteNodeName::Reverse),

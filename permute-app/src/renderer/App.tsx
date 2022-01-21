@@ -22,7 +22,7 @@ const defaultAppState: IAppState = {
 const Content = () => {
   const [state, setState] = useState<IAppState>(defaultAppState);
   const {
-    depth,
+    permutationDepth,
     output,
     files,
     permutations,
@@ -83,8 +83,7 @@ const Content = () => {
   return (
     <Box w="100%" h="100vh">
       <Grid
-        h='100vh'
-        templateRows='repeat(12, 1fr)'
+        templateRows='repeat(24, 1fr)'
         templateColumns='repeat(12, 1fr)'
         gap={0}
       >
@@ -97,7 +96,7 @@ const Content = () => {
           permutationOutputs={permutationOutputs}
           runProcessor={runProcessor}
           processing={state.permuteState.processing}
-          depth={depth}
+          depth={permutationDepth}
           permutations={permutations}
           normaliseAtEnd={normaliseAtEnd}
           inputTrail={inputTrail}
@@ -107,6 +106,8 @@ const Content = () => {
           setNormalised={setNormalised}
           setInputTrail={setInputTrail}
           setOutputTrail={setOutputTrail}
+          files={files}
+          output={output}
         />
       </Grid>
     </Box>
