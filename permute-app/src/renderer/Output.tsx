@@ -1,25 +1,45 @@
-import { Box, Button, GridItem, Heading } from "@chakra-ui/react";
+import { Box, Button, GridItem, Heading, Center, IconButton } from "@chakra-ui/react";
+import { ViewIcon } from  "@chakra-ui/icons"
 
 export interface IOutputProps {
   output: string;
-  refreshState: () => void;
+  setOutput: () => void;
+  showFile: (file: string) => void;
 }
 
-export const Output: React.FC<IOutputProps> = ({ output, refreshState }) => {
-  const onClick = async () => {
-    window.Electron.ipcRenderer.openOutputDialog(([output]) => {
-      window.Electron.ipcRenderer.setOutput(output);
-      refreshState();
-    });
-  }
-
+export const Output: React.FC<IOutputProps> = ({ output, showFile, setOutput }) => {
+  const directory = output ? 
+  <Box 
+    display="flex" 
+    padding={3} 
+    mt={5}
+    alignItems="center" 
+    borderTop="1px"
+    borderTopColor="gray.300" 
+    borderBottom="1px"
+    borderBottomColor="gray.300" 
+    >
+    <IconButton 
+      aria-label="show" 
+      variant="ghost"
+      size="sm"
+      icon={<ViewIcon  />} 
+      onClick={() => showFile(output)} 
+      />
+    <Heading 
+      ml={3}
+      className="output-heading"
+      size="sm" 
+        >
+        {output}
+    </Heading>
+  </Box> : null;
   return <GridItem rowSpan={17} colSpan={3} bg='red.50' pt={4}>
     <Heading textAlign="center" size="lg">Output</Heading>
-
-    <Button onClick={onClick}>Select Output Directory</Button>
-
-    <Box>{output}</Box>
-
+    <Center>
+    <Button mt={3} bg="pink.300" onClick={setOutput}>Select Output Directory</Button>
+    </Center>
+    {directory}
   </GridItem>
 
 }

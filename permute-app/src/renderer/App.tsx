@@ -11,23 +11,29 @@ import { theme } from './theme';
 import type { IPermuteState } from "permute-node";
 import { useEffect, useState } from 'react';
 import { Processors } from './Processors';
+import { IFileStat } from 'main/IFileStat';
 
 export interface IAppState {
   permuteState: IPermuteState;
-  allProcessors: string[];
+  files: IFileStat[];
 }
 
 const defaultAppState: IAppState = {
-  permuteState: { files: [], permutationOutputs: [], processorPool: [], } as any,
-  allProcessors: [],
+  permuteState: { 
+      allProcessors: [],
+      files: [], 
+      permutationOutputs: [], 
+      processorPool: [], 
+    } as any,
+    files: [],
 }
 
 const Content = () => {
   const [state, setState] = useState<IAppState>(defaultAppState);
   const {
+    allProcessors,
     permutationDepth,
     output,
-    files,
     permutations,
     normaliseAtEnd,
     inputTrail,
@@ -42,8 +48,9 @@ const Content = () => {
   useEffect(() => {
     const setup = async () => {
       const permuteState: IPermuteState = await window.Electron.ipcRenderer.getState();
+      const fileStats = await window.Electron.ipcRenderer.getFileStats(permuteState.files);
       setState({
-        allProcessors: permuteState.processorPool,
+        files: fileStats,
         permuteState,
       });
     }
@@ -52,26 +59,47 @@ const Content = () => {
 
   const runProcessor = async () => {
     window.Electron.ipcRenderer.runProcessor(refreshState);
-  }
+  };
   const setDepth = async (depth: number) => {
     window.Electron.ipcRenderer.setDepth(depth);
     refreshState();
-  }
+  };
   const setPermutations = async (permutations: number) => {
     window.Electron.ipcRenderer.setPermutations(permutations);
     refreshState();
-  }
+  };
   const setNormalised = async (normaliseAtEnd: boolean) => {
     window.Electron.ipcRenderer.setNormalised(normaliseAtEnd);
     refreshState();
-  }
+  };
   const setInputTrail = async (inputTrail: number) => {
     window.Electron.ipcRenderer.setInputTrail(inputTrail);
     refreshState();
-  }
+  };
   const setOutputTrail = async (outputTrail: number) => {
     window.Electron.ipcRenderer.setOutputTrail(outputTrail);
     refreshState();
+  };
+  const addFiles = async (files: string[]) => {
+    files.map(f => window.Electron.ipcRenderer.addFile(f));
+    const permuteState = await window.Electron.ipcRenderer.getState();
+    const fileStats = await window.Electron.ipcRenderer.getFileStats(permuteState.files);
+    setState({ permuteState, files: fileStats });
+  };
+  const removeFile = async (file: string) => {
+    window.Electron.ipcRenderer.removeFile(file);
+    const permuteState = await window.Electron.ipcRenderer.getState();
+    const fileStats = await window.Electron.ipcRenderer.getFileStats(permuteState.files);
+    setState({ permuteState, files: fileStats });
+  };
+  const showFile = async (file: string) => {
+    window.Electron.ipcRenderer.showFile(file);
+  };
+  const setOutput = async () => {
+    window.Electron.ipcRenderer.openOutputDialog(([output]: [string]) => {
+        window.Electron.ipcRenderer.setOutput(output);
+        refreshState();
+      });
   }
 
   const setProcessorEnabled = (name: string, enable: boolean) => {
@@ -92,10 +120,18 @@ const Content = () => {
       width="1024px"
     >
       <TopBar />
-
-      <Files files={files} refreshState={refreshState} />
-      <Processors allProcessors={state.allProcessors} processorPool={processorPool} setProcessorEnabled={setProcessorEnabled} />
-      <Output output={output} refreshState={refreshState} />
+      <Files 
+      files={state.files} 
+      addFiles={addFiles} 
+      removeFile={removeFile} 
+      showFile={showFile}
+      />
+      <Processors 
+        allProcessors={allProcessors} 
+        processorPool={processorPool} 
+        setProcessorEnabled={setProcessorEnabled} 
+      />
+      <Output output={output} setOutput={setOutput} showFile={showFile} />
       <BottomBar
         permutationOutputs={permutationOutputs}
         runProcessor={runProcessor}
@@ -110,7 +146,7 @@ const Content = () => {
         setNormalised={setNormalised}
         setInputTrail={setInputTrail}
         setOutputTrail={setOutputTrail}
-        files={files}
+        files={state.permuteState.files}
         output={output}
       />
     </Grid>
