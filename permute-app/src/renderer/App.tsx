@@ -1,3 +1,6 @@
+import '@fontsource/dongle/400.css';
+import '@fontsource/dongle/300.css';
+import '@fontsource/dongle/700.css';
 import './App.css';
 import { ChakraProvider, Box, Grid } from '@chakra-ui/react';
 import { Files } from './Files';

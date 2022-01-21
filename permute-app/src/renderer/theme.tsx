@@ -1,9 +1,5 @@
-import { extendTheme, withDefaultSize } from '@chakra-ui/react';
+import { extendTheme } from '@chakra-ui/react';
 import { createBreakpoints } from '@chakra-ui/theme-tools';
-
-import '@fontsource/dongle/400.css'
-import '@fontsource/dongle/300.css'
-import '@fontsource/dongle/700.css'
 
 export const theme = extendTheme(
 
@@ -20,8 +16,8 @@ export const theme = extendTheme(
       secondary: "#76FFC0"
     },
     fonts: {
-    heading: 'dongle',
-    body: 'dongle',
-  },
+      heading: 'dongle',
+      body: 'dongle',
+    },
   }
 );

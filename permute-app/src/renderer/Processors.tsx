@@ -13,6 +13,7 @@ export const Processors: React.FC<IProcessorsProps> = ({ allProcessors, processo
     const onClick = () => setProcessorEnabled(ap, !enabled);
 
     return <Processor
+      key={ap}
       name={ap}
       enabled={enabled}
       onClick={onClick}
