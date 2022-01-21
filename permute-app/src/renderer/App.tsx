@@ -81,36 +81,36 @@ const Content = () => {
   }
 
   return (
-    <Box w="100%" h="100vh">
-      <Grid
-        templateRows='repeat(24, 1fr)'
-        templateColumns='repeat(12, 1fr)'
-        gap={0}
-      >
-        <TopBar />
+    <Grid
+      templateRows='repeat(24, 1fr)'
+      templateColumns='repeat(12, 1fr)'
+      gap={0}
+      height="702px"
+      width="1024px"
+    >
+      <TopBar />
 
-        <Files files={files} refreshState={refreshState} />
-        <Processors allProcessors={state.allProcessors} processorPool={processorPool} setProcessorEnabled={setProcessorEnabled} />
-        <Output output={output} refreshState={refreshState} />
-        <BottomBar
-          permutationOutputs={permutationOutputs}
-          runProcessor={runProcessor}
-          processing={state.permuteState.processing}
-          depth={permutationDepth}
-          permutations={permutations}
-          normaliseAtEnd={normaliseAtEnd}
-          inputTrail={inputTrail}
-          outputTrail={outputTrail}
-          setDepth={setDepth}
-          setPermutations={setPermutations}
-          setNormalised={setNormalised}
-          setInputTrail={setInputTrail}
-          setOutputTrail={setOutputTrail}
-          files={files}
-          output={output}
-        />
-      </Grid>
-    </Box>
+      <Files files={files} refreshState={refreshState} />
+      <Processors allProcessors={state.allProcessors} processorPool={processorPool} setProcessorEnabled={setProcessorEnabled} />
+      <Output output={output} refreshState={refreshState} />
+      <BottomBar
+        permutationOutputs={permutationOutputs}
+        runProcessor={runProcessor}
+        processing={state.permuteState.processing}
+        depth={permutationDepth}
+        permutations={permutations}
+        normaliseAtEnd={normaliseAtEnd}
+        inputTrail={inputTrail}
+        outputTrail={outputTrail}
+        setDepth={setDepth}
+        setPermutations={setPermutations}
+        setNormalised={setNormalised}
+        setInputTrail={setInputTrail}
+        setOutputTrail={setOutputTrail}
+        files={files}
+        output={output}
+      />
+    </Grid>
   );
 };
 
