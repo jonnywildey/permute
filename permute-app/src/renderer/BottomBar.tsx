@@ -1,4 +1,4 @@
-import { GridItem, Button, CircularProgress, Slider, SliderTrack, SliderFilledTrack, SliderThumb, SliderMark, Switch, Heading, Grid } from "@chakra-ui/react";
+import { GridItem, Button, CircularProgress, Slider, SliderTrack, SliderFilledTrack, SliderThumb, SliderMark, Switch, Heading, Grid, Tooltip } from "@chakra-ui/react";
 import type { IPermutationOutput } from "permute-node";
 
 export interface IBottomBarProps {
@@ -95,7 +95,12 @@ function InputTrail(inputTrail: number, setInputTrail: (trail: number) => void) 
 
 function Depth(depth: number, setDepth: (depth: number) => void) {
   return <GridItem rowSpan={1} colSpan={2} pl={4}>
-    <Heading size="sm" textAlign="center">Depth</Heading>
+    <Tooltip label={<>
+      Controls how many processors the audio is run through.  <br />
+      High depth values can run up to 32 processors and can be noisy
+    </>}>
+      <Heading size="sm" textAlign="center">Depth</Heading>
+    </Tooltip>
     <Slider aria-label='slider-ex-2'
       min={1} max={4} step={1}
       colorScheme='pink' value={depth} onChange={setDepth}
@@ -117,12 +122,18 @@ function Depth(depth: number, setDepth: (depth: number) => void) {
       </SliderTrack>
       <SliderThumb />
     </Slider>
-  </GridItem>
+  </GridItem >
 }
 
 function Permutations(permutations: number, setPermutations: (permutations: number) => void) {
   return <GridItem rowSpan={1} colSpan={2} pl={4} pt={3}>
-    <Heading size="sm" textAlign="center">Permutations</Heading>
+    <Tooltip label={<>
+      How many permutations to generate per file. <br />
+      e.g. setting permutations to 5 and selecting one file will generate 5 files <br />
+      Selecting 2 files would generate 10
+    </>}>
+      <Heading size="sm" textAlign="center">Permutations</Heading>
+    </Tooltip>
     <Slider aria-label='slider-ex-2'
       min={1} max={9} step={1}
       colorScheme='pink' value={permutations} onChange={setPermutations}
@@ -239,7 +250,11 @@ const Run: React.FC<IRunProps> = ({
 
 function Normalise(normaliseAtEnd: boolean, setNormalised: (normaliseAtEnd: boolean) => void) {
   return <GridItem rowSpan={1} colSpan={2} pl="33%">
-    <Heading size="sm" fr>Normalise</Heading>
+    <Tooltip label={<>
+      If enabled, normalises audio to ensure there is no digital clipping <b>(recommended)</b>
+    </>}>
+      <Heading size="sm" fr>Normalise</Heading>
+    </Tooltip>
     <Switch fr isChecked={normaliseAtEnd} onChange={(e) => setNormalised(e.target.checked)} ml={2} />
   </GridItem>;
 }

@@ -1,4 +1,4 @@
-import { Grid, GridItem } from "@chakra-ui/react";
+import { Grid, GridItem, Heading } from "@chakra-ui/react";
 import { Processor } from "./Processor";
 
 export interface IProcessorsProps {
@@ -25,6 +25,7 @@ export const Processors: React.FC<IProcessorsProps> = ({ allProcessors, processo
       bg='gray.50'
       padding="4"
     >
+      <Heading textAlign="center" size="lg">Processors</Heading>
       <Grid
         templateRows={`repeat(${Math.floor(allProcessors.length / 3)}, 1fr)`}
         templateColumns='repeat(3, 1fr)'

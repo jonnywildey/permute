@@ -28,7 +28,7 @@ export const Files: React.FC<IFilesProps> = ({ files, refreshState }) => {
   return <GridItem rowSpan={17} colSpan={3} bg='yellow.50' pt={4}>
     <Heading textAlign="center" size="lg">Files</Heading>
 
-    <Input padding={3} type="file" multiple onDrop={onDrop} onChange={onChange} />
+    <Input accept=".wav" padding={3} type="file" multiple onDrop={onDrop} onChange={onChange} />
 
     {fileBoxes}
 
