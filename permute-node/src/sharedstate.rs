@@ -15,6 +15,7 @@ pub struct SharedState {
     pub permutations: usize,
     pub permutation_depth: usize,
     pub processor_pool: Vec<PermuteNodeName>,
+    pub all_processors: Vec<PermuteNodeName>,
     pub normalise_at_end: bool,
     pub high_sample_rate: bool,
     pub processor_count: Option<i32>,
@@ -26,6 +27,16 @@ pub struct SharedState {
 
 impl SharedState {
     pub fn init(update_sender: mpsc::Sender<PermuteUpdate>) -> Self {
+        let all_processors = vec![
+            PermuteNodeName::Reverse,
+            PermuteNodeName::MetallicDelay,
+            PermuteNodeName::RhythmicDelay,
+            PermuteNodeName::HalfSpeed,
+            PermuteNodeName::DoubleSpeed,
+            PermuteNodeName::Wow,
+            PermuteNodeName::Flutter,
+            PermuteNodeName::Chorus,
+        ];
         Self {
             files: vec![],
             high_sample_rate: false,
@@ -37,16 +48,8 @@ impl SharedState {
             permutations: 1,
             processor_count: None,
             update_sender,
-            processor_pool: vec![
-                PermuteNodeName::Reverse,
-                PermuteNodeName::MetallicDelay,
-                PermuteNodeName::RhythmicDelay,
-                PermuteNodeName::HalfSpeed,
-                PermuteNodeName::DoubleSpeed,
-                PermuteNodeName::Wow,
-                PermuteNodeName::Flutter,
-                PermuteNodeName::Chorus,
-            ],
+            processor_pool: all_processors.clone(),
+            all_processors,
             processing: false,
             permutation_outputs: vec![],
         }
@@ -70,6 +73,10 @@ impl SharedState {
 
     pub fn add_file(&mut self, file: String) {
         let _ = &self.files.push(file);
+    }
+
+    pub fn remove_file(&mut self, file: String) {
+        self.files.retain(|f| *f != file);
     }
 
     pub fn add_processor(&mut self, name: String) {

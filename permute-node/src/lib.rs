@@ -18,6 +18,7 @@ struct Processor {
 enum ProcessorMessage {
     Run,
     AddFile(String),
+    RemoveFile(String),
     AddProcessor(String),
     RemoveProcessor(String),
     SetOutput(String),
@@ -67,6 +68,9 @@ impl Processor {
                     }
                     ProcessorMessage::AddFile(file) => {
                         state.add_file(file);
+                    }
+                    ProcessorMessage::RemoveFile(file) => {
+                        state.remove_file(file);
                     }
                     ProcessorMessage::AddProcessor(name) => {
                         state.add_processor(name);
@@ -191,6 +195,11 @@ impl Processor {
                         let str = cx.string(get_processor_display_name(state.processor_pool[i]));
                         processor_pool.set(&mut cx, i as u32, str)?;
                     }
+                    let all_processors = cx.empty_array();
+                    for i in 0..state.all_processors.len() {
+                        let str = cx.string(get_processor_display_name(state.all_processors[i]));
+                        all_processors.set(&mut cx, i as u32, str)?;
+                    }
                     let permutation_outputs = cx.empty_array();
                     for i in 0..state.permutation_outputs.len() {
                         let output_obj = cx.empty_object();
@@ -212,6 +221,7 @@ impl Processor {
                     obj.set(&mut cx, "permutationDepth", permutation_depth)?;
                     obj.set(&mut cx, "processorCount", processor_count)?;
                     obj.set(&mut cx, "processorPool", processor_pool)?;
+                    obj.set(&mut cx, "allProcessors", all_processors)?;
                     obj.set(&mut cx, "normaliseAtEnd", normalise_at_end)?;
                     obj.set(&mut cx, "permutationOutputs", permutation_outputs)?;
 
@@ -251,6 +261,21 @@ impl Processor {
         processor
             .tx
             .send(ProcessorMessage::AddFile(file))
+            .or_else(|err| cx.throw_error(err.to_string()))?;
+
+        Ok(cx.undefined())
+    }
+
+    fn js_remove_file(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+        let file = cx.argument::<JsString>(0)?.value(&mut cx);
+
+        let processor = cx
+            .this()
+            .downcast_or_throw::<JsBox<Processor>, _>(&mut cx)?;
+
+        processor
+            .tx
+            .send(ProcessorMessage::RemoveFile(file))
             .or_else(|err| cx.throw_error(err.to_string()))?;
 
         Ok(cx.undefined())
@@ -384,6 +409,7 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
     cx.export_function("getStateCallback", Processor::js_get_state_callback)?;
     cx.export_function("runProcess", Processor::js_run_process)?;
     cx.export_function("addFile", Processor::js_add_file)?;
+    cx.export_function("removeFile", Processor::js_remove_file)?;
     cx.export_function("addProcessor", Processor::js_add_processor)?;
     cx.export_function("removeProcessor", Processor::js_remove_processor)?;
     cx.export_function("setOutput", Processor::js_set_output)?;

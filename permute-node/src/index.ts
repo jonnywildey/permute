@@ -1,7 +1,7 @@
 const {
   init, cancel, runProcess, addFile, addProcessor, removeProcessor,
   getStateCallback, setOutput, setDepth, setInputTrail,
-  setOutputTrail, setPermutations, setNormalised,
+  setOutputTrail, setPermutations, setNormalised, removeFile,
 } = require("../permute-library");
 
 const PERMUTE_POLL_LATENCY = 100;
@@ -17,6 +17,7 @@ export interface IPermuteState {
   permutationDepth: number,
   processorCount: number,
   processorPool: string[],
+  allProcessors: string[],
   normaliseAtEnd: boolean,
   permutationOutputs: IPermutationOutput[];
 };
@@ -57,6 +58,9 @@ export function createPermuteProcessor() {
     },
     addFile(file: string) {
       return addFile.call(permuteLibrary, file);
+    },
+    removeFile(file: string) {
+      return removeFile.call(permuteLibrary, file);
     },
     addProcessor(name: string) {
       return addProcessor.call(permuteLibrary, name);
