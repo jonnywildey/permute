@@ -32,6 +32,21 @@ contextBridge.exposeInMainWorld('Electron', {
     setOutput(output) {
       ipcRenderer.send('set-output', output);
     },
+    setDepth(depth) {
+      ipcRenderer.send('set-depth', depth);
+    },
+    setNormalised(normalised) {
+      ipcRenderer.send('set-normalised', normalised);
+    },
+    setPermutations(permutations) {
+      ipcRenderer.send('set-permutations', permutations);
+    },
+    setInputTrail(trail) {
+      ipcRenderer.send('set-input-trail', trail);
+    },
+    setOutputTrail(trail) {
+      ipcRenderer.send('set-output-trail', trail);
+    },
     getState() {
       return new Promise((res) => {
         ipcRenderer.once('get-state', (event, ...args) => res(...args));

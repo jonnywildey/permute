@@ -9,6 +9,7 @@
 - sound fx???
 - preview inputs
 - store previous settings
+- all processors
 
 
 ## UI

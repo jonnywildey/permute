@@ -1,13 +1,14 @@
 const {
-  init, cancel, runProcess, addFile,
-  addProcessor, removeProcessor,
-  getStateCallback, setOutput } = require("../permute-library");
+  init, cancel, runProcess, addFile, addProcessor, removeProcessor,
+  getStateCallback, setOutput, setDepth, setInputTrail,
+  setOutputTrail, setPermutations, setNormalised,
+} = require("../permute-library");
 
 const PERMUTE_POLL_LATENCY = 100;
 
 export interface IPermuteState {
   output: string,
-  finished: boolean,
+  processing: boolean,
   highSampleRate: boolean,
   inputTrail: number,
   outputTrail: 0,
@@ -46,7 +47,7 @@ export function createPermuteProcessor() {
     runProcess(updateFn: GetStateCallback) {
       pollHandle = setInterval(() => {
         getStateCallback.call(permuteLibrary, (state: IPermuteState) => {
-          if (state.finished) {
+          if (!state.processing) {
             clearInterval(pollHandle!);
           }
           updateFn(state);
@@ -65,6 +66,21 @@ export function createPermuteProcessor() {
     },
     setOutput(output: string) {
       return setOutput.call(permuteLibrary, output);
+    },
+    setDepth(output: string) {
+      return setDepth.call(permuteLibrary, output);
+    },
+    setPermutations(output: string) {
+      return setPermutations.call(permuteLibrary, output);
+    },
+    setNormalised(output: string) {
+      return setNormalised.call(permuteLibrary, output);
+    },
+    setInputTrail(output: string) {
+      return setInputTrail.call(permuteLibrary, output);
+    },
+    setOutputTrail(output: string) {
+      return setOutputTrail.call(permuteLibrary, output);
     },
     getStateCallback,
     async getState(): Promise<IPermuteState> {

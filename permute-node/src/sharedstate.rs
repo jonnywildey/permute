@@ -20,7 +20,7 @@ pub struct SharedState {
     pub processor_count: Option<i32>,
 
     pub update_sender: mpsc::Sender<PermuteUpdate>,
-    pub finished: bool,
+    pub processing: bool,
     pub permutation_outputs: Vec<OutputProgress>,
 }
 
@@ -31,12 +31,10 @@ impl SharedState {
             high_sample_rate: false,
             input_trail: 0.0,
             normalise_at_end: true,
-            output: String::from(
-                "/Users/jonnywildey/rustcode/permute/permute-core/renders/vibebeepui.wav",
-            ),
+            output: String::default(),
             output_trail: 2.0,
             permutation_depth: 1,
-            permutations: 3,
+            permutations: 1,
             processor_count: None,
             update_sender,
             processor_pool: vec![
@@ -49,7 +47,7 @@ impl SharedState {
                 PermuteNodeName::Flutter,
                 PermuteNodeName::Chorus,
             ],
-            finished: true,
+            processing: false,
             permutation_outputs: vec![],
         }
     }
@@ -122,12 +120,32 @@ impl SharedState {
     }
 
     pub fn set_finished(&mut self) {
-        self.finished = true;
+        self.processing = false;
+    }
+
+    pub fn set_normalised(&mut self, normalised: bool) {
+        self.normalise_at_end = normalised;
+    }
+
+    pub fn set_input_trail(&mut self, trail: f64) {
+        self.input_trail = trail;
+    }
+
+    pub fn set_output_trail(&mut self, trail: f64) {
+        self.output_trail = trail;
+    }
+
+    pub fn set_permutations(&mut self, permutations: usize) {
+        self.permutations = permutations;
+    }
+
+    pub fn set_depth(&mut self, depth: usize) {
+        self.permutation_depth = depth;
     }
 
     pub fn run_process(&mut self) -> JoinHandle<()> {
         self.permutation_outputs = vec![];
-        self.finished = false;
+        self.processing = true;
         let permute_params = Self::to_permute_params(&self);
 
         permute_files(permute_params)

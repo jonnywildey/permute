@@ -22,6 +22,11 @@ enum ProcessorMessage {
     RemoveProcessor(String),
     SetOutput(String),
     GetStateCallback(ProcessorCallback),
+    SetNormalised(bool),
+    SetPermutationDepth(usize),
+    SetPermutations(usize),
+    SetInputTrail(f64),
+    SetOutputTrail(f64),
     Cancel,
 }
 
@@ -72,6 +77,21 @@ impl Processor {
                     ProcessorMessage::SetOutput(output) => {
                         state.set_output(output);
                     }
+                    ProcessorMessage::SetInputTrail(trail) => {
+                        state.set_input_trail(trail);
+                    }
+                    ProcessorMessage::SetOutputTrail(trail) => {
+                        state.set_output_trail(trail);
+                    }
+                    ProcessorMessage::SetNormalised(normalised) => {
+                        state.set_normalised(normalised);
+                    }
+                    ProcessorMessage::SetPermutations(permutations) => {
+                        state.set_permutations(permutations);
+                    }
+                    ProcessorMessage::SetPermutationDepth(depth) => {
+                        state.set_depth(depth);
+                    }
                     ProcessorMessage::Cancel => break,
                 }
             }
@@ -116,22 +136,6 @@ impl Processor {
     fn run(&self) -> Result<(), mpsc::SendError<ProcessorMessage>> {
         self.tx.send(ProcessorMessage::Run)
     }
-
-    fn add_file(&self, file: String) -> Result<(), mpsc::SendError<ProcessorMessage>> {
-        self.tx.send(ProcessorMessage::AddFile(file))
-    }
-
-    fn add_processor(&self, name: String) -> Result<(), mpsc::SendError<ProcessorMessage>> {
-        self.tx.send(ProcessorMessage::AddProcessor(name))
-    }
-
-    fn remove_processor(&self, name: String) -> Result<(), mpsc::SendError<ProcessorMessage>> {
-        self.tx.send(ProcessorMessage::RemoveProcessor(name))
-    }
-
-    fn set_output(&self, file: String) -> Result<(), mpsc::SendError<ProcessorMessage>> {
-        self.tx.send(ProcessorMessage::SetOutput(file))
-    }
 }
 
 // Methods exposed to JavaScript
@@ -168,7 +172,7 @@ impl Processor {
                     let this = cx.undefined();
 
                     let output = cx.string(state.output.clone());
-                    let finished = cx.boolean(state.finished);
+                    let processing = cx.boolean(state.processing);
                     let high_sample_rate = cx.boolean(state.high_sample_rate);
                     let input_trail = cx.number(state.input_trail);
                     let output_trail = cx.number(state.output_trail);
@@ -199,7 +203,7 @@ impl Processor {
 
                     let obj = cx.empty_object();
                     obj.set(&mut cx, "output", output)?;
-                    obj.set(&mut cx, "finished", finished)?;
+                    obj.set(&mut cx, "processing", processing)?;
                     obj.set(&mut cx, "highSampleRate", high_sample_rate)?;
                     obj.set(&mut cx, "inputTrail", input_trail)?;
                     obj.set(&mut cx, "outputTrail", output_trail)?;
@@ -245,7 +249,83 @@ impl Processor {
             .downcast_or_throw::<JsBox<Processor>, _>(&mut cx)?;
 
         processor
-            .add_file(file)
+            .tx
+            .send(ProcessorMessage::AddFile(file))
+            .or_else(|err| cx.throw_error(err.to_string()))?;
+
+        Ok(cx.undefined())
+    }
+
+    fn js_set_permutations(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+        let permutations = cx.argument::<JsNumber>(0)?.value(&mut cx) as usize;
+
+        let processor = cx
+            .this()
+            .downcast_or_throw::<JsBox<Processor>, _>(&mut cx)?;
+
+        processor
+            .tx
+            .send(ProcessorMessage::SetPermutations(permutations))
+            .or_else(|err| cx.throw_error(err.to_string()))?;
+
+        Ok(cx.undefined())
+    }
+
+    fn js_set_depth(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+        let depth = cx.argument::<JsNumber>(0)?.value(&mut cx) as usize;
+
+        let processor = cx
+            .this()
+            .downcast_or_throw::<JsBox<Processor>, _>(&mut cx)?;
+
+        processor
+            .tx
+            .send(ProcessorMessage::SetPermutationDepth(depth))
+            .or_else(|err| cx.throw_error(err.to_string()))?;
+
+        Ok(cx.undefined())
+    }
+
+    fn js_set_normalised(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+        let normalised = cx.argument::<JsBoolean>(0)?.value(&mut cx);
+
+        let processor = cx
+            .this()
+            .downcast_or_throw::<JsBox<Processor>, _>(&mut cx)?;
+
+        processor
+            .tx
+            .send(ProcessorMessage::SetNormalised(normalised))
+            .or_else(|err| cx.throw_error(err.to_string()))?;
+
+        Ok(cx.undefined())
+    }
+
+    fn js_set_input_trail(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+        let input_trail = cx.argument::<JsNumber>(0)?.value(&mut cx);
+
+        let processor = cx
+            .this()
+            .downcast_or_throw::<JsBox<Processor>, _>(&mut cx)?;
+
+        processor
+            .tx
+            .send(ProcessorMessage::SetInputTrail(input_trail))
+            .or_else(|err| cx.throw_error(err.to_string()))?;
+
+        Ok(cx.undefined())
+    }
+
+    fn js_set_output_trail(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+        let output_trail = cx.argument::<JsNumber>(0)?.value(&mut cx);
+
+        let processor = cx
+            .this()
+            .downcast_or_throw::<JsBox<Processor>, _>(&mut cx)?;
+
+        processor
+            .tx
+            .send(ProcessorMessage::SetOutputTrail(output_trail))
             .or_else(|err| cx.throw_error(err.to_string()))?;
 
         Ok(cx.undefined())
@@ -259,7 +339,8 @@ impl Processor {
             .downcast_or_throw::<JsBox<Processor>, _>(&mut cx)?;
 
         processor
-            .add_processor(name)
+            .tx
+            .send(ProcessorMessage::AddProcessor(name))
             .or_else(|err| cx.throw_error(err.to_string()))?;
 
         Ok(cx.undefined())
@@ -273,7 +354,8 @@ impl Processor {
             .downcast_or_throw::<JsBox<Processor>, _>(&mut cx)?;
 
         processor
-            .remove_processor(name)
+            .tx
+            .send(ProcessorMessage::RemoveProcessor(name))
             .or_else(|err| cx.throw_error(err.to_string()))?;
 
         Ok(cx.undefined())
@@ -287,7 +369,8 @@ impl Processor {
             .downcast_or_throw::<JsBox<Processor>, _>(&mut cx)?;
 
         processor
-            .set_output(file)
+            .tx
+            .send(ProcessorMessage::SetOutput(file))
             .or_else(|err| cx.throw_error(err.to_string()))?;
 
         Ok(cx.undefined())
@@ -304,6 +387,11 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
     cx.export_function("addProcessor", Processor::js_add_processor)?;
     cx.export_function("removeProcessor", Processor::js_remove_processor)?;
     cx.export_function("setOutput", Processor::js_set_output)?;
+    cx.export_function("setDepth", Processor::js_set_depth)?;
+    cx.export_function("setInputTrail", Processor::js_set_input_trail)?;
+    cx.export_function("setOutputTrail", Processor::js_set_output_trail)?;
+    cx.export_function("setPermutations", Processor::js_set_permutations)?;
+    cx.export_function("setNormalised", Processor::js_set_normalised)?;
 
     Ok(())
 }

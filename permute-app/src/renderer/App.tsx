@@ -1,6 +1,5 @@
-// import icon from '../../assets/icon.svg';
 import './App.css';
-import { ChakraProvider, Box, Grid, GridItem } from '@chakra-ui/react';
+import { ChakraProvider, Box, Grid } from '@chakra-ui/react';
 import { Files } from './Files';
 import { TopBar } from './TopBar';
 import { Output } from './Output';
@@ -16,18 +15,28 @@ export interface IAppState {
 }
 
 const defaultAppState: IAppState = {
-  permuteState: { files: [], permutationOutputs: [] } as any,
+  permuteState: { files: [], permutationOutputs: [], processorPool: [], } as any,
   allProcessors: [],
 }
 
 const Content = () => {
   const [state, setState] = useState<IAppState>(defaultAppState);
-
+  const {
+    depth,
+    output,
+    files,
+    permutations,
+    normaliseAtEnd,
+    inputTrail,
+    outputTrail,
+    processorPool,
+    permutationOutputs,
+  } = state.permuteState;
   const refreshState = async () => {
     const permuteState = await window.Electron.ipcRenderer.getState();
     setState({ ...state, permuteState });
   };
-  useEffect(() => { 
+  useEffect(() => {
     const setup = async () => {
       const permuteState: IPermuteState = await window.Electron.ipcRenderer.getState();
       setState({
@@ -39,7 +48,27 @@ const Content = () => {
   }, []);
 
   const runProcessor = async () => {
-     window.Electron.ipcRenderer.runProcessor(refreshState);
+    window.Electron.ipcRenderer.runProcessor(refreshState);
+  }
+  const setDepth = async (depth: number) => {
+    window.Electron.ipcRenderer.setDepth(depth);
+    refreshState();
+  }
+  const setPermutations = async (permutations: number) => {
+    window.Electron.ipcRenderer.setPermutations(permutations);
+    refreshState();
+  }
+  const setNormalised = async (normaliseAtEnd: boolean) => {
+    window.Electron.ipcRenderer.setNormalised(normaliseAtEnd);
+    refreshState();
+  }
+  const setInputTrail = async (inputTrail: number) => {
+    window.Electron.ipcRenderer.setInputTrail(inputTrail);
+    refreshState();
+  }
+  const setOutputTrail = async (outputTrail: number) => {
+    window.Electron.ipcRenderer.setOutputTrail(outputTrail);
+    refreshState();
   }
 
   const setProcessorEnabled = (name: string, enable: boolean) => {
@@ -54,18 +83,32 @@ const Content = () => {
   return (
     <Box w="100%" h="100vh">
       <Grid
-  h='100vh'
-  templateRows='repeat(12, 1fr)'
-  templateColumns='repeat(12, 1fr)'
-  gap={0}
->
-    <TopBar />
+        h='100vh'
+        templateRows='repeat(12, 1fr)'
+        templateColumns='repeat(12, 1fr)'
+        gap={0}
+      >
+        <TopBar />
 
-      <Files files={state.permuteState.files} refreshState={refreshState} />
-   <Processors allProcessors={state.allProcessors} processorPool={state.permuteState.processorPool} setProcessorEnabled={setProcessorEnabled} />
-  <Output output={state.permuteState.output} refreshState={refreshState}/>
-  <BottomBar permutationOutputs={state.permuteState.permutationOutputs} runProcessor={runProcessor} finished={state.permuteState.finished}  />
-</Grid>
+        <Files files={files} refreshState={refreshState} />
+        <Processors allProcessors={state.allProcessors} processorPool={processorPool} setProcessorEnabled={setProcessorEnabled} />
+        <Output output={output} refreshState={refreshState} />
+        <BottomBar
+          permutationOutputs={permutationOutputs}
+          runProcessor={runProcessor}
+          processing={state.permuteState.processing}
+          depth={depth}
+          permutations={permutations}
+          normaliseAtEnd={normaliseAtEnd}
+          inputTrail={inputTrail}
+          outputTrail={outputTrail}
+          setDepth={setDepth}
+          setPermutations={setPermutations}
+          setNormalised={setNormalised}
+          setInputTrail={setInputTrail}
+          setOutputTrail={setOutputTrail}
+        />
+      </Grid>
     </Box>
   );
 };
