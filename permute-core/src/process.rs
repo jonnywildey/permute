@@ -1,4 +1,5 @@
 use biquad::*;
+use serde::{Deserialize, Serialize};
 use std::{f64::consts::PI, sync::mpsc};
 
 use crate::permute_files::PermuteUpdate;
@@ -33,7 +34,7 @@ pub enum PermuteNodeEvent {
     NodeProcessComplete,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum PermuteNodeName {
     Reverse,
     RhythmicDelay,

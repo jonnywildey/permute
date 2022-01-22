@@ -1,11 +1,12 @@
-import { ipcMain, dialog } from 'electron';
+import { ipcMain, dialog, app } from 'electron';
 import { createPermuteProcessor, IPermuteState } from "permute-node";
 import { promises as fs } from "fs";
 import { basename } from "path";
 import { shell } from 'electron';
 import { IFileStat } from './IFileStat';
+import path from "path";
 
-
+const configPath = path.join(app.getPath('userData'), "config.json");
 export const processor = createPermuteProcessor();
 
 ipcMain.on('open-output-dialog', async (event) => {
@@ -68,3 +69,10 @@ ipcMain.on('get-file-stats', async (event, files: string[]) => {
 ipcMain.on('show-file', async (_, file) => {
   shell.showItemInFolder(file);
 });
+
+app.on('before-quit', () => {
+  processor.saveSettings(configPath);
+})
+app.on('ready', () => {
+  processor.loadSettings(configPath);
+})

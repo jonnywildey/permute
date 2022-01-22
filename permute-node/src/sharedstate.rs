@@ -1,9 +1,12 @@
-use std::sync::mpsc;
-use std::thread::JoinHandle;
-
 use neon::prelude::*;
 use permute::permute_files::*;
 use permute::process::*;
+use serde::{Deserialize, Serialize};
+use std::fs::File;
+use std::io::BufReader;
+use std::io::Write;
+use std::sync::mpsc;
+use std::thread::JoinHandle;
 
 #[derive(Debug, Clone)]
 pub struct SharedState {
@@ -44,8 +47,8 @@ impl SharedState {
             normalise_at_end: true,
             output: String::default(),
             output_trail: 2.0,
-            permutation_depth: 1,
-            permutations: 1,
+            permutation_depth: 2,
+            permutations: 3,
             processor_count: None,
             update_sender,
             processor_pool: all_processors.clone(),
@@ -170,3 +173,57 @@ pub struct OutputProgress {
 }
 
 impl Finalize for OutputProgress {}
+
+impl SharedState {
+    pub fn write_to_json(&self, path: String) -> std::io::Result<()> {
+        let data = SharedStateSerializable {
+            files: self.files.clone(),
+            high_sample_rate: self.high_sample_rate,
+            input_trail: self.input_trail,
+            normalise_at_end: self.normalise_at_end,
+            output: self.output.clone(),
+            output_trail: self.output_trail,
+            permutation_depth: self.permutation_depth,
+            permutations: self.permutations,
+            processor_count: self.processor_count,
+            processor_pool: self.processor_pool.clone(),
+        };
+        let json = serde_json::to_string(&data)?;
+        let mut file = File::create(path)?;
+        file.write(json.as_bytes())?;
+        Ok(())
+    }
+
+    pub fn read_from_json(&mut self, path: String) -> std::io::Result<()> {
+        let file = File::open(path)?;
+        let reader = BufReader::new(file);
+        let data: SharedStateSerializable = serde_json::from_reader(reader)?;
+
+        self.files = data.files;
+        self.high_sample_rate = data.high_sample_rate;
+        self.input_trail = data.input_trail;
+        self.normalise_at_end = data.normalise_at_end;
+        self.output = data.output;
+        self.output_trail = data.output_trail;
+        self.permutation_depth = data.permutation_depth;
+        self.permutations = data.permutations;
+        self.processor_count = data.processor_count;
+        self.processor_pool = data.processor_pool;
+
+        Ok(())
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct SharedStateSerializable {
+    pub files: Vec<String>,
+    pub output: String,
+    pub input_trail: f64,
+    pub output_trail: f64,
+    pub permutations: usize,
+    pub permutation_depth: usize,
+    pub processor_pool: Vec<PermuteNodeName>,
+    pub normalise_at_end: bool,
+    pub high_sample_rate: bool,
+    pub processor_count: Option<i32>,
+}

@@ -2,6 +2,7 @@ const {
   init, cancel, runProcess, addFile, addProcessor, removeProcessor,
   getStateCallback, setOutput, setDepth, setInputTrail,
   setOutputTrail, setPermutations, setNormalised, removeFile,
+  saveSettings, loadSettings,
 } = require("../permute-library");
 
 const PERMUTE_POLL_LATENCY = 100;
@@ -85,6 +86,12 @@ export function createPermuteProcessor() {
     },
     setOutputTrail(output: string) {
       return setOutputTrail.call(permuteLibrary, output);
+    },
+    loadSettings(file: string) {
+      return loadSettings.call(permuteLibrary, file);
+    },
+    saveSettings(file: string) {
+      return saveSettings.call(permuteLibrary, file);
     },
     getStateCallback,
     async getState(): Promise<IPermuteState> {

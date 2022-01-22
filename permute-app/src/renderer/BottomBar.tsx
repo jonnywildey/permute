@@ -263,7 +263,7 @@ function Normalise(normaliseAtEnd: boolean, setNormalised: (normaliseAtEnd: bool
     <Tooltip openDelay={200} label={<Text fontSize="lg">
       If enabled, normalises audio to ensure there is no digital clipping <b>(recommended)</b>
     </Text>}>
-      <Heading size="sm" fr>Normalise</Heading>
+      <Heading size="sm">Normalise</Heading>
     </Tooltip>
     <Switch isChecked={normaliseAtEnd} onChange={(e) => setNormalised(e.target.checked)} ml={2} />
   </GridItem>;

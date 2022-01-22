@@ -28,6 +28,8 @@ enum ProcessorMessage {
     SetPermutations(usize),
     SetInputTrail(f64),
     SetOutputTrail(f64),
+    LoadSettingsFromJson(String),
+    SaveSettingsToJson(String),
     Cancel,
 }
 
@@ -96,6 +98,12 @@ impl Processor {
                     ProcessorMessage::SetPermutationDepth(depth) => {
                         state.set_depth(depth);
                     }
+                    ProcessorMessage::LoadSettingsFromJson(file) => {
+                        state.read_from_json(file).unwrap_or(())
+                    }
+                    ProcessorMessage::SaveSettingsToJson(file) => {
+                        state.write_to_json(file).unwrap_or(())
+                    }
                     ProcessorMessage::Cancel => break,
                 }
             }
@@ -125,20 +133,12 @@ impl Processor {
         Ok(Self { tx })
     }
 
-    fn cancel(&self) -> Result<(), mpsc::SendError<ProcessorMessage>> {
-        self.tx.send(ProcessorMessage::Cancel)
-    }
-
     fn set_state_callback(
         &self,
         callback: impl FnOnce(&Channel, SharedState) + Send + 'static,
     ) -> Result<(), mpsc::SendError<ProcessorMessage>> {
         self.tx
             .send(ProcessorMessage::GetStateCallback(Box::new(callback)))
-    }
-
-    fn run(&self) -> Result<(), mpsc::SendError<ProcessorMessage>> {
-        self.tx.send(ProcessorMessage::Run)
     }
 }
 
@@ -153,12 +153,7 @@ impl Processor {
     }
 
     fn js_cancel(mut cx: FunctionContext) -> JsResult<JsUndefined> {
-        // Get the `this` value as a `JsBox<Database>`
-        cx.this()
-            .downcast_or_throw::<JsBox<Processor>, _>(&mut cx)?
-            .cancel()
-            .or_else(|err| cx.throw_error(err.to_string()))?;
-
+        js_hook!(ProcessorMessage::Cancel, cx);
         Ok(cx.undefined())
     }
 
@@ -238,166 +233,80 @@ impl Processor {
         Ok(cx.undefined())
     }
 
-    // Run process
     fn js_run_process(mut cx: FunctionContext) -> JsResult<JsUndefined> {
-        let processor = cx
-            .this()
-            .downcast_or_throw::<JsBox<Processor>, _>(&mut cx)?;
-
-        processor
-            .run()
-            .or_else(|err| cx.throw_error(err.to_string()))?;
-
+        js_hook!(ProcessorMessage::Run, cx);
         Ok(cx.undefined())
     }
 
     fn js_add_file(mut cx: FunctionContext) -> JsResult<JsUndefined> {
         let file = cx.argument::<JsString>(0)?.value(&mut cx);
-
-        let processor = cx
-            .this()
-            .downcast_or_throw::<JsBox<Processor>, _>(&mut cx)?;
-
-        processor
-            .tx
-            .send(ProcessorMessage::AddFile(file))
-            .or_else(|err| cx.throw_error(err.to_string()))?;
-
+        js_hook!(file, ProcessorMessage::AddFile, cx);
         Ok(cx.undefined())
     }
 
     fn js_remove_file(mut cx: FunctionContext) -> JsResult<JsUndefined> {
         let file = cx.argument::<JsString>(0)?.value(&mut cx);
-
-        let processor = cx
-            .this()
-            .downcast_or_throw::<JsBox<Processor>, _>(&mut cx)?;
-
-        processor
-            .tx
-            .send(ProcessorMessage::RemoveFile(file))
-            .or_else(|err| cx.throw_error(err.to_string()))?;
-
+        js_hook!(file, ProcessorMessage::RemoveFile, cx);
         Ok(cx.undefined())
     }
 
     fn js_set_permutations(mut cx: FunctionContext) -> JsResult<JsUndefined> {
         let permutations = cx.argument::<JsNumber>(0)?.value(&mut cx) as usize;
-
-        let processor = cx
-            .this()
-            .downcast_or_throw::<JsBox<Processor>, _>(&mut cx)?;
-
-        processor
-            .tx
-            .send(ProcessorMessage::SetPermutations(permutations))
-            .or_else(|err| cx.throw_error(err.to_string()))?;
-
+        js_hook!(permutations, ProcessorMessage::SetPermutations, cx);
         Ok(cx.undefined())
     }
 
     fn js_set_depth(mut cx: FunctionContext) -> JsResult<JsUndefined> {
         let depth = cx.argument::<JsNumber>(0)?.value(&mut cx) as usize;
-
-        let processor = cx
-            .this()
-            .downcast_or_throw::<JsBox<Processor>, _>(&mut cx)?;
-
-        processor
-            .tx
-            .send(ProcessorMessage::SetPermutationDepth(depth))
-            .or_else(|err| cx.throw_error(err.to_string()))?;
-
+        js_hook!(depth, ProcessorMessage::SetPermutationDepth, cx);
         Ok(cx.undefined())
     }
 
     fn js_set_normalised(mut cx: FunctionContext) -> JsResult<JsUndefined> {
         let normalised = cx.argument::<JsBoolean>(0)?.value(&mut cx);
-
-        let processor = cx
-            .this()
-            .downcast_or_throw::<JsBox<Processor>, _>(&mut cx)?;
-
-        processor
-            .tx
-            .send(ProcessorMessage::SetNormalised(normalised))
-            .or_else(|err| cx.throw_error(err.to_string()))?;
-
+        js_hook!(normalised, ProcessorMessage::SetNormalised, cx);
         Ok(cx.undefined())
     }
 
     fn js_set_input_trail(mut cx: FunctionContext) -> JsResult<JsUndefined> {
         let input_trail = cx.argument::<JsNumber>(0)?.value(&mut cx);
-
-        let processor = cx
-            .this()
-            .downcast_or_throw::<JsBox<Processor>, _>(&mut cx)?;
-
-        processor
-            .tx
-            .send(ProcessorMessage::SetInputTrail(input_trail))
-            .or_else(|err| cx.throw_error(err.to_string()))?;
-
+        js_hook!(input_trail, ProcessorMessage::SetInputTrail, cx);
         Ok(cx.undefined())
     }
 
     fn js_set_output_trail(mut cx: FunctionContext) -> JsResult<JsUndefined> {
         let output_trail = cx.argument::<JsNumber>(0)?.value(&mut cx);
-
-        let processor = cx
-            .this()
-            .downcast_or_throw::<JsBox<Processor>, _>(&mut cx)?;
-
-        processor
-            .tx
-            .send(ProcessorMessage::SetOutputTrail(output_trail))
-            .or_else(|err| cx.throw_error(err.to_string()))?;
-
+        js_hook!(output_trail, ProcessorMessage::SetOutputTrail, cx);
         Ok(cx.undefined())
     }
 
     fn js_add_processor(mut cx: FunctionContext) -> JsResult<JsUndefined> {
         let name = cx.argument::<JsString>(0)?.value(&mut cx);
-
-        let processor = cx
-            .this()
-            .downcast_or_throw::<JsBox<Processor>, _>(&mut cx)?;
-
-        processor
-            .tx
-            .send(ProcessorMessage::AddProcessor(name))
-            .or_else(|err| cx.throw_error(err.to_string()))?;
-
+        js_hook!(name, ProcessorMessage::AddProcessor, cx);
         Ok(cx.undefined())
     }
 
     fn js_remove_processor(mut cx: FunctionContext) -> JsResult<JsUndefined> {
         let name = cx.argument::<JsString>(0)?.value(&mut cx);
-
-        let processor = cx
-            .this()
-            .downcast_or_throw::<JsBox<Processor>, _>(&mut cx)?;
-
-        processor
-            .tx
-            .send(ProcessorMessage::RemoveProcessor(name))
-            .or_else(|err| cx.throw_error(err.to_string()))?;
-
+        js_hook!(name, ProcessorMessage::RemoveProcessor, cx);
         Ok(cx.undefined())
     }
 
     fn js_set_output(mut cx: FunctionContext) -> JsResult<JsUndefined> {
         let file = cx.argument::<JsString>(0)?.value(&mut cx);
+        js_hook!(file, ProcessorMessage::SetOutput, cx);
+        Ok(cx.undefined())
+    }
 
-        let processor = cx
-            .this()
-            .downcast_or_throw::<JsBox<Processor>, _>(&mut cx)?;
+    fn js_save_settings(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+        let file = cx.argument::<JsString>(0)?.value(&mut cx);
+        js_hook!(file, ProcessorMessage::SaveSettingsToJson, cx);
+        Ok(cx.undefined())
+    }
 
-        processor
-            .tx
-            .send(ProcessorMessage::SetOutput(file))
-            .or_else(|err| cx.throw_error(err.to_string()))?;
-
+    fn js_load_settings(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+        let file = cx.argument::<JsString>(0)?.value(&mut cx);
+        js_hook!(file, ProcessorMessage::LoadSettingsFromJson, cx);
         Ok(cx.undefined())
     }
 }
@@ -418,6 +327,32 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
     cx.export_function("setOutputTrail", Processor::js_set_output_trail)?;
     cx.export_function("setPermutations", Processor::js_set_permutations)?;
     cx.export_function("setNormalised", Processor::js_set_normalised)?;
+    cx.export_function("saveSettings", Processor::js_save_settings)?;
+    cx.export_function("loadSettings", Processor::js_load_settings)?;
 
     Ok(())
 }
+
+macro_rules! js_hook {
+    ($parameter:expr, $message:expr, $cx:expr) => {{
+        let processor = $cx
+            .this()
+            .downcast_or_throw::<JsBox<Processor>, _>(&mut $cx)?;
+
+        processor
+            .tx
+            .send($message($parameter))
+            .or_else(|err| $cx.throw_error(err.to_string()))?;
+    }};
+    ($message:expr, $cx:expr) => {{
+        let processor = $cx
+            .this()
+            .downcast_or_throw::<JsBox<Processor>, _>(&mut $cx)?;
+
+        processor
+            .tx
+            .send($message)
+            .or_else(|err| $cx.throw_error(err.to_string()))?;
+    }};
+}
+pub(crate) use js_hook;
