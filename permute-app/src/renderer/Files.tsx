@@ -1,6 +1,7 @@
-import { Box, GridItem, Heading, Input, IconButton, CloseButton, PropsOf, Text } from "@chakra-ui/react";
+import { Box, GridItem, Heading, Input, IconButton, CloseButton, PropsOf, Text, Button, Center } from "@chakra-ui/react";
 import { IFileStat } from "main/IFileStat";
 import { ViewIcon } from  "@chakra-ui/icons"
+import { useState } from "react";
 
 export interface IFilesProps {
   files: IFileStat[];
@@ -10,12 +11,15 @@ export interface IFilesProps {
 }
 
 export const Files: React.FC<IFilesProps> = ({ files, addFiles, removeFile, showFile }) => {
+  const [isDrag, setDrag] = useState(false);
+
   const onDrop: React.DragEventHandler<HTMLInputElement> = (e) => {
     let files: string[] = [];
     for (const f of (e.dataTransfer as any).files) {
       files.push(f.path);
     };
     addFiles(files);
+    setDrag(false);
   };
   const onChange: React.ChangeEventHandler<HTMLInputElement> = (e) => {
     let files: string[] = [];
@@ -68,12 +72,31 @@ export const Files: React.FC<IFilesProps> = ({ files, addFiles, removeFile, show
         >{file.sizeMb} mb</Text>
       </Box>
     </Box>);
-  })
+  });
 
   return <GridItem rowSpan={17} colSpan={3} bg='yellow.50' pt={4}>
     <Heading textAlign="center" size="lg">Files</Heading>
-    <Input accept=".wav" padding={3} type="file" mb={4} multiple onDrop={onDrop} onChange={onChange} />
+    <Box className="file-upload-container"
+    >
+      <Center>
+        <Button width="75%" bgColor={isDrag ? "pink.200" : "pink.300"}>Select files 
+          <Input 
+            accept=".wav"
+            className="file-upload" 
+            position="absolute"
+            type="file" 
+            multiple 
+            onDrop={onDrop} 
+            onChange={onChange} 
+            onDragEnter={() => setDrag(true)}
+            onDragLeave={() => setDrag(false)}
+            />
+          </Button>
+        </Center>
+      </Box>
+    <Box overflowY="scroll" height="386px">
     {fileBoxes}
+    </Box>
   </GridItem>
 
 }
