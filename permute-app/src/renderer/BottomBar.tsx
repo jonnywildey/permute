@@ -21,6 +21,10 @@ export interface IBottomBarProps {
   setOutputTrail: (trail: number) => void;
 }
 
+const bg = "brand.150";
+const buttonBg = "brand.200";
+const borderColour = "gray.100"
+
 export const BottomBar: React.FC<IBottomBarProps> = ({
   permutationOutputs, runProcessor, processing, setDepth, setInputTrail,
   setNormalised, setOutputTrail, setPermutations, depth, inputTrail, files, output,
@@ -28,9 +32,10 @@ export const BottomBar: React.FC<IBottomBarProps> = ({
 }) => {
   return (
     <GridItem rowSpan={5} colSpan={12}
-      bg='cyan.100' borderTop="0.5px solid" borderTopColor="cyan.200"
+      bg={bg} borderTop="0.5px solid" borderTopColor={borderColour}
       pt={3}
       pb={3}
+      color="gray.700"
     >
       <Grid
         templateRows={`repeat(2, 1fr)`}
@@ -250,7 +255,8 @@ const Run: React.FC<IRunProps> = ({
       onClick={runProcessor}
       disabled={processing || !output || !files.length}
       width="100%"
-      bg="primary"
+      bg={buttonBg}
+      color="gray.50"
       fontSize="2xl"
     >
       {!processing ? "Run" : <CircularProgress value={progress} size={8} />}

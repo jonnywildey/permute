@@ -12,8 +12,20 @@ export const theme = extendTheme(
   }),
   {
     colors: {
-      primary: "#EC598B",
-      secondary: "#76FFC0"
+      brand: {
+        25: "#bed3ee38",
+        50: "#CDBCD3",
+        75: "#3ee9c414",
+        100: "#A293D6",
+        150: "#BED3EF",
+        200: "#3A3659",
+        300: "#52B74D",
+        400: "#6D7D99",
+        500: "#CBA7DA",
+        600: "#3EE8C5",
+        650: "#3ee9c44d",
+        700: "#C0BDF0"
+      }
     },
     fonts: {
       heading: 'dongle',
