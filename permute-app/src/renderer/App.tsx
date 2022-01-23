@@ -34,7 +34,7 @@ const Content = () => {
   const [state, setState] = useState<IAppState>(defaultAppState);
   const toast = useToast();
   const { isOpen, onOpen, onClose } = useDisclosure({
-    defaultIsOpen: state.permuteState.output
+    defaultIsOpen: !state.permuteState.output
   });
 
   const {
