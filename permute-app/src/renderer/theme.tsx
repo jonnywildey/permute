@@ -2,7 +2,6 @@ import { extendTheme } from '@chakra-ui/react';
 import { createBreakpoints } from '@chakra-ui/theme-tools';
 
 export const theme = extendTheme(
-
   createBreakpoints({
     sm: '1200em',
     md: '1200em',
@@ -31,5 +30,12 @@ export const theme = extendTheme(
       heading: 'dongle',
       body: 'dongle',
     },
+    components: {
+      Toast: {
+        defaultProps: {
+          colorScheme: 'purple',
+        },
+      },
+    }
   }
 );

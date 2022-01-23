@@ -46,11 +46,12 @@ export function createPermuteProcessor() {
     cancel() {
       cancel.call(permuteLibrary);
     },
-    runProcess(updateFn: GetStateCallback) {
+    runProcess(updateFn: GetStateCallback, onFinished: GetStateCallback) {
       pollHandle = setInterval(() => {
         getStateCallback.call(permuteLibrary, (state: IPermuteState) => {
           if (!state.processing) {
             clearInterval(pollHandle!);
+            return onFinished(state);
           }
           updateFn(state);
         });

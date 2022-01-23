@@ -2,7 +2,7 @@ import '@fontsource/dongle/400.css';
 import '@fontsource/dongle/300.css';
 import '@fontsource/dongle/700.css';
 import './App.css';
-import { ChakraProvider, Box, Grid } from '@chakra-ui/react';
+import { ChakraProvider, Grid, useToast } from '@chakra-ui/react';
 import { Files } from './Files';
 import { TopBar } from './TopBar';
 import { Output } from './Output';
@@ -28,8 +28,10 @@ const defaultAppState: IAppState = {
     files: [],
 }
 
+
 const Content = () => {
   const [state, setState] = useState<IAppState>(defaultAppState);
+  const toast = useToast()
   const {
     allProcessors,
     permutationDepth,
@@ -41,6 +43,7 @@ const Content = () => {
     processorPool,
     permutationOutputs,
   } = state.permuteState;
+
   const refreshState = async () => {
     const permuteState = await window.Electron.ipcRenderer.getState();
     setState({ ...state, permuteState });
@@ -58,7 +61,17 @@ const Content = () => {
   }, []);
 
   const runProcessor = async () => {
-    window.Electron.ipcRenderer.runProcessor(refreshState);
+    const onFinished = (pState: IPermuteState) => {
+      const description = `${pState.files.length * pState.permutations} files permuted!`;
+      toast({
+          description,
+          status: 'success',
+          duration: 50000,
+          isClosable: true,
+       });
+      setState({ ...state, permuteState: pState });
+    };
+    window.Electron.ipcRenderer.runProcessor(refreshState, onFinished);
   };
   const setDepth = async (depth: number) => {
     window.Electron.ipcRenderer.setDepth(depth);
