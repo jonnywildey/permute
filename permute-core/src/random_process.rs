@@ -70,7 +70,7 @@ pub fn get_processor_function(name: PermuteNodeName) -> ProcessorFn {
 
 pub fn random_metallic_delay(params: &ProcessorParams) -> ProcessorParams {
     let update_sender = params.update_sender.to_owned();
-    update_sender.send(PermuteUpdate::UpdatePermuteNodeStarted(
+    let _ = update_sender.send(PermuteUpdate::UpdatePermuteNodeStarted(
         params.permutation.clone(),
         PermuteNodeName::MetallicDelay,
         PermuteNodeEvent::NodeProcessStarted,
@@ -86,7 +86,7 @@ pub fn random_metallic_delay(params: &ProcessorParams) -> ProcessorParams {
     };
 
     let new_params = delay_line(&params.clone(), &delay_params);
-    update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
+    let _ = update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
         params.permutation.clone(),
         PermuteNodeName::MetallicDelay,
         PermuteNodeEvent::NodeProcessComplete,
@@ -97,7 +97,7 @@ pub fn random_metallic_delay(params: &ProcessorParams) -> ProcessorParams {
 pub fn random_rhythmic_delay(params: &ProcessorParams) -> ProcessorParams {
     let update_sender = params.update_sender.to_owned();
     let permutation = params.permutation.clone();
-    update_sender.send(PermuteUpdate::UpdatePermuteNodeStarted(
+    let _ = update_sender.send(PermuteUpdate::UpdatePermuteNodeStarted(
         params.permutation.clone(),
         PermuteNodeName::RhythmicDelay,
         PermuteNodeEvent::NodeProcessStarted,
@@ -114,7 +114,7 @@ pub fn random_rhythmic_delay(params: &ProcessorParams) -> ProcessorParams {
     };
 
     let new_params = delay_line(&params, &delay_params);
-    update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
+    let _ = update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
         permutation,
         PermuteNodeName::RhythmicDelay,
         PermuteNodeEvent::NodeProcessComplete,
@@ -125,13 +125,13 @@ pub fn random_rhythmic_delay(params: &ProcessorParams) -> ProcessorParams {
 pub fn half_speed(params: &ProcessorParams) -> ProcessorParams {
     let update_sender = params.update_sender.to_owned();
     let permutation = params.permutation.clone();
-    update_sender.send(PermuteUpdate::UpdatePermuteNodeStarted(
+    let _ = update_sender.send(PermuteUpdate::UpdatePermuteNodeStarted(
         params.permutation.clone(),
         PermuteNodeName::HalfSpeed,
         PermuteNodeEvent::NodeProcessStarted,
     ));
     let new_samples = change_speed(params.to_owned(), 0.5_f64);
-    update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
+    let _ = update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
         permutation,
         PermuteNodeName::HalfSpeed,
         PermuteNodeEvent::NodeProcessComplete,
@@ -141,13 +141,13 @@ pub fn half_speed(params: &ProcessorParams) -> ProcessorParams {
 pub fn double_speed(params: &ProcessorParams) -> ProcessorParams {
     let update_sender = params.update_sender.to_owned();
     let permutation = params.permutation.clone();
-    update_sender.send(PermuteUpdate::UpdatePermuteNodeStarted(
+    let _ = update_sender.send(PermuteUpdate::UpdatePermuteNodeStarted(
         params.permutation.clone(),
         PermuteNodeName::DoubleSpeed,
         PermuteNodeEvent::NodeProcessStarted,
     ));
     let new_samples = change_speed(params.to_owned(), 2_f64);
-    update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
+    let _ = update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
         permutation,
         PermuteNodeName::DoubleSpeed,
         PermuteNodeEvent::NodeProcessComplete,
@@ -158,7 +158,7 @@ pub fn double_speed(params: &ProcessorParams) -> ProcessorParams {
 pub fn random_wow(params: &ProcessorParams) -> ProcessorParams {
     let update_sender = params.update_sender.to_owned();
     let permutation = params.permutation.clone();
-    update_sender.send(PermuteUpdate::UpdatePermuteNodeStarted(
+    let _ = update_sender.send(PermuteUpdate::UpdatePermuteNodeStarted(
         params.permutation.clone(),
         PermuteNodeName::Wow,
         PermuteNodeEvent::NodeProcessStarted,
@@ -172,7 +172,7 @@ pub fn random_wow(params: &ProcessorParams) -> ProcessorParams {
             depth: rng.gen_range(0.3_f64..0.7_f64),
         },
     );
-    update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
+    let _ = update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
         permutation,
         PermuteNodeName::Wow,
         PermuteNodeEvent::NodeProcessComplete,
@@ -182,7 +182,7 @@ pub fn random_wow(params: &ProcessorParams) -> ProcessorParams {
 pub fn random_flutter(params: &ProcessorParams) -> ProcessorParams {
     let update_sender = params.update_sender.to_owned();
     let permutation = params.permutation.clone();
-    update_sender.send(PermuteUpdate::UpdatePermuteNodeStarted(
+    let _ = update_sender.send(PermuteUpdate::UpdatePermuteNodeStarted(
         params.permutation.clone(),
         PermuteNodeName::Flutter,
         PermuteNodeEvent::NodeProcessStarted,
@@ -196,7 +196,7 @@ pub fn random_flutter(params: &ProcessorParams) -> ProcessorParams {
             depth: rng.gen_range(0.05_f64..0.5_f64),
         },
     );
-    update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
+    let _ = update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
         permutation,
         PermuteNodeName::Flutter,
         PermuteNodeEvent::NodeProcessComplete,
@@ -207,7 +207,7 @@ pub fn random_flutter(params: &ProcessorParams) -> ProcessorParams {
 pub fn random_chorus(params: &ProcessorParams) -> ProcessorParams {
     let update_sender = params.update_sender.to_owned();
     let permutation = params.permutation.clone();
-    update_sender.send(PermuteUpdate::UpdatePermuteNodeStarted(
+    let _ = update_sender.send(PermuteUpdate::UpdatePermuteNodeStarted(
         params.permutation.clone(),
         PermuteNodeName::Chorus,
         PermuteNodeEvent::NodeProcessStarted,
@@ -235,7 +235,7 @@ pub fn random_chorus(params: &ProcessorParams) -> ProcessorParams {
             vibrato_params,
         },
     );
-    update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
+    let _ = update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
         permutation,
         PermuteNodeName::Chorus,
         PermuteNodeEvent::NodeProcessComplete,
@@ -246,13 +246,13 @@ pub fn random_chorus(params: &ProcessorParams) -> ProcessorParams {
 pub fn normalise(params: &ProcessorParams) -> ProcessorParams {
     let update_sender = params.update_sender.to_owned();
     let permutation = params.permutation.clone();
-    update_sender.send(PermuteUpdate::UpdatePermuteNodeStarted(
+    let _ = update_sender.send(PermuteUpdate::UpdatePermuteNodeStarted(
         permutation.clone(),
         PermuteNodeName::Normalise,
         PermuteNodeEvent::NodeProcessStarted,
     ));
     let new_samples = ceiling(params.to_owned(), 1_f64);
-    update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
+    let _ = update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
         permutation,
         PermuteNodeName::Normalise,
         PermuteNodeEvent::NodeProcessComplete,

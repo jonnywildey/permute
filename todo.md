@@ -1,5 +1,16 @@
 # Permute
 
+###
+- Rename finished to processing
+- trail options
+- normalise options
+- add description
+- limit files to wav
+- sound fx???
+- preview inputs
+- store previous settings
+- all processors
+
 
 ## UI
 - [Neon electron app](https://github.com/neon-bindings/neon) [Example](https://keminglabs.com/blog/building-a-fast-electron-app-with-rust/)
@@ -7,7 +18,6 @@
 - [Iced](https://github.com/iced-rs/iced)
 - [Dioxus](https://github.com/DioxusLabs/dioxus)
 
-Chakra-ui component library
 
 ## Features
 - Hi quality mode (run at 192k) (Somewhat working)
@@ -15,6 +25,7 @@ Chakra-ui component library
 - Separate out cli layer and core layer (T)
 - UI 
 - overload option rather than normalise (T)
+- mps and aiff support
 
 ## FX Ideas
 

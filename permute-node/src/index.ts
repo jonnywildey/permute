@@ -1,54 +1,104 @@
-const { init, cancel, runProcess, addFile, getStateCallback } = require("../permute-library");
+const {
+  init, cancel, runProcess, addFile, addProcessor, removeProcessor,
+  getStateCallback, setOutput, setDepth, setInputTrail,
+  setOutputTrail, setPermutations, setNormalised, removeFile,
+  saveSettings, loadSettings,
+} = require("../permute-library");
 
-const PERMUTE_POLL_LATENCY = 50;
+const PERMUTE_POLL_LATENCY = 100;
 
-export type PermuteState = any;
+export interface IPermuteState {
+  output: string,
+  processing: boolean,
+  highSampleRate: boolean,
+  inputTrail: number,
+  outputTrail: 0,
+  files: string[],
+  permutations: number,
+  permutationDepth: number,
+  processorCount: number,
+  processorPool: string[],
+  allProcessors: string[],
+  normaliseAtEnd: boolean,
+  permutationOutputs: IPermutationOutput[];
+};
 
-export type GetStateCallback = (state: PermuteState) => void;
+export interface IPermutationOutput {
+  output: string;
+  progress: number;
+}
+
+export type GetStateCallback = (state: IPermuteState) => void;
 
 /**
  * Wrapper for the boxed `Processor`
  */
-function createPermuteProcessor() {
+export function createPermuteProcessor() {
   const permuteLibrary = init();
   let pollHandle: NodeJS.Timer | undefined = undefined;
+
+  const getStateCb = (cb: GetStateCallback) => {
+    return getStateCallback.call(permuteLibrary, cb);
+  };
+
 
   return {
     cancel() {
       cancel.call(permuteLibrary);
     },
-    pollForStateUpdates(cb: GetStateCallback) {
-      pollHandle = setInterval(() => { });
-    },
-    runProcess(cb: GetStateCallback) {
+    runProcess(updateFn: GetStateCallback) {
       pollHandle = setInterval(() => {
-        getStateCallback.call(permuteLibrary, cb);
-      });
-      return runProcess.call(permuteLibrary, (state: PermuteState) => {
-        clearInterval(pollHandle!);
-        cb(state);
+        getStateCallback.call(permuteLibrary, (state: IPermuteState) => {
+          if (!state.processing) {
+            clearInterval(pollHandle!);
+          }
+          updateFn(state);
+        });
       }, PERMUTE_POLL_LATENCY);
+      return runProcess.call(permuteLibrary);
     },
     addFile(file: string) {
       return addFile.call(permuteLibrary, file);
     },
-    getStateCallback(cb: GetStateCallback) {
-      return getStateCallback.call(permuteLibrary, cb);
+    removeFile(file: string) {
+      return removeFile.call(permuteLibrary, file);
+    },
+    addProcessor(name: string) {
+      return addProcessor.call(permuteLibrary, name);
+    },
+    removeProcessor(name: string) {
+      return removeProcessor.call(permuteLibrary, name);
+    },
+    setOutput(output: string) {
+      return setOutput.call(permuteLibrary, output);
+    },
+    setDepth(output: string) {
+      return setDepth.call(permuteLibrary, output);
+    },
+    setPermutations(output: string) {
+      return setPermutations.call(permuteLibrary, output);
+    },
+    setNormalised(output: string) {
+      return setNormalised.call(permuteLibrary, output);
+    },
+    setInputTrail(output: string) {
+      return setInputTrail.call(permuteLibrary, output);
+    },
+    setOutputTrail(output: string) {
+      return setOutputTrail.call(permuteLibrary, output);
+    },
+    loadSettings(file: string) {
+      return loadSettings.call(permuteLibrary, file);
+    },
+    saveSettings(file: string) {
+      return saveSettings.call(permuteLibrary, file);
+    },
+    getStateCallback,
+    async getState(): Promise<IPermuteState> {
+      return new Promise(res => getStateCb((state) => {
+        res(state);
+      }))
     }
   }
 }
-
-const run = async () => {
-  const processor = createPermuteProcessor();
-  processor.addFile("/Users/jonnywildey/rustcode/permute/permute-core/examples/vibebeep24.wav");
-  processor.getStateCallback((state) => {
-    console.log(state);
-  });
-  processor.runProcess((state) => {
-    console.log("woo", state)
-  });
-}
-
-run();
-
 

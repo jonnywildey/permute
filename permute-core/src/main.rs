@@ -66,7 +66,7 @@ fn main() {
 
     let (tx, rx) = mpsc::channel::<PermuteUpdate>();
 
-    let handle = thread::spawn(move || {
+    thread::spawn(move || {
         permute_files(PermuteFilesParams {
             files: vec![args.file],
             output: args.output,
@@ -90,17 +90,22 @@ fn main() {
                     * 100.0;
                 println!("{}%", percentage_progress.round());
             }
-            PermuteUpdate::UpdatePermuteNodeStarted(_, _, _) => {}
+            PermuteUpdate::UpdatePermuteNodeStarted(permutation, _, _) => {
+                if permutation.node_index == 0 {
+                    println!("Permuting {}", permutation.output);
+                }
+            }
             PermuteUpdate::UpdateSetProcessors(permutation, processors) => {
                 let pretty_processors = processors
                     .iter()
                     .map(|p| get_processor_display_name(*p))
                     .collect::<Vec<String>>();
                 println!(
-                    "Permutating {} Processors {:#?}",
+                    "File {} Processors {:#?}",
                     permutation.output, pretty_processors
                 );
             }
+            PermuteUpdate::ProcessComplete => {}
         }
     }
 }
