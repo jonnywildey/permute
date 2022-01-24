@@ -1,4 +1,5 @@
 use crate::{permute_files::PermuteUpdate, process::*};
+use biquad::Q_BUTTERWORTH_F64;
 use rand::prelude::*;
 
 pub struct GetProcessorNodeParams {
@@ -54,6 +55,7 @@ pub fn get_processor_function(name: PermuteNodeName) -> ProcessorFn {
     match name {
         PermuteNodeName::Reverse => reverse,
         PermuteNodeName::Chorus => random_chorus,
+        PermuteNodeName::Phaser => random_phaser,
         PermuteNodeName::DoubleSpeed => double_speed,
         PermuteNodeName::Flutter => random_flutter,
         PermuteNodeName::HalfSpeed => half_speed,
@@ -238,6 +240,43 @@ pub fn random_chorus(params: &ProcessorParams) -> ProcessorParams {
     let _ = update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
         permutation,
         PermuteNodeName::Chorus,
+        PermuteNodeEvent::NodeProcessComplete,
+    ));
+    new_samples
+}
+
+pub fn random_phaser(params: &ProcessorParams) -> ProcessorParams {
+    let update_sender = params.update_sender.to_owned();
+    let permutation = params.permutation.clone();
+    let _ = update_sender.send(PermuteUpdate::UpdatePermuteNodeStarted(
+        params.permutation.clone(),
+        PermuteNodeName::Phaser,
+        PermuteNodeEvent::NodeProcessStarted,
+    ));
+
+    let phaser_params = PhaserParams {
+        center_freq: 500.0,
+        lfo_rate: 3.0,
+        q: 10.0,
+        stages: 1,
+        step_hz: 200.0,
+        dry_mix: 0.0,
+        wet_mix: 1.0,
+    };
+
+    let new_samples = phaser(&params.to_owned(), &phaser_params);
+
+    // let filter_params = FilterParams {
+    //     filter_type: FilterType::Notch,
+    //     form: FilterForm::Form1,
+    //     frequency: 400.0,
+    //     q: Some(0.72),
+    // };
+
+    // let new_samples = multi_channel_filter(&params.to_owned(), &filter_params);
+    let _ = update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
+        permutation,
+        PermuteNodeName::Phaser,
         PermuteNodeEvent::NodeProcessComplete,
     ));
     new_samples

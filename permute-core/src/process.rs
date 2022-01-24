@@ -44,6 +44,7 @@ pub enum PermuteNodeName {
     Wow,
     Flutter,
     Chorus,
+    Phaser,
     Normalise,
     SampleRateConversionHigh,
     SampleRateConversionOriginal,
@@ -106,6 +107,7 @@ pub fn change_sample_rate(params: ProcessorParams, new_sample_rate: u32) -> Proc
             &FilterParams {
                 filter_type: FilterType::LowPass,
                 frequency: (new_sample_rate / 2) as f64,
+                form: FilterForm::Form2,
                 q: None,
             },
         );
@@ -482,10 +484,17 @@ pub fn chorus(
 pub type FilterType<T> = Type<T>;
 
 #[derive(Clone)]
+pub enum FilterForm {
+    Form1,
+    Form2,
+}
+
+#[derive(Clone)]
 pub struct FilterParams {
     pub frequency: f64,
     pub q: Option<f64>,
     pub filter_type: FilterType<f64>,
+    pub form: FilterForm,
 }
 
 pub fn multi_channel_filter(
@@ -538,6 +547,7 @@ pub fn filter(
         filter_type,
         frequency,
         q,
+        form,
     }: &FilterParams,
 ) -> ProcessorParams {
     // Cutoff and sampling frequencies
@@ -547,12 +557,23 @@ pub fn filter(
 
     // Create coefficients for the biquads
     let coeffs = Coefficients::<f64>::from_params(*filter_type, fs, f0, q).unwrap();
-    let mut biquad1 = DirectForm2Transposed::<f64>::new(coeffs);
 
     let mut new_samples = vec![0_f64; *sample_length];
+    match form {
+        &FilterForm::Form1 => {
+            let mut biquad1 = DirectForm1::<f64>::new(coeffs);
 
-    for i in 0..*sample_length {
-        new_samples[i] = biquad1.run(samples[i]);
+            for i in 0..*sample_length {
+                new_samples[i] = biquad1.run(samples[i]);
+            }
+        }
+        &FilterForm::Form2 => {
+            let mut biquad2 = DirectForm2Transposed::<f64>::new(coeffs);
+
+            for i in 0..*sample_length {
+                new_samples[i] = biquad2.run(samples[i]);
+            }
+        }
     }
 
     return ProcessorParams {
@@ -561,5 +582,133 @@ pub fn filter(
         sample_length: *sample_length,
         update_sender: update_sender.to_owned(),
         permutation: permutation.to_owned(),
+    };
+}
+
+pub struct PhaserParams {
+    pub stages: i32,
+    pub center_freq: f64,
+    pub step_hz: f64,
+    pub lfo_rate: f64,
+    pub q: f64,
+    pub dry_mix: f64,
+    pub wet_mix: f64,
+}
+
+pub fn phaser(params: &ProcessorParams, phaser_params: &PhaserParams) -> ProcessorParams {
+    let channel_samples = split_channels(params.samples.to_owned(), params.spec.channels);
+
+    let split_params = channel_samples
+        .iter()
+        .map(|cs| {
+            let coeffs = Coefficients::<f64>::from_params(
+                FilterType::AllPass,
+                (params.spec.sample_rate).hz(),
+                (phaser_params.center_freq).hz(),
+                phaser_params.q,
+            )
+            .unwrap();
+
+            let mut filter = DirectForm1::<f64>::new(coeffs);
+            let mut new_samples = cs.clone();
+            let mut cos_amplitude: f64;
+
+            for i in 0..cs.len() {
+                cos_amplitude =
+                    (i as f64 / params.spec.sample_rate as f64 * 2.0 * PI * phaser_params.lfo_rate)
+                        .cos();
+                let freq =
+                    phaser_params.center_freq + (phaser_params.step_hz * cos_amplitude as f64);
+
+                let new_coeffs = Coefficients::<f64>::from_params(
+                    FilterType::AllPass,
+                    params.spec.sample_rate.hz(),
+                    (freq + (phaser_params.step_hz * cos_amplitude)).hz(),
+                    phaser_params.q,
+                )
+                .unwrap();
+                filter.update_coefficients(new_coeffs);
+                new_samples[i] = filter.run(cs[i]);
+            }
+
+            // copy
+            for i in 0..cs.len() {
+                cos_amplitude =
+                    (i as f64 / params.spec.sample_rate as f64 * 2.0 * PI * phaser_params.lfo_rate)
+                        .cos();
+                let freq =
+                    phaser_params.center_freq + (phaser_params.step_hz * cos_amplitude as f64);
+
+                let new_coeffs = Coefficients::<f64>::from_params(
+                    FilterType::AllPass,
+                    params.spec.sample_rate.hz(),
+                    (freq + (phaser_params.step_hz * cos_amplitude)).hz(),
+                    phaser_params.q,
+                )
+                .unwrap();
+                filter.update_coefficients(new_coeffs);
+                new_samples[i] = filter.run(cs[i]);
+            }
+
+            // copy
+            for i in 0..cs.len() {
+                cos_amplitude =
+                    (i as f64 / params.spec.sample_rate as f64 * 2.0 * PI * phaser_params.lfo_rate)
+                        .cos();
+                let freq = phaser_params.center_freq
+                    + (phaser_params.step_hz * cos_amplitude * 1.3 as f64);
+
+                let new_coeffs = Coefficients::<f64>::from_params(
+                    FilterType::AllPass,
+                    params.spec.sample_rate.hz(),
+                    (freq + (phaser_params.step_hz * cos_amplitude)).hz(),
+                    phaser_params.q,
+                )
+                .unwrap();
+                filter.update_coefficients(new_coeffs);
+                new_samples[i] = filter.run(cs[i]);
+            }
+            // copy
+            for i in 0..cs.len() {
+                cos_amplitude =
+                    (i as f64 / params.spec.sample_rate as f64 * 2.0 * PI * phaser_params.lfo_rate)
+                        .cos();
+                let freq = phaser_params.center_freq
+                    + (phaser_params.step_hz * cos_amplitude * 1.1 as f64);
+
+                let new_coeffs = Coefficients::<f64>::from_params(
+                    FilterType::AllPass,
+                    params.spec.sample_rate.hz(),
+                    (freq + (phaser_params.step_hz * cos_amplitude)).hz(),
+                    phaser_params.q,
+                )
+                .unwrap();
+                filter.update_coefficients(new_coeffs);
+                new_samples[i] = filter.run(cs[i]);
+            }
+
+            new_samples
+        })
+        .collect::<Vec<Vec<f64>>>();
+
+    let interleaved_samples = interleave_channels(split_params);
+
+    let summed = sum(vec![
+        SampleLine {
+            samples: params.samples.to_owned(),
+            gain_factor: phaser_params.dry_mix,
+        },
+        SampleLine {
+            samples: interleaved_samples,
+            gain_factor: phaser_params.wet_mix,
+        },
+    ]);
+
+    return ProcessorParams {
+        sample_length: summed.len(),
+        samples: summed,
+        spec: params.spec,
+        update_sender: params.update_sender.to_owned(),
+        permutation: params.permutation.to_owned(),
     };
 }
