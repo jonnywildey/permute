@@ -1,0 +1,26 @@
+.output-heading {
+  direction: rtl;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-upload-container {
+  position: relative;
+  margin: 8px;
+  margin-bottom: 20px;
+}
+
+.file-upload {
+  position: absolute;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  outline: none;
+  opacity: 0;
+  height: 100%;
+  padding: 0;
+  top: 0px
+}

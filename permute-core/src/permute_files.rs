@@ -1,5 +1,7 @@
 use std::path::Path;
 use std::sync::mpsc;
+use std::thread;
+use std::thread::JoinHandle;
 
 use crate::process::*;
 use crate::random_process::*;
@@ -8,6 +10,7 @@ pub enum PermuteUpdate {
     UpdatePermuteNodeStarted(Permutation, PermuteNodeName, PermuteNodeEvent),
     UpdatePermuteNodeCompleted(Permutation, PermuteNodeName, PermuteNodeEvent),
     UpdateSetProcessors(Permutation, Vec<PermuteNodeName>),
+    ProcessComplete,
 }
 
 #[derive(Debug, Clone)]
@@ -26,12 +29,18 @@ pub struct PermuteFilesParams {
     pub update_sender: mpsc::Sender<PermuteUpdate>,
 }
 
-pub fn permute_files(params: PermuteFilesParams) {
-    let copied_params = params.clone();
-    let files = params.files;
-    for i in 0..files.len() {
-        permute_file(copied_params.clone(), files[i].clone())
-    }
+pub fn permute_files(params: PermuteFilesParams) -> JoinHandle<()> {
+    thread::spawn(|| {
+        let copied_params = params.clone();
+        let files = params.files;
+        for i in 0..files.len() {
+            permute_file(copied_params.clone(), files[i].clone());
+        }
+        params
+            .update_sender
+            .send(PermuteUpdate::ProcessComplete)
+            .unwrap();
+    })
 }
 
 fn permute_file(
@@ -85,9 +94,10 @@ fn permute_file(
 
     let sample_length = samples_64.len();
 
-    for i in 1..=permutations {
-        let output_i = generate_file_name(output.clone(), i);
+    let mut generated_processors: Vec<(Vec<ProcessorFn>, ProcessorParams)> = vec![];
 
+    for i in 1..=permutations {
+        let output_i = generate_file_name(file.clone(), output.clone(), i);
         let processors = generate_processor_sequence(GetProcessorNodeParams {
             depth: permutation_depth,
             normalise_at_end,
@@ -117,16 +127,21 @@ fn permute_file(
             permutation: permutation.clone(),
             update_sender: update_sender.to_owned(),
         };
-        update_sender.send(PermuteUpdate::UpdateSetProcessors(
+        let _ = update_sender.send(PermuteUpdate::UpdateSetProcessors(
             permutation.clone(),
             processors,
         ));
 
+        generated_processors.push((processor_fns, processor_params));
+    }
+
+    for (processor_fns, processor_params) in generated_processors.iter() {
+        let output = processor_params.permutation.output.clone();
         let output_params = run_processors(RunProcessorsParams {
             processor_params: processor_params.clone(),
-            processors: processor_fns,
+            processors: processor_fns.to_vec(),
         });
-        let mut pro_writer = hound::WavWriter::create(output_i, spec).expect("Error in output");
+        let mut pro_writer = hound::WavWriter::create(output, spec).expect("Error in output");
 
         for mut s in output_params.samples {
             // overload protection
@@ -143,16 +158,23 @@ fn permute_file(
     }
 }
 
-fn generate_file_name(output: String, permutation_count: usize) -> String {
-    let path = Path::new(&output);
-    let file_stem = path.file_stem().unwrap_or_default().to_str().unwrap_or("");
-    let extension = path.extension().unwrap_or_default().to_str().unwrap_or("");
+fn generate_file_name(file: String, output: String, permutation_count: usize) -> String {
+    let mut dir_path = Path::new(&output).canonicalize().unwrap();
+    let file_path = Path::new(&file);
+    let file_stem = file_path
+        .file_stem()
+        .unwrap_or_default()
+        .to_str()
+        .unwrap_or("");
+    let extension = file_path
+        .extension()
+        .unwrap_or_default()
+        .to_str()
+        .unwrap_or("");
     let new_filename = [file_stem, &permutation_count.to_string(), ".", extension].concat();
 
-    path.with_file_name(new_filename)
-        .into_os_string()
-        .into_string()
-        .unwrap()
+    dir_path.push(new_filename);
+    dir_path.into_os_string().into_string().unwrap()
 }
 
 pub struct RunProcessorsParams {
@@ -201,5 +223,22 @@ pub fn get_processor_display_name(name: PermuteNodeName) -> String {
         PermuteNodeName::Normalise => String::from("Normalise"),
         PermuteNodeName::SampleRateConversionHigh => String::from("Sample rate conversion high"),
         PermuteNodeName::SampleRateConversionOriginal => String::from("Sample rate conversion low"),
+    }
+}
+
+pub fn get_processor_from_display_name(name: &str) -> Result<PermuteNodeName, String> {
+    match name {
+        "Reverse" => Ok(PermuteNodeName::Reverse),
+        "Chorus" => Ok(PermuteNodeName::Chorus),
+        "Double speed" => Ok(PermuteNodeName::DoubleSpeed),
+        "Flutter" => Ok(PermuteNodeName::Flutter),
+        "Half speed" => Ok(PermuteNodeName::HalfSpeed),
+        "Metallic delay" => Ok(PermuteNodeName::MetallicDelay),
+        "Rhythmic delay" => Ok(PermuteNodeName::RhythmicDelay),
+        "Wow" => Ok(PermuteNodeName::Wow),
+        "Normalise" => Ok(PermuteNodeName::Normalise),
+        "Sample rate conversion high" => Ok(PermuteNodeName::SampleRateConversionHigh),
+        "Sample rate conversion low" => Ok(PermuteNodeName::SampleRateConversionOriginal),
+        _ => Err(format!("{} not found", name)),
     }
 }

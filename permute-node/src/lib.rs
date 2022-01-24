@@ -4,7 +4,6 @@ use neon::prelude::*;
 use permute::permute_files::*;
 use sharedstate::*;
 use std::fmt::Error;
-use std::rc::Rc;
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
 
@@ -17,9 +16,20 @@ struct Processor {
 
 // Messages sent on the database channel
 enum ProcessorMessage {
-    Run(ProcessorCallback),
+    Run,
     AddFile(String),
+    RemoveFile(String),
+    AddProcessor(String),
+    RemoveProcessor(String),
+    SetOutput(String),
     GetStateCallback(ProcessorCallback),
+    SetNormalised(bool),
+    SetPermutationDepth(usize),
+    SetPermutations(usize),
+    SetInputTrail(f64),
+    SetOutputTrail(f64),
+    LoadSettingsFromJson(String),
+    SaveSettingsToJson(String),
     Cancel,
 }
 
@@ -55,12 +65,44 @@ impl Processor {
                     ProcessorMessage::GetStateCallback(f) => {
                         f(&channel, state.clone());
                     }
-                    ProcessorMessage::Run(f) => {
+                    ProcessorMessage::Run => {
                         state.run_process();
-                        f(&channel, state.clone());
                     }
                     ProcessorMessage::AddFile(file) => {
                         state.add_file(file);
+                    }
+                    ProcessorMessage::RemoveFile(file) => {
+                        state.remove_file(file);
+                    }
+                    ProcessorMessage::AddProcessor(name) => {
+                        state.add_processor(name);
+                    }
+                    ProcessorMessage::RemoveProcessor(name) => {
+                        state.remove_processor(name);
+                    }
+                    ProcessorMessage::SetOutput(output) => {
+                        state.set_output(output);
+                    }
+                    ProcessorMessage::SetInputTrail(trail) => {
+                        state.set_input_trail(trail);
+                    }
+                    ProcessorMessage::SetOutputTrail(trail) => {
+                        state.set_output_trail(trail);
+                    }
+                    ProcessorMessage::SetNormalised(normalised) => {
+                        state.set_normalised(normalised);
+                    }
+                    ProcessorMessage::SetPermutations(permutations) => {
+                        state.set_permutations(permutations);
+                    }
+                    ProcessorMessage::SetPermutationDepth(depth) => {
+                        state.set_depth(depth);
+                    }
+                    ProcessorMessage::LoadSettingsFromJson(file) => {
+                        state.read_from_json(file).unwrap_or(())
+                    }
+                    ProcessorMessage::SaveSettingsToJson(file) => {
+                        state.write_to_json(file).unwrap_or(())
                     }
                     ProcessorMessage::Cancel => break,
                 }
@@ -81,15 +123,14 @@ impl Processor {
                     PermuteUpdate::UpdateSetProcessors(permutation, processors) => {
                         state.add_output_progress(permutation, processors);
                     }
+                    PermuteUpdate::ProcessComplete => {
+                        state.set_finished();
+                    }
                 }
             }
         });
 
         Ok(Self { tx })
-    }
-
-    fn cancel(&self) -> Result<(), mpsc::SendError<ProcessorMessage>> {
-        self.tx.send(ProcessorMessage::Cancel)
     }
 
     fn set_state_callback(
@@ -98,17 +139,6 @@ impl Processor {
     ) -> Result<(), mpsc::SendError<ProcessorMessage>> {
         self.tx
             .send(ProcessorMessage::GetStateCallback(Box::new(callback)))
-    }
-
-    fn run(
-        &self,
-        callback: impl FnOnce(&Channel, SharedState) + Send + 'static,
-    ) -> Result<(), mpsc::SendError<ProcessorMessage>> {
-        self.tx.send(ProcessorMessage::Run(Box::new(callback)))
-    }
-
-    fn add_file(&self, file: String) -> Result<(), mpsc::SendError<ProcessorMessage>> {
-        self.tx.send(ProcessorMessage::AddFile(file))
     }
 }
 
@@ -123,12 +153,7 @@ impl Processor {
     }
 
     fn js_cancel(mut cx: FunctionContext) -> JsResult<JsUndefined> {
-        // Get the `this` value as a `JsBox<Database>`
-        cx.this()
-            .downcast_or_throw::<JsBox<Processor>, _>(&mut cx)?
-            .cancel()
-            .or_else(|err| cx.throw_error(err.to_string()))?;
-
+        js_hook!(ProcessorMessage::Cancel, cx);
         Ok(cx.undefined())
     }
 
@@ -145,8 +170,57 @@ impl Processor {
                     let callback = callback.into_inner(&mut cx);
                     let this = cx.undefined();
 
-                    let js_state = format!("{:#?}", state);
-                    let args = vec![cx.string(js_state)];
+                    let output = cx.string(state.output.clone());
+                    let processing = cx.boolean(state.processing);
+                    let high_sample_rate = cx.boolean(state.high_sample_rate);
+                    let input_trail = cx.number(state.input_trail);
+                    let output_trail = cx.number(state.output_trail);
+                    let permutations = cx.number(state.permutations as u32);
+                    let permutation_depth = cx.number(state.permutation_depth as u32);
+                    let processor_count = cx.number(state.processor_count.unwrap_or(0) as u32);
+                    let normalise_at_end = cx.boolean(state.normalise_at_end);
+
+                    let files = cx.empty_array();
+                    for i in 0..state.files.len() {
+                        let str = cx.string(state.files[i].clone());
+                        files.set(&mut cx, i as u32, str)?;
+                    }
+                    let processor_pool = cx.empty_array();
+                    for i in 0..state.processor_pool.len() {
+                        let str = cx.string(get_processor_display_name(state.processor_pool[i]));
+                        processor_pool.set(&mut cx, i as u32, str)?;
+                    }
+                    let all_processors = cx.empty_array();
+                    for i in 0..state.all_processors.len() {
+                        let str = cx.string(get_processor_display_name(state.all_processors[i]));
+                        all_processors.set(&mut cx, i as u32, str)?;
+                    }
+                    let permutation_outputs = cx.empty_array();
+                    for i in 0..state.permutation_outputs.len() {
+                        let output_obj = cx.empty_object();
+                        let output = cx.string(state.permutation_outputs[i].output.clone());
+                        output_obj.set(&mut cx, "output", output)?;
+                        let progress = cx.number(state.permutation_outputs[i].progress);
+                        output_obj.set(&mut cx, "progress", progress)?;
+                        permutation_outputs.set(&mut cx, i as u32, output_obj)?;
+                    }
+
+                    let obj = cx.empty_object();
+                    obj.set(&mut cx, "output", output)?;
+                    obj.set(&mut cx, "processing", processing)?;
+                    obj.set(&mut cx, "highSampleRate", high_sample_rate)?;
+                    obj.set(&mut cx, "inputTrail", input_trail)?;
+                    obj.set(&mut cx, "outputTrail", output_trail)?;
+                    obj.set(&mut cx, "files", files)?;
+                    obj.set(&mut cx, "permutations", permutations)?;
+                    obj.set(&mut cx, "permutationDepth", permutation_depth)?;
+                    obj.set(&mut cx, "processorCount", processor_count)?;
+                    obj.set(&mut cx, "processorPool", processor_pool)?;
+                    obj.set(&mut cx, "allProcessors", all_processors)?;
+                    obj.set(&mut cx, "normaliseAtEnd", normalise_at_end)?;
+                    obj.set(&mut cx, "permutationOutputs", permutation_outputs)?;
+
+                    let args = vec![obj];
 
                     callback.call(&mut cx, this, args)?;
 
@@ -159,45 +233,80 @@ impl Processor {
         Ok(cx.undefined())
     }
 
-    // Run process
     fn js_run_process(mut cx: FunctionContext) -> JsResult<JsUndefined> {
-        let callback = cx.argument::<JsFunction>(0)?.root(&mut cx);
-
-        let processor = cx
-            .this()
-            .downcast_or_throw::<JsBox<Processor>, _>(&mut cx)?;
-
-        processor
-            .run(move |channel, state| {
-                channel.send(move |mut cx| {
-                    let callback = callback.into_inner(&mut cx);
-                    let this = cx.undefined();
-
-                    let js_state = format!("{:#?}", state);
-                    let args = vec![cx.string(js_state)];
-
-                    callback.call(&mut cx, this, args)?;
-
-                    Ok(())
-                });
-            })
-            .or_else(|err| cx.throw_error(err.to_string()))
-            .unwrap();
-
+        js_hook!(ProcessorMessage::Run, cx);
         Ok(cx.undefined())
     }
 
     fn js_add_file(mut cx: FunctionContext) -> JsResult<JsUndefined> {
         let file = cx.argument::<JsString>(0)?.value(&mut cx);
+        js_hook!(file, ProcessorMessage::AddFile, cx);
+        Ok(cx.undefined())
+    }
 
-        let processor = cx
-            .this()
-            .downcast_or_throw::<JsBox<Processor>, _>(&mut cx)?;
+    fn js_remove_file(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+        let file = cx.argument::<JsString>(0)?.value(&mut cx);
+        js_hook!(file, ProcessorMessage::RemoveFile, cx);
+        Ok(cx.undefined())
+    }
 
-        processor
-            .add_file(file)
-            .or_else(|err| cx.throw_error(err.to_string()))?;
+    fn js_set_permutations(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+        let permutations = cx.argument::<JsNumber>(0)?.value(&mut cx) as usize;
+        js_hook!(permutations, ProcessorMessage::SetPermutations, cx);
+        Ok(cx.undefined())
+    }
 
+    fn js_set_depth(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+        let depth = cx.argument::<JsNumber>(0)?.value(&mut cx) as usize;
+        js_hook!(depth, ProcessorMessage::SetPermutationDepth, cx);
+        Ok(cx.undefined())
+    }
+
+    fn js_set_normalised(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+        let normalised = cx.argument::<JsBoolean>(0)?.value(&mut cx);
+        js_hook!(normalised, ProcessorMessage::SetNormalised, cx);
+        Ok(cx.undefined())
+    }
+
+    fn js_set_input_trail(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+        let input_trail = cx.argument::<JsNumber>(0)?.value(&mut cx);
+        js_hook!(input_trail, ProcessorMessage::SetInputTrail, cx);
+        Ok(cx.undefined())
+    }
+
+    fn js_set_output_trail(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+        let output_trail = cx.argument::<JsNumber>(0)?.value(&mut cx);
+        js_hook!(output_trail, ProcessorMessage::SetOutputTrail, cx);
+        Ok(cx.undefined())
+    }
+
+    fn js_add_processor(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+        let name = cx.argument::<JsString>(0)?.value(&mut cx);
+        js_hook!(name, ProcessorMessage::AddProcessor, cx);
+        Ok(cx.undefined())
+    }
+
+    fn js_remove_processor(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+        let name = cx.argument::<JsString>(0)?.value(&mut cx);
+        js_hook!(name, ProcessorMessage::RemoveProcessor, cx);
+        Ok(cx.undefined())
+    }
+
+    fn js_set_output(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+        let file = cx.argument::<JsString>(0)?.value(&mut cx);
+        js_hook!(file, ProcessorMessage::SetOutput, cx);
+        Ok(cx.undefined())
+    }
+
+    fn js_save_settings(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+        let file = cx.argument::<JsString>(0)?.value(&mut cx);
+        js_hook!(file, ProcessorMessage::SaveSettingsToJson, cx);
+        Ok(cx.undefined())
+    }
+
+    fn js_load_settings(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+        let file = cx.argument::<JsString>(0)?.value(&mut cx);
+        js_hook!(file, ProcessorMessage::LoadSettingsFromJson, cx);
         Ok(cx.undefined())
     }
 }
@@ -209,6 +318,41 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
     cx.export_function("getStateCallback", Processor::js_get_state_callback)?;
     cx.export_function("runProcess", Processor::js_run_process)?;
     cx.export_function("addFile", Processor::js_add_file)?;
+    cx.export_function("removeFile", Processor::js_remove_file)?;
+    cx.export_function("addProcessor", Processor::js_add_processor)?;
+    cx.export_function("removeProcessor", Processor::js_remove_processor)?;
+    cx.export_function("setOutput", Processor::js_set_output)?;
+    cx.export_function("setDepth", Processor::js_set_depth)?;
+    cx.export_function("setInputTrail", Processor::js_set_input_trail)?;
+    cx.export_function("setOutputTrail", Processor::js_set_output_trail)?;
+    cx.export_function("setPermutations", Processor::js_set_permutations)?;
+    cx.export_function("setNormalised", Processor::js_set_normalised)?;
+    cx.export_function("saveSettings", Processor::js_save_settings)?;
+    cx.export_function("loadSettings", Processor::js_load_settings)?;
 
     Ok(())
 }
+
+macro_rules! js_hook {
+    ($parameter:expr, $message:expr, $cx:expr) => {{
+        let processor = $cx
+            .this()
+            .downcast_or_throw::<JsBox<Processor>, _>(&mut $cx)?;
+
+        processor
+            .tx
+            .send($message($parameter))
+            .or_else(|err| $cx.throw_error(err.to_string()))?;
+    }};
+    ($message:expr, $cx:expr) => {{
+        let processor = $cx
+            .this()
+            .downcast_or_throw::<JsBox<Processor>, _>(&mut $cx)?;
+
+        processor
+            .tx
+            .send($message)
+            .or_else(|err| $cx.throw_error(err.to_string()))?;
+    }};
+}
+pub(crate) use js_hook;
