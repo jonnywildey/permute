@@ -1,3 +1,4 @@
+use biquad::Errors as FilterErrors;
 use hound::Error as HoundError;
 use std::fmt::Display;
 use std::io;
@@ -10,6 +11,7 @@ pub enum PermuteError {
     SendError(SendError<PermuteUpdate>),
     Hound(HoundError),
     IO(io::Error),
+    Filter(FilterErrors),
 }
 
 impl From<HoundError> for PermuteError {
@@ -27,6 +29,12 @@ impl From<SendError<PermuteUpdate>> for PermuteError {
 impl From<io::Error> for PermuteError {
     fn from(error: io::Error) -> Self {
         PermuteError::IO(error)
+    }
+}
+
+impl From<FilterErrors> for PermuteError {
+    fn from(error: FilterErrors) -> Self {
+        PermuteError::Filter(error)
     }
 }
 

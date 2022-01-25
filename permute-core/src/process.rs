@@ -95,9 +95,12 @@ pub struct DelayLineParams {
     pub wet_gain_factor: f64,
 }
 
-pub fn change_sample_rate(params: ProcessorParams, new_sample_rate: u32) -> ProcessorParams {
+pub fn change_sample_rate(
+    params: ProcessorParams,
+    new_sample_rate: u32,
+) -> Result<ProcessorParams, PermuteError> {
     if params.spec.sample_rate == new_sample_rate {
-        return params;
+        return Ok(params);
     }
     let mut new_params = params.clone();
     let speed = params.spec.sample_rate as f64 / new_sample_rate as f64;
@@ -111,12 +114,12 @@ pub fn change_sample_rate(params: ProcessorParams, new_sample_rate: u32) -> Proc
                 form: FilterForm::Form2,
                 q: None,
             },
-        );
+        )?;
     }
 
     let resampled = change_speed(new_params, speed);
 
-    resampled
+    Ok(resampled)
 }
 
 pub fn change_sample_rate_high(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
@@ -135,7 +138,7 @@ pub fn change_sample_rate_high(params: &ProcessorParams) -> Result<ProcessorPara
         _ => params.spec.sample_rate,
     };
 
-    let mut new_params = change_sample_rate(new_params, new_sample_rate);
+    let mut new_params = change_sample_rate(new_params, new_sample_rate)?;
     new_params.permutation.original_sample_rate = params.spec.sample_rate;
     new_params.spec.sample_rate = new_sample_rate;
 
@@ -160,7 +163,7 @@ pub fn change_sample_rate_original(
         PermuteNodeEvent::NodeProcessStarted,
     ))?;
 
-    let new_params = change_sample_rate(new_params, permutation.original_sample_rate);
+    let new_params = change_sample_rate(new_params, permutation.original_sample_rate)?;
 
     update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
         new_params.permutation.clone(),
@@ -369,7 +372,10 @@ fn split_channels(samples: Vec<f64>, channels: u16) -> Vec<Vec<f64>> {
     by_channels
 }
 
-fn interleave_channels(by_channels: Vec<Vec<f64>>) -> Vec<f64> {
+fn interleave_channels(
+    by_channels: Result<Vec<Vec<f64>>, PermuteError>,
+) -> Result<Vec<f64>, PermuteError> {
+    let by_channels = by_channels?;
     let channel_length = by_channels[0].len();
     let channels = by_channels.len();
     let total_sample_length = channel_length * channels;
@@ -377,11 +383,12 @@ fn interleave_channels(by_channels: Vec<Vec<f64>>) -> Vec<f64> {
     let mut samples: Vec<f64> = vec![0_f64; total_sample_length];
 
     for c in 0..channels {
-        for i in 0..by_channels[c].len() {
+        let len = by_channels[c].len();
+        for i in 0..len {
             samples[(i * channels) + c] = by_channels[c][i];
         }
     }
-    samples
+    Ok(samples)
 }
 
 pub struct VibratoParams {
@@ -398,11 +405,11 @@ pub fn vibrato(
         permutation,
     }: ProcessorParams,
     VibratoParams { speed_hz, depth }: VibratoParams,
-) -> ProcessorParams {
+) -> Result<ProcessorParams, PermuteError> {
     // let adjusted_depth = depth.powf(2_f64) * 512_f64; // ideally 1 should be a somewhat usable value
     let adjusted_depth = depth * spec.sample_rate as f64 * 2_f64.powf(-7.0);
     let channel_samples = split_channels(samples, spec.channels);
-    let mut new_channel_samples: Vec<Vec<f64>> = vec![];
+    let mut new_channel_samples: Vec<Result<Vec<f64>, PermuteError>> = vec![];
 
     for c in 0..channel_samples.len() {
         let cs = &channel_samples[c];
@@ -431,19 +438,20 @@ pub fn vibrato(
 
             ns[i] = cs[ptr1] + (cs[ptr2] - cs[ptr1]) * frac;
         }
-        new_channel_samples.push(ns);
+        new_channel_samples.push(Ok(ns));
     }
+    let new_channel_samples = new_channel_samples.into_iter().collect();
 
-    let interleave_samples = interleave_channels(new_channel_samples);
+    let interleave_samples = interleave_channels(new_channel_samples)?;
     let interleave_sample_length = interleave_samples.len();
 
-    return ProcessorParams {
+    return Ok(ProcessorParams {
         samples: interleave_samples,
         spec: spec,
         sample_length: interleave_sample_length,
         update_sender,
         permutation,
-    };
+    });
 }
 
 pub struct ChorusParams {
@@ -462,7 +470,7 @@ pub fn chorus(
     let update_sender = params.update_sender.to_owned();
 
     let delayed = delay_line(&params, &delay_params)?;
-    let vibratod = vibrato(delayed, vibrato_params);
+    let vibratod = vibrato(delayed, vibrato_params)?;
 
     let summed = sum(vec![
         SampleLine {
@@ -503,14 +511,14 @@ pub struct FilterParams {
 pub fn multi_channel_filter(
     params: &ProcessorParams,
     filter_params: &FilterParams,
-) -> ProcessorParams {
+) -> Result<ProcessorParams, PermuteError> {
     let copied_params = params.clone();
     let channel_samples = split_channels(params.samples.to_owned(), params.spec.channels);
 
-    let split_params = channel_samples
+    let split_samples = channel_samples
         .iter()
         .map(|cs| {
-            filter(
+            Ok(filter(
                 &ProcessorParams {
                     permutation: copied_params.permutation.clone(),
                     sample_length: cs.len(),
@@ -519,23 +527,19 @@ pub fn multi_channel_filter(
                     update_sender: copied_params.update_sender.to_owned(),
                 },
                 &filter_params.clone(),
-            )
+            )?
+            .samples)
         })
-        .collect::<Vec<ProcessorParams>>();
+        .collect::<Vec<Result<Vec<f64>, PermuteError>>>();
 
-    let split_samples = split_params
-        .iter()
-        .map(|ss| ss.samples.to_vec())
-        .collect::<Vec<Vec<f64>>>();
-
-    let interleaved_samples = interleave_channels(split_samples);
-    ProcessorParams {
+    let interleaved_samples = interleave_channels(split_samples.into_iter().collect())?;
+    Ok(ProcessorParams {
         permutation: copied_params.permutation,
         sample_length: interleaved_samples.len(),
         samples: interleaved_samples,
         spec: copied_params.spec,
         update_sender: copied_params.update_sender,
-    }
+    })
 }
 
 pub fn filter(
@@ -552,14 +556,14 @@ pub fn filter(
         q,
         form,
     }: &FilterParams,
-) -> ProcessorParams {
+) -> Result<ProcessorParams, PermuteError> {
     // Cutoff and sampling frequencies
     let f0 = frequency.hz();
     let fs = spec.sample_rate.hz();
     let q = q.unwrap_or(Q_BUTTERWORTH_F64);
 
     // Create coefficients for the biquads
-    let coeffs = Coefficients::<f64>::from_params(*filter_type, fs, f0, q).unwrap();
+    let coeffs = Coefficients::<f64>::from_params(*filter_type, fs, f0, q)?;
 
     let mut new_samples = vec![0_f64; *sample_length];
     match form {
@@ -579,13 +583,13 @@ pub fn filter(
         }
     }
 
-    return ProcessorParams {
+    return Ok(ProcessorParams {
         samples: new_samples,
         spec: *spec,
         sample_length: *sample_length,
         update_sender: update_sender.to_owned(),
         permutation: permutation.to_owned(),
-    };
+    });
 }
 
 #[derive(Clone, EnumIter)]
@@ -612,15 +616,20 @@ pub struct PhaserParams {
     pub wet_mix: f64,
 }
 
-pub fn phaser(params: &ProcessorParams, phaser_params: &PhaserParams) -> ProcessorParams {
+pub fn phaser(
+    params: &ProcessorParams,
+    phaser_params: &PhaserParams,
+) -> Result<ProcessorParams, PermuteError> {
     let channel_samples = split_channels(params.samples.to_owned(), params.spec.channels);
 
     let split_params = channel_samples
         .iter()
         .map(|cs| phase_stage(params, phaser_params, cs))
-        .collect::<Vec<Vec<f64>>>();
+        .collect::<Vec<Result<Vec<f64>, PermuteError>>>()
+        .into_iter()
+        .collect();
 
-    let interleaved_samples = interleave_channels(split_params);
+    let interleaved_samples = interleave_channels(split_params)?;
 
     let summed = sum(vec![
         SampleLine {
@@ -633,27 +642,27 @@ pub fn phaser(params: &ProcessorParams, phaser_params: &PhaserParams) -> Process
         },
     ]);
 
-    return ProcessorParams {
+    return Ok(ProcessorParams {
         sample_length: summed.len(),
         samples: summed,
         spec: params.spec,
         update_sender: params.update_sender.to_owned(),
         permutation: params.permutation.to_owned(),
-    };
+    });
 }
 
 fn phase_stage(
     params: &ProcessorParams,
     phaser_params: &PhaserParams,
     samples: &Vec<f64>,
-) -> Vec<f64> {
+) -> Result<Vec<f64>, PermuteError> {
     let stages = phaser_params.stages.clone();
     let stage_hz = phaser_params.stage_hz;
     let base_freq = phaser_params.base_freq;
     let q = phaser_params.q;
     let lfo_rate = phaser_params.lfo_rate;
     let lfo_depth = phaser_params.lfo_depth;
-    let filters: Vec<(f64, DirectForm1<f64>)> = (0..stages as i32)
+    let filters: Result<Vec<(f64, DirectForm1<f64>)>, PermuteError> = (0..stages as i32)
         .map(|i| {
             let base_freq = base_freq + (i as f64 * stage_hz);
             let coeffs = Coefficients::<f64>::from_params(
@@ -661,16 +670,17 @@ fn phase_stage(
                 (params.spec.sample_rate).hz(),
                 base_freq.hz(),
                 q,
-            )
-            .unwrap();
+            )?;
             let filter = DirectForm1::<f64>::new(coeffs);
-            return (base_freq, filter);
+            return Ok((base_freq, filter));
         })
+        .collect::<Vec<Result<(f64, DirectForm1<f64>), PermuteError>>>()
+        .into_iter()
         .collect();
     let mut new_samples = samples.clone();
     let mut lfo_amplitude: f64;
     let sample_rate = params.spec.sample_rate;
-    for (base_freq, mut filter) in filters.iter() {
+    for (base_freq, mut filter) in filters?.iter() {
         for i in 0..samples.len() {
             lfo_amplitude = lfo_tri(i, sample_rate, lfo_rate);
             let offset = base_freq * lfo_depth * lfo_amplitude;
@@ -683,14 +693,14 @@ fn phase_stage(
                 params.spec.sample_rate.hz(),
                 freq.hz(),
                 q,
-            )
-            .unwrap();
+            )?;
+
             filter.update_coefficients(new_coeffs);
             new_samples[i] = filter.run(new_samples[i]);
         }
     }
 
-    new_samples
+    Ok(new_samples)
 }
 
 pub fn lfo_sin(sample: usize, sample_rate: u32, lfo_rate: f64) -> f64 {
@@ -712,10 +722,6 @@ pub fn lfo_tri(sample: usize, sample_rate: u32, lfo_rate: f64) -> f64 {
 }
 
 pub fn lfo_tri_exp(sample: usize, sample_rate: u32, lfo_rate: f64, exp: f64) -> f64 {
-    // according to internet y = (A/P) * (P - abs(x % (2*P) - P) )
-    // P = sample rate / 2
-    // A = 2 (will need to subtract 1 to 0 center)
-    // add p/2 to x to push phase 90 deg
     let cycle = sample_rate as f64 / lfo_rate as f64;
     let p = cycle / 2.0;
     return ((2.0 / p) * (p - ((sample as f64 + p / 2.0) % cycle - p).abs())).powf(exp) - 1.0;

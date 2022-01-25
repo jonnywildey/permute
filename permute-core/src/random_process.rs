@@ -173,7 +173,7 @@ pub fn random_wow(params: &ProcessorParams) -> Result<ProcessorParams, PermuteEr
             speed_hz: rng.gen_range(0.2_f64..1.6_f64),
             depth: rng.gen_range(0.3_f64..0.7_f64),
         },
-    );
+    )?;
     update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
         permutation,
         PermuteNodeName::Wow,
@@ -197,7 +197,7 @@ pub fn random_flutter(params: &ProcessorParams) -> Result<ProcessorParams, Permu
             speed_hz: rng.gen_range(3_f64..20_f64),
             depth: rng.gen_range(0.05_f64..0.5_f64),
         },
-    );
+    )?;
     update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
         permutation,
         PermuteNodeName::Flutter,
@@ -269,7 +269,7 @@ pub fn random_phaser(params: &ProcessorParams) -> Result<ProcessorParams, Permut
         wet_mix: 1.0,
     };
 
-    let new_samples = phaser(&params.to_owned(), &phaser_params);
+    let new_samples = phaser(&params.to_owned(), &phaser_params)?;
 
     update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
         permutation,
