@@ -214,6 +214,7 @@ pub fn get_processor_display_name(name: PermuteNodeName) -> String {
     match name {
         PermuteNodeName::Reverse => String::from("Reverse"),
         PermuteNodeName::Chorus => String::from("Chorus"),
+        PermuteNodeName::Phaser => String::from("Phaser"),
         PermuteNodeName::DoubleSpeed => String::from("Double speed"),
         PermuteNodeName::Flutter => String::from("Flutter"),
         PermuteNodeName::HalfSpeed => String::from("Half speed"),
@@ -230,6 +231,7 @@ pub fn get_processor_from_display_name(name: &str) -> Result<PermuteNodeName, St
     match name {
         "Reverse" => Ok(PermuteNodeName::Reverse),
         "Chorus" => Ok(PermuteNodeName::Chorus),
+        "Phaser" => Ok(PermuteNodeName::Phaser),
         "Double speed" => Ok(PermuteNodeName::DoubleSpeed),
         "Flutter" => Ok(PermuteNodeName::Flutter),
         "Half speed" => Ok(PermuteNodeName::HalfSpeed),

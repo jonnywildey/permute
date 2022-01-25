@@ -48,7 +48,6 @@ const Content = () => {
     processorPool,
     permutationOutputs,
   } = state.permuteState;
-
   const refreshState = async () => {
     const permuteState = await window.Electron.ipcRenderer.getState();
     setState({ ...state, permuteState });
@@ -120,7 +119,6 @@ const Content = () => {
       });
   }
   const openWelcome = () => {
-    console.log("here");
     onOpen();
   }
 
