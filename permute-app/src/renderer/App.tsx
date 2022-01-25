@@ -66,6 +66,14 @@ const Content = () => {
 
   const runProcessor = async () => {
     const onFinished = (pState: IPermuteState) => {
+      if (pState.error) {
+        toast({
+          description: pState.error,
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+       });
+      } else {
       const description = `${pState.files.length * pState.permutations} files permuted!`;
       toast({
           description,
@@ -73,6 +81,7 @@ const Content = () => {
           duration: 5000,
           isClosable: true,
        });
+      }
       setState({ ...state, permuteState: pState });
     };
     window.Electron.ipcRenderer.runProcessor(refreshState, onFinished);
