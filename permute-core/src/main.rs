@@ -57,6 +57,7 @@ fn main() {
         PermuteNodeName::Wow,
         PermuteNodeName::Flutter,
         PermuteNodeName::Chorus,
+        PermuteNodeName::Phaser,
     ];
 
     let processor_count: Option<i32> = match args.processor_count {
