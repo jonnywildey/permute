@@ -265,6 +265,7 @@ function Normalise(normaliseAtEnd: boolean, setNormalised: (normaliseAtEnd: bool
     </Text>}>
       <Heading size="sm">Normalise</Heading>
     </Tooltip>
-    <Switch isChecked={normaliseAtEnd} onChange={(e) => setNormalised(e.target.checked)} ml={2} />
+    <Switch colorScheme="pink"
+      isChecked={normaliseAtEnd} onChange={(e) => setNormalised(e.target.checked)} ml={2} />
   </GridItem>;
 }

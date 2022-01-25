@@ -1,5 +1,4 @@
 use crate::{permute_files::PermuteUpdate, process::*};
-use biquad::Q_BUTTERWORTH_F64;
 use rand::prelude::*;
 use strum::IntoEnumIterator;
 
@@ -261,7 +260,7 @@ pub fn random_phaser(params: &ProcessorParams) -> ProcessorParams {
 
     let phaser_params = PhaserParams {
         base_freq: rng.gen_range(300.0..700.0),
-        lfo_rate: rng.gen_range(0.2..4.0),
+        lfo_rate: rng.gen_range(0.2..2.0), // Maybe a separate one for faster?
         q: rng.gen_range(0.15..0.5),
         stages: stages,
         lfo_depth: rng.gen_range(0.5..0.95),
