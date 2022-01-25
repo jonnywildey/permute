@@ -1,12 +1,14 @@
+use crate::permute_error::PermuteError;
+use crate::process::*;
+use crate::random_process::*;
+use hound::{SampleFormat, WavReader, WavSpec, WavWriter};
 use std::path::Path;
 use std::sync::mpsc;
 use std::thread;
 use std::thread::JoinHandle;
 
-use crate::process::*;
-use crate::random_process::*;
-
 pub enum PermuteUpdate {
+    Error(String),
     UpdatePermuteNodeStarted(Permutation, PermuteNodeName, PermuteNodeEvent),
     UpdatePermuteNodeCompleted(Permutation, PermuteNodeName, PermuteNodeEvent),
     UpdateSetProcessors(Permutation, Vec<PermuteNodeName>),
@@ -30,17 +32,27 @@ pub struct PermuteFilesParams {
 }
 
 pub fn permute_files(params: PermuteFilesParams) -> JoinHandle<()> {
-    thread::spawn(|| {
-        let copied_params = params.clone();
-        let files = params.files;
-        for i in 0..files.len() {
-            permute_file(copied_params.clone(), files[i].clone());
-        }
-        params
-            .update_sender
-            .send(PermuteUpdate::ProcessComplete)
-            .unwrap();
-    })
+    thread::Builder::new()
+        .name("PermuteThread".to_string())
+        .spawn(|| {
+            let copied_params = params.clone();
+            let files = params.files;
+            for i in 0..files.len() {
+                permute_file(copied_params.clone(), files[i].clone())
+                    .map_err(|err| {
+                        params
+                            .update_sender
+                            .send(PermuteUpdate::Error(err.to_string()))
+                            .expect("Error sending message");
+                    })
+                    .unwrap();
+            }
+            params
+                .update_sender
+                .send(PermuteUpdate::ProcessComplete)
+                .expect("Error sending message");
+        })
+        .expect("Error creating thread")
 }
 
 fn permute_file(
@@ -58,15 +70,15 @@ fn permute_file(
         processor_count,
     }: PermuteFilesParams,
     file: String,
-) {
-    let mut reader = hound::WavReader::open(file.clone()).expect("Error opening file");
+) -> Result<(), PermuteError> {
+    let mut reader = WavReader::open(file.clone())?;
     let spec = reader.spec();
 
-    let processor_spec = hound::WavSpec {
+    let processor_spec = WavSpec {
         channels: spec.channels,
         sample_rate: spec.sample_rate,
         bits_per_sample: 64,
-        sample_format: hound::SampleFormat::Float,
+        sample_format: SampleFormat::Float,
     };
 
     // Set all values to -1..1
@@ -140,8 +152,8 @@ fn permute_file(
         let output_params = run_processors(RunProcessorsParams {
             processor_params: processor_params.clone(),
             processors: processor_fns.to_vec(),
-        });
-        let mut pro_writer = hound::WavWriter::create(output, spec).expect("Error in output");
+        })?;
+        let mut pro_writer = WavWriter::create(output, spec).expect("Error in output");
 
         for mut s in output_params.samples {
             // overload protection
@@ -156,6 +168,7 @@ fn permute_file(
         }
         pro_writer.finalize().expect("Error writing file");
     }
+    Ok(())
 }
 
 fn generate_file_name(file: String, output: String, permutation_count: usize) -> String {
@@ -187,12 +200,12 @@ pub fn run_processors(
         processors,
         processor_params,
     }: RunProcessorsParams,
-) -> ProcessorParams {
+) -> Result<ProcessorParams, PermuteError> {
     processors
         .iter()
-        .fold(processor_params, |params, processor| {
-            let new_params = processor(&params);
-            ProcessorParams {
+        .fold(Ok(processor_params), |params, processor| {
+            let new_params = processor(&params?)?;
+            Ok(ProcessorParams {
                 permutation: Permutation {
                     file: new_params.permutation.file,
                     node_index: new_params.permutation.node_index + 1,
@@ -206,41 +219,6 @@ pub fn run_processors(
                 samples: new_params.samples,
                 spec: new_params.spec,
                 update_sender: new_params.update_sender,
-            }
+            })
         })
-}
-
-pub fn get_processor_display_name(name: PermuteNodeName) -> String {
-    match name {
-        PermuteNodeName::Reverse => String::from("Reverse"),
-        PermuteNodeName::Chorus => String::from("Chorus"),
-        PermuteNodeName::Phaser => String::from("Phaser"),
-        PermuteNodeName::DoubleSpeed => String::from("Double speed"),
-        PermuteNodeName::Flutter => String::from("Flutter"),
-        PermuteNodeName::HalfSpeed => String::from("Half speed"),
-        PermuteNodeName::MetallicDelay => String::from("Metallic delay"),
-        PermuteNodeName::RhythmicDelay => String::from("Rhythmic delay"),
-        PermuteNodeName::Wow => String::from("Wow"),
-        PermuteNodeName::Normalise => String::from("Normalise"),
-        PermuteNodeName::SampleRateConversionHigh => String::from("Sample rate conversion high"),
-        PermuteNodeName::SampleRateConversionOriginal => String::from("Sample rate conversion low"),
-    }
-}
-
-pub fn get_processor_from_display_name(name: &str) -> Result<PermuteNodeName, String> {
-    match name {
-        "Reverse" => Ok(PermuteNodeName::Reverse),
-        "Chorus" => Ok(PermuteNodeName::Chorus),
-        "Phaser" => Ok(PermuteNodeName::Phaser),
-        "Double speed" => Ok(PermuteNodeName::DoubleSpeed),
-        "Flutter" => Ok(PermuteNodeName::Flutter),
-        "Half speed" => Ok(PermuteNodeName::HalfSpeed),
-        "Metallic delay" => Ok(PermuteNodeName::MetallicDelay),
-        "Rhythmic delay" => Ok(PermuteNodeName::RhythmicDelay),
-        "Wow" => Ok(PermuteNodeName::Wow),
-        "Normalise" => Ok(PermuteNodeName::Normalise),
-        "Sample rate conversion high" => Ok(PermuteNodeName::SampleRateConversionHigh),
-        "Sample rate conversion low" => Ok(PermuteNodeName::SampleRateConversionOriginal),
-        _ => Err(format!("{} not found", name)),
-    }
 }

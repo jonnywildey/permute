@@ -1,9 +1,12 @@
+mod display_node;
+mod permute_error;
 mod permute_files;
 mod process;
 mod random_process;
 
 use std::{sync::mpsc, thread};
 
+use display_node::*;
 use permute_files::*;
 use structopt::StructOpt;
 
@@ -105,6 +108,9 @@ fn main() {
                     "File {} Processors {:#?}",
                     permutation.output, pretty_processors
                 );
+            }
+            PermuteUpdate::Error(err) => {
+                panic!("{}", err);
             }
             PermuteUpdate::ProcessComplete => {}
         }

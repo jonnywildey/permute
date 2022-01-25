@@ -1,4 +1,5 @@
 use neon::prelude::*;
+use permute::display_node::*;
 use permute::permute_files::*;
 use permute::process::*;
 use serde::{Deserialize, Serialize};
@@ -13,6 +14,7 @@ pub struct SharedState {
     // permute file params
     pub files: Vec<String>,
     pub output: String,
+    pub error: String,
     pub input_trail: f64,
     pub output_trail: f64,
     pub permutations: usize,
@@ -46,6 +48,7 @@ impl SharedState {
             high_sample_rate: false,
             input_trail: 0.0,
             normalise_at_end: true,
+            error: String::default(),
             output: String::default(),
             output_trail: 2.0,
             permutation_depth: 2,
@@ -97,6 +100,10 @@ impl SharedState {
 
     pub fn set_output(&mut self, output: String) {
         self.output = output;
+    }
+
+    pub fn set_error(&mut self, error: String) {
+        self.error = error;
     }
 
     pub fn add_output_progress(
@@ -157,6 +164,7 @@ impl SharedState {
     pub fn run_process(&mut self) -> JoinHandle<()> {
         self.permutation_outputs = vec![];
         self.processing = true;
+        self.error = String::default();
         let permute_params = Self::to_permute_params(&self);
 
         permute_files(permute_params)
