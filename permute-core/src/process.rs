@@ -1,6 +1,7 @@
 use biquad::*;
 use serde::{Deserialize, Serialize};
 use std::{f64::consts::PI, sync::mpsc};
+use strum::EnumIter;
 
 use crate::permute_files::PermuteUpdate;
 
@@ -585,8 +586,21 @@ pub fn filter(
     };
 }
 
+#[derive(Clone, EnumIter)]
+pub enum PhaserStages {
+    One = 1,
+    Two = 2,
+    Three = 3,
+    Four = 4,
+    Six = 6,
+    Eight = 8,
+    Twelve = 12,
+    Sixteen = 16,
+    Twenty = 20,
+}
+
 pub struct PhaserParams {
-    pub stages: i32,
+    pub stages: PhaserStages,
     pub base_freq: f64,
     pub lfo_depth: f64, // range lfo affects frequency. range 0-1
     pub stage_hz: f64,  // increases base freq by this amount
@@ -596,64 +610,12 @@ pub struct PhaserParams {
     pub wet_mix: f64,
 }
 
-pub fn phaser(
-    params: &ProcessorParams,
-    PhaserParams {
-        base_freq,
-        dry_mix,
-        lfo_depth,
-        lfo_rate,
-        q,
-        stage_hz,
-        stages,
-        wet_mix,
-    }: &PhaserParams,
-) -> ProcessorParams {
+pub fn phaser(params: &ProcessorParams, phaser_params: &PhaserParams) -> ProcessorParams {
     let channel_samples = split_channels(params.samples.to_owned(), params.spec.channels);
 
     let split_params = channel_samples
         .iter()
-        .map(|cs| {
-            let filters: Vec<(f64, DirectForm1<f64>)> = (0..*stages)
-                .map(|i| {
-                    let base_freq = base_freq + (i as f64 * stage_hz);
-                    let coeffs = Coefficients::<f64>::from_params(
-                        FilterType::AllPass,
-                        (params.spec.sample_rate).hz(),
-                        base_freq.hz(),
-                        *q,
-                    )
-                    .unwrap();
-                    let filter = DirectForm1::<f64>::new(coeffs);
-                    return (base_freq, filter);
-                })
-                .collect();
-
-            let mut new_samples = cs.clone();
-            let mut lfo_amplitude: f64;
-            let sample_rate = params.spec.sample_rate;
-            for (base_freq, mut filter) in filters.iter() {
-                for i in 0..cs.len() {
-                    lfo_amplitude = lfo_tri(i, sample_rate, *lfo_rate);
-                    let offset = base_freq * lfo_depth * lfo_amplitude;
-                    let mut freq = base_freq + offset;
-                    if freq <= 0.0 {
-                        freq = 0.0001;
-                    }
-                    let new_coeffs = Coefficients::<f64>::from_params(
-                        FilterType::AllPass,
-                        params.spec.sample_rate.hz(),
-                        freq.hz(),
-                        *q,
-                    )
-                    .unwrap();
-                    filter.update_coefficients(new_coeffs);
-                    new_samples[i] = filter.run(new_samples[i]);
-                }
-            }
-
-            new_samples
-        })
+        .map(|cs| phase_stage(params, phaser_params, cs))
         .collect::<Vec<Vec<f64>>>();
 
     let interleaved_samples = interleave_channels(split_params);
@@ -661,11 +623,11 @@ pub fn phaser(
     let summed = sum(vec![
         SampleLine {
             samples: params.samples.to_owned(),
-            gain_factor: *dry_mix,
+            gain_factor: phaser_params.dry_mix,
         },
         SampleLine {
             samples: interleaved_samples,
-            gain_factor: *wet_mix,
+            gain_factor: phaser_params.wet_mix,
         },
     ]);
 
@@ -676,6 +638,57 @@ pub fn phaser(
         update_sender: params.update_sender.to_owned(),
         permutation: params.permutation.to_owned(),
     };
+}
+
+fn phase_stage(
+    params: &ProcessorParams,
+    phaser_params: &PhaserParams,
+    samples: &Vec<f64>,
+) -> Vec<f64> {
+    let stages = phaser_params.stages.clone();
+    let stage_hz = phaser_params.stage_hz;
+    let base_freq = phaser_params.base_freq;
+    let q = phaser_params.q;
+    let lfo_rate = phaser_params.lfo_rate;
+    let lfo_depth = phaser_params.lfo_depth;
+    let filters: Vec<(f64, DirectForm1<f64>)> = (0..stages as i32)
+        .map(|i| {
+            let base_freq = base_freq + (i as f64 * stage_hz);
+            let coeffs = Coefficients::<f64>::from_params(
+                FilterType::AllPass,
+                (params.spec.sample_rate).hz(),
+                base_freq.hz(),
+                q,
+            )
+            .unwrap();
+            let filter = DirectForm1::<f64>::new(coeffs);
+            return (base_freq, filter);
+        })
+        .collect();
+    let mut new_samples = samples.clone();
+    let mut lfo_amplitude: f64;
+    let sample_rate = params.spec.sample_rate;
+    for (base_freq, mut filter) in filters.iter() {
+        for i in 0..samples.len() {
+            lfo_amplitude = lfo_tri(i, sample_rate, lfo_rate);
+            let offset = base_freq * lfo_depth * lfo_amplitude;
+            let mut freq = base_freq + offset;
+            if freq <= 0.0 {
+                freq = 0.0001;
+            }
+            let new_coeffs = Coefficients::<f64>::from_params(
+                FilterType::AllPass,
+                params.spec.sample_rate.hz(),
+                freq.hz(),
+                q,
+            )
+            .unwrap();
+            filter.update_coefficients(new_coeffs);
+            new_samples[i] = filter.run(new_samples[i]);
+        }
+    }
+
+    new_samples
 }
 
 pub fn lfo_sin(sample: usize, sample_rate: u32, lfo_rate: f64) -> f64 {
