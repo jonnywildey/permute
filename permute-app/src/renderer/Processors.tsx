@@ -7,6 +7,8 @@ export interface IProcessorsProps {
   setProcessorEnabled: (processor: string, enabled: boolean) => void;
 }
 
+const bg = "brand.75";
+
 export const Processors: React.FC<IProcessorsProps> = ({ allProcessors, processorPool, setProcessorEnabled }) => {
   const processors = allProcessors.map((ap) => {
     const enabled = processorPool.some(pp => pp === ap);
@@ -23,10 +25,10 @@ export const Processors: React.FC<IProcessorsProps> = ({ allProcessors, processo
     <GridItem
       rowSpan={17}
       colSpan={6}
-      bg='gray.50'
+      bg={bg}
       padding="4"
     >
-      <Heading textAlign="center" size="lg">Processors</Heading>
+      <Heading textAlign="center" size="lg" color="gray.600">Processors</Heading>
       <Grid
         templateRows={`repeat(${Math.floor(allProcessors.length / 3)}, 1fr)`}
         templateColumns='repeat(3, 1fr)'

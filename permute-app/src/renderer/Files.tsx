@@ -10,6 +10,10 @@ export interface IFilesProps {
   showFile: (file: string) => void;
 }
 
+const buttonBg = "brand.500";
+const bg = "brand.25";
+const fileBorderColour = "brand.150";
+
 export const Files: React.FC<IFilesProps> = ({ files, addFiles, removeFile, showFile }) => {
   const [isDrag, setDrag] = useState(false);
 
@@ -33,18 +37,19 @@ export const Files: React.FC<IFilesProps> = ({ files, addFiles, removeFile, show
     const props: PropsOf<typeof Box> = {
       key: file.name,
       borderBottom: "1px solid",
-      borderBottomColor: "yellow.200",
+      borderBottomColor: fileBorderColour,
       color: "gray.700"
     };
     if (i === 0) {
       props.borderTop = "1px solid";
-      props.borderTopColor = "yellow.200";
+      props.borderTopColor = fileBorderColour;
     }
     return (<Box {...props}>
       <Heading 
         size="sm" 
         width="80%"         
         display="inline"
+        color="gray.600"
         pl={2}
       >{file.name}</Heading>
       <CloseButton 
@@ -74,12 +79,12 @@ export const Files: React.FC<IFilesProps> = ({ files, addFiles, removeFile, show
     </Box>);
   });
 
-  return <GridItem rowSpan={17} colSpan={3} bg='yellow.50' pt={4}>
-    <Heading textAlign="center" size="lg">Files</Heading>
+  return <GridItem rowSpan={17} colSpan={3} bg={bg} pt={4}>
+    <Heading textAlign="center" size="lg" color="gray.600">Files</Heading>
     <Box className="file-upload-container"
     >
       <Center>
-        <Button width="75%" bgColor={isDrag ? "pink.200" : "pink.300"}>Select files 
+        <Button width="75%" bgColor={isDrag ? buttonBg : buttonBg} color="gray.800">Select files 
           <Input 
             accept=".wav"
             className="file-upload" 

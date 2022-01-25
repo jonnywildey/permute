@@ -2,7 +2,7 @@ import '@fontsource/dongle/400.css';
 import '@fontsource/dongle/300.css';
 import '@fontsource/dongle/700.css';
 import './App.css';
-import { ChakraProvider, Box, Grid } from '@chakra-ui/react';
+import { ChakraProvider, Grid, useDisclosure, useToast } from '@chakra-ui/react';
 import { Files } from './Files';
 import { TopBar } from './TopBar';
 import { Output } from './Output';
@@ -12,6 +12,7 @@ import type { IPermuteState } from "permute-node";
 import { useEffect, useState } from 'react';
 import { Processors } from './Processors';
 import { IFileStat } from 'main/IFileStat';
+import { Welcome } from './Welcome';
 
 export interface IAppState {
   permuteState: IPermuteState;
@@ -28,8 +29,14 @@ const defaultAppState: IAppState = {
     files: [],
 }
 
+
 const Content = () => {
   const [state, setState] = useState<IAppState>(defaultAppState);
+  const toast = useToast();
+  const { isOpen, onOpen, onClose } = useDisclosure({
+    defaultIsOpen: !state.permuteState.output
+  });
+
   const {
     allProcessors,
     permutationDepth,
@@ -58,7 +65,17 @@ const Content = () => {
   }, []);
 
   const runProcessor = async () => {
-    window.Electron.ipcRenderer.runProcessor(refreshState);
+    const onFinished = (pState: IPermuteState) => {
+      const description = `${pState.files.length * pState.permutations} files permuted!`;
+      toast({
+          description,
+          status: 'success',
+          duration: 5000,
+          isClosable: true,
+       });
+      setState({ ...state, permuteState: pState });
+    };
+    window.Electron.ipcRenderer.runProcessor(refreshState, onFinished);
   };
   const setDepth = async (depth: number) => {
     window.Electron.ipcRenderer.setDepth(depth);
@@ -101,6 +118,9 @@ const Content = () => {
         refreshState();
       });
   }
+  const openWelcome = () => {
+    onOpen();
+  }
 
   const setProcessorEnabled = (name: string, enable: boolean) => {
     if (enable) {
@@ -119,7 +139,8 @@ const Content = () => {
       height="702px"
       width="1024px"
     >
-      <TopBar />
+      <Welcome isOpen={isOpen} onClose={onClose} />
+      <TopBar openWelcome={openWelcome} />
       <Files 
       files={state.files} 
       addFiles={addFiles} 
