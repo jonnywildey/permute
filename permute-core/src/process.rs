@@ -587,8 +587,9 @@ pub fn filter(
 
 pub struct PhaserParams {
     pub stages: i32,
-    pub center_freq: f64,
-    pub step_hz: f64,
+    pub base_freq: f64,
+    pub lfo_depth: f64, // range lfo affects frequency. range 0-1
+    pub stage_hz: f64,  // increases base freq by this amount
     pub lfo_rate: f64,
     pub q: f64,
     pub dry_mix: f64,
@@ -604,7 +605,7 @@ pub fn phaser(params: &ProcessorParams, phaser_params: &PhaserParams) -> Process
             let coeffs = Coefficients::<f64>::from_params(
                 FilterType::AllPass,
                 (params.spec.sample_rate).hz(),
-                (phaser_params.center_freq).hz(),
+                (phaser_params.base_freq).hz(),
                 phaser_params.q,
             )
             .unwrap();
@@ -617,69 +618,58 @@ pub fn phaser(params: &ProcessorParams, phaser_params: &PhaserParams) -> Process
                 cos_amplitude =
                     (i as f64 / params.spec.sample_rate as f64 * 2.0 * PI * phaser_params.lfo_rate)
                         .cos();
-                let freq =
-                    phaser_params.center_freq + (phaser_params.step_hz * cos_amplitude as f64);
+                let mut freq = phaser_params.base_freq
+                    + (phaser_params.base_freq * phaser_params.lfo_depth * cos_amplitude as f64);
+                if freq <= 0.0 {
+                    freq = 0.0001;
+                }
 
                 let new_coeffs = Coefficients::<f64>::from_params(
                     FilterType::AllPass,
                     params.spec.sample_rate.hz(),
-                    (freq + (phaser_params.step_hz * cos_amplitude)).hz(),
+                    freq.hz(),
                     phaser_params.q,
                 )
                 .unwrap();
                 filter.update_coefficients(new_coeffs);
                 new_samples[i] = filter.run(cs[i]);
             }
-
-            // copy
             for i in 0..cs.len() {
                 cos_amplitude =
                     (i as f64 / params.spec.sample_rate as f64 * 2.0 * PI * phaser_params.lfo_rate)
                         .cos();
-                let freq =
-                    phaser_params.center_freq + (phaser_params.step_hz * cos_amplitude as f64);
+                let mut freq = phaser_params.base_freq
+                    + phaser_params.stage_hz
+                    + (phaser_params.base_freq * phaser_params.lfo_depth * cos_amplitude as f64);
+                if freq <= 0.0 {
+                    freq = 0.0001;
+                }
 
                 let new_coeffs = Coefficients::<f64>::from_params(
                     FilterType::AllPass,
                     params.spec.sample_rate.hz(),
-                    (freq + (phaser_params.step_hz * cos_amplitude)).hz(),
+                    freq.hz(),
                     phaser_params.q,
                 )
                 .unwrap();
                 filter.update_coefficients(new_coeffs);
                 new_samples[i] = filter.run(cs[i]);
             }
-
-            // copy
             for i in 0..cs.len() {
                 cos_amplitude =
                     (i as f64 / params.spec.sample_rate as f64 * 2.0 * PI * phaser_params.lfo_rate)
                         .cos();
-                let freq = phaser_params.center_freq
-                    + (phaser_params.step_hz * cos_amplitude * 1.3 as f64);
+                let mut freq = phaser_params.base_freq
+                    + phaser_params.stage_hz * 2.0
+                    + (phaser_params.base_freq * phaser_params.lfo_depth * cos_amplitude as f64);
+                if freq <= 0.0 {
+                    freq = 0.0001;
+                }
 
                 let new_coeffs = Coefficients::<f64>::from_params(
                     FilterType::AllPass,
                     params.spec.sample_rate.hz(),
-                    (freq + (phaser_params.step_hz * cos_amplitude)).hz(),
-                    phaser_params.q,
-                )
-                .unwrap();
-                filter.update_coefficients(new_coeffs);
-                new_samples[i] = filter.run(cs[i]);
-            }
-            // copy
-            for i in 0..cs.len() {
-                cos_amplitude =
-                    (i as f64 / params.spec.sample_rate as f64 * 2.0 * PI * phaser_params.lfo_rate)
-                        .cos();
-                let freq = phaser_params.center_freq
-                    + (phaser_params.step_hz * cos_amplitude * 1.1 as f64);
-
-                let new_coeffs = Coefficients::<f64>::from_params(
-                    FilterType::AllPass,
-                    params.spec.sample_rate.hz(),
-                    (freq + (phaser_params.step_hz * cos_amplitude)).hz(),
+                    freq.hz(),
                     phaser_params.q,
                 )
                 .unwrap();
