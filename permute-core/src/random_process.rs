@@ -255,12 +255,12 @@ pub fn random_phaser(params: &ProcessorParams) -> ProcessorParams {
     ));
 
     let phaser_params = PhaserParams {
-        base_freq: 500.0,
+        base_freq: 300.0,
         lfo_rate: 2.0,
         q: 0.05,
-        stages: 1,
+        stages: 16,
         lfo_depth: 0.8,
-        stage_hz: 100.0,
+        stage_hz: 0.0,
         dry_mix: 1.0,
         wet_mix: 1.0,
     };
