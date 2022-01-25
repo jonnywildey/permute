@@ -1,6 +1,7 @@
 mod sharedstate;
 
 use neon::prelude::*;
+use permute::display_node::*;
 use permute::permute_files::*;
 use sharedstate::*;
 use std::fmt::Error;
@@ -126,6 +127,10 @@ impl Processor {
                     PermuteUpdate::ProcessComplete => {
                         state.set_finished();
                     }
+                    PermuteUpdate::Error(err) => {
+                        state.set_finished();
+                        state.set_error(err);
+                    }
                 }
             }
         });
@@ -171,6 +176,7 @@ impl Processor {
                     let this = cx.undefined();
 
                     let output = cx.string(state.output.clone());
+                    let error = cx.string(state.error.clone());
                     let processing = cx.boolean(state.processing);
                     let high_sample_rate = cx.boolean(state.high_sample_rate);
                     let input_trail = cx.number(state.input_trail);
@@ -207,6 +213,7 @@ impl Processor {
 
                     let obj = cx.empty_object();
                     obj.set(&mut cx, "output", output)?;
+                    obj.set(&mut cx, "error", error)?;
                     obj.set(&mut cx, "processing", processing)?;
                     obj.set(&mut cx, "highSampleRate", high_sample_rate)?;
                     obj.set(&mut cx, "inputTrail", input_trail)?;

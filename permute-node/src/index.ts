@@ -9,6 +9,7 @@ const PERMUTE_POLL_LATENCY = 100;
 
 export interface IPermuteState {
   output: string,
+  error: string,
   processing: boolean,
   highSampleRate: boolean,
   inputTrail: number,
