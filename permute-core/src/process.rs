@@ -3,9 +3,9 @@ use serde::{Deserialize, Serialize};
 use std::{f64::consts::PI, sync::mpsc};
 use strum::EnumIter;
 
-use crate::permute_files::PermuteUpdate;
+use crate::{permute_error::PermuteError, permute_files::PermuteUpdate};
 
-pub type ProcessorFn = fn(&ProcessorParams) -> ProcessorParams;
+pub type ProcessorFn = fn(&ProcessorParams) -> Result<ProcessorParams, PermuteError>;
 
 #[derive(Debug, Clone)]
 pub struct ProcessorParams {
@@ -59,12 +59,12 @@ pub fn reverse(
         update_sender,
         permutation,
     }: &ProcessorParams,
-) -> ProcessorParams {
-    let _ = update_sender.send(PermuteUpdate::UpdatePermuteNodeStarted(
+) -> Result<ProcessorParams, PermuteError> {
+    update_sender.send(PermuteUpdate::UpdatePermuteNodeStarted(
         permutation.clone(),
         PermuteNodeName::Reverse,
         PermuteNodeEvent::NodeProcessStarted,
-    ));
+    ))?;
     let mut new_samples = samples.clone();
     let channels = spec.channels as i32;
 
@@ -74,18 +74,18 @@ pub fn reverse(
         new_samples[i] = samples[sample_i as usize];
     }
 
-    let _ = update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
+    update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
         permutation.clone(),
         PermuteNodeName::Reverse,
         PermuteNodeEvent::NodeProcessComplete,
-    ));
-    return ProcessorParams {
+    ))?;
+    return Ok(ProcessorParams {
         samples: new_samples,
         spec: *spec,
         sample_length: *sample_length,
         update_sender: update_sender.to_owned(),
         permutation: permutation.to_owned(),
-    };
+    });
 }
 
 pub struct DelayLineParams {
@@ -119,15 +119,15 @@ pub fn change_sample_rate(params: ProcessorParams, new_sample_rate: u32) -> Proc
     resampled
 }
 
-pub fn change_sample_rate_high(params: &ProcessorParams) -> ProcessorParams {
+pub fn change_sample_rate_high(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
     let new_params = params.clone();
     let update_sender = params.update_sender.to_owned();
     let permutation = params.permutation.to_owned();
-    let _ = update_sender.send(PermuteUpdate::UpdatePermuteNodeStarted(
+    update_sender.send(PermuteUpdate::UpdatePermuteNodeStarted(
         permutation.clone(),
         PermuteNodeName::SampleRateConversionHigh,
         PermuteNodeEvent::NodeProcessStarted,
-    ));
+    ))?;
 
     let new_sample_rate = match params.spec.sample_rate {
         0..=48000 => params.spec.sample_rate * 4,
@@ -139,33 +139,35 @@ pub fn change_sample_rate_high(params: &ProcessorParams) -> ProcessorParams {
     new_params.permutation.original_sample_rate = params.spec.sample_rate;
     new_params.spec.sample_rate = new_sample_rate;
 
-    let _ = update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
+    update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
         new_params.permutation.clone(),
         PermuteNodeName::SampleRateConversionHigh,
         PermuteNodeEvent::NodeProcessComplete,
-    ));
-    new_params
+    ))?;
+    Ok(new_params)
 }
 
-pub fn change_sample_rate_original(params: &ProcessorParams) -> ProcessorParams {
+pub fn change_sample_rate_original(
+    params: &ProcessorParams,
+) -> Result<ProcessorParams, PermuteError> {
     let new_params = params.clone();
     let update_sender = params.update_sender.to_owned();
 
     let permutation = params.permutation.to_owned();
-    let _ = update_sender.send(PermuteUpdate::UpdatePermuteNodeStarted(
+    update_sender.send(PermuteUpdate::UpdatePermuteNodeStarted(
         permutation.clone(),
         PermuteNodeName::SampleRateConversionOriginal,
         PermuteNodeEvent::NodeProcessStarted,
-    ));
+    ))?;
 
     let new_params = change_sample_rate(new_params, permutation.original_sample_rate);
 
-    let _ = update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
+    update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
         new_params.permutation.clone(),
         PermuteNodeName::SampleRateConversionOriginal,
         PermuteNodeEvent::NodeProcessComplete,
-    ));
-    new_params
+    ))?;
+    Ok(new_params)
 }
 
 pub fn delay_line(
@@ -182,7 +184,7 @@ pub fn delay_line(
         dry_gain_factor,
         wet_gain_factor,
     }: &DelayLineParams,
-) -> ProcessorParams {
+) -> Result<ProcessorParams, PermuteError> {
     // Ensure sample length matches channel count
     let sample_length = *sample_length;
     let delay_sample_length = delay_sample_length - (delay_sample_length % spec.channels as usize);
@@ -223,7 +225,7 @@ pub fn delay_line(
         return delay_line(&new_processor_params, &new_delay_params);
     }
 
-    return new_processor_params;
+    return Ok(new_processor_params);
 }
 
 pub fn gain(
@@ -455,11 +457,11 @@ pub fn chorus(
         delay_params,
         vibrato_params,
     }: ChorusParams,
-) -> ProcessorParams {
+) -> Result<ProcessorParams, PermuteError> {
     let dry_samples = params.samples.clone();
     let update_sender = params.update_sender.to_owned();
 
-    let delayed = delay_line(&params, &delay_params);
+    let delayed = delay_line(&params, &delay_params)?;
     let vibratod = vibrato(delayed, vibrato_params);
 
     let summed = sum(vec![
@@ -473,13 +475,13 @@ pub fn chorus(
         },
     ]);
 
-    return ProcessorParams {
+    return Ok(ProcessorParams {
         sample_length: summed.len(),
         samples: summed,
         spec: vibratod.spec,
         update_sender,
         permutation: params.permutation,
-    };
+    });
 }
 
 pub type FilterType<T> = Type<T>;
