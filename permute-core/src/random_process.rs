@@ -258,7 +258,7 @@ pub fn random_phaser(params: &ProcessorParams) -> ProcessorParams {
         base_freq: 300.0,
         lfo_rate: 2.0,
         q: 0.05,
-        stages: 16,
+        stages: 4,
         lfo_depth: 0.8,
         stage_hz: 0.0,
         dry_mix: 1.0,

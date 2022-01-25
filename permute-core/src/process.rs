@@ -652,60 +652,6 @@ pub fn phaser(
                 }
             }
 
-            // let coeffs = Coefficients::<f64>::from_params(
-            //     FilterType::AllPass,
-            //     (params.spec.sample_rate).hz(),
-            //     (phaser_params.base_freq).hz(),
-            //     phaser_params.q,
-            // )
-            // .unwrap();
-
-            // let mut filter = DirectForm1::<f64>::new(coeffs);
-            // let mut new_samples = cs.clone();
-            // let mut cos_amplitude: f64;
-
-            // for i in 0..cs.len() {
-            //     cos_amplitude =
-            //         (i as f64 / params.spec.sample_rate as f64 * 2.0 * PI * phaser_params.lfo_rate)
-            //             .cos();
-            //     let mut freq = phaser_params.base_freq
-            //         + (phaser_params.base_freq * phaser_params.lfo_depth * cos_amplitude as f64);
-            //     if freq <= 0.0 {
-            //         freq = 0.0001;
-            //     }
-
-            //     let new_coeffs = Coefficients::<f64>::from_params(
-            //         FilterType::AllPass,
-            //         params.spec.sample_rate.hz(),
-            //         freq.hz(),
-            //         phaser_params.q,
-            //     )
-            //     .unwrap();
-            //     filter.update_coefficients(new_coeffs);
-            //     new_samples[i] = filter.run(cs[i]);
-            // }
-            // for i in 0..cs.len() {
-            //     cos_amplitude =
-            //         (i as f64 / params.spec.sample_rate as f64 * 2.0 * PI * phaser_params.lfo_rate)
-            //             .cos();
-            //     let mut freq = phaser_params.base_freq
-            //         + phaser_params.stage_hz
-            //         + (phaser_params.base_freq * phaser_params.lfo_depth * cos_amplitude as f64);
-            //     if freq <= 0.0 {
-            //         freq = 0.0001;
-            //     }
-
-            //     let new_coeffs = Coefficients::<f64>::from_params(
-            //         FilterType::AllPass,
-            //         params.spec.sample_rate.hz(),
-            //         freq.hz(),
-            //         phaser_params.q,
-            //     )
-            //     .unwrap();
-            //     filter.update_coefficients(new_coeffs);
-            //     new_samples[i] = filter.run(cs[i]);
-            // }
-
             new_samples
         })
         .collect::<Vec<Vec<f64>>>();
@@ -741,6 +687,26 @@ pub fn lfo_cos(sample: usize, sample_rate: u32, lfo_rate: f64) -> f64 {
 }
 
 pub fn lfo_tri(sample: usize, sample_rate: u32, lfo_rate: f64) -> f64 {
+    // according to internet y = (A/P) * (P - abs(x % (2*P) - P) )
+    // P = sample rate / 2
+    // A = 2 (will need to subtract 1 to 0 center)
+    // add p/2 to x to push phase 90 deg
+    let cycle = sample_rate as f64 / lfo_rate as f64;
+    let p = cycle / 2.0;
+    return ((2.0 / p) * (p - ((sample as f64 + p / 2.0) % cycle - p).abs())) - 1.0;
+}
+
+pub fn lfo_tri_exp(sample: usize, sample_rate: u32, lfo_rate: f64, exp: f64) -> f64 {
+    // according to internet y = (A/P) * (P - abs(x % (2*P) - P) )
+    // P = sample rate / 2
+    // A = 2 (will need to subtract 1 to 0 center)
+    // add p/2 to x to push phase 90 deg
+    let cycle = sample_rate as f64 / lfo_rate as f64;
+    let p = cycle / 2.0;
+    return ((2.0 / p) * (p - ((sample as f64 + p / 2.0) % cycle - p).abs())).powf(exp) - 1.0;
+}
+
+pub fn lfo_quad(sample: usize, sample_rate: u32, lfo_rate: f64) -> f64 {
     let cycle: u32 = sample_rate / lfo_rate as u32; // rounding error here. no guarantee lfo_rate matches
     let pos: f64 = (sample as u32 % cycle) as f64;
     let half_cycle: f64 = (cycle as f64) / 2.0;
