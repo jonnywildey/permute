@@ -12,3 +12,4 @@ hound = "3.4.0"
 rand = "0.8.4"
 serde = { version = "1.0.134", features = ["derive"] }
 biquad = "0.4.1"
+strum = { version = "0.23", features = ["derive"] }

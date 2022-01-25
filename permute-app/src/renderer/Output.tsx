@@ -7,6 +7,9 @@ export interface IOutputProps {
   showFile: (file: string) => void;
 }
 
+const buttonBg = "brand.500";
+const bg = "brand.25";
+
 export const Output: React.FC<IOutputProps> = ({ output, showFile, setOutput }) => {
   const directory = output ? 
   <Box 
@@ -18,6 +21,7 @@ export const Output: React.FC<IOutputProps> = ({ output, showFile, setOutput }) 
     borderTopColor="gray.300" 
     borderBottom="1px"
     borderBottomColor="gray.300" 
+    color="gray.800"
     >
     <IconButton 
       aria-label="show" 
@@ -34,10 +38,10 @@ export const Output: React.FC<IOutputProps> = ({ output, showFile, setOutput }) 
         {output}
     </Heading>
   </Box> : null;
-  return <GridItem rowSpan={17} colSpan={3} bg='red.50' pt={4}>
-    <Heading textAlign="center" size="lg">Output</Heading>
+  return <GridItem rowSpan={17} colSpan={3} bg={bg} pt={4}>
+    <Heading textAlign="center" size="lg" color="gray.600">Output</Heading>
     <Center>
-    <Button mt={3} bg="pink.300" onClick={setOutput}>Select Output Directory</Button>
+    <Button mt={3} bg={buttonBg} width="75%" onClick={setOutput} color="gray.800">Select Output Directory</Button>
     </Center>
     {directory}
   </GridItem>

@@ -39,6 +39,7 @@ impl SharedState {
             PermuteNodeName::Wow,
             PermuteNodeName::Flutter,
             PermuteNodeName::Chorus,
+            PermuteNodeName::Phaser,
         ];
         Self {
             files: vec![],

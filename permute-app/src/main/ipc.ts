@@ -18,6 +18,8 @@ ipcMain.on('open-output-dialog', async (event) => {
 ipcMain.on('run-processor', async (event) => {
   processor.runProcess((state: IPermuteState) => {
     event.reply('run-processor-update', state);
+  }, (state: IPermuteState) => {
+    event.reply('run-processor-ended', state);
   });
 });
 ipcMain.on('add-file', async (_, file) => {

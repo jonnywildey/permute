@@ -1,5 +1,6 @@
 use crate::{permute_files::PermuteUpdate, process::*};
 use rand::prelude::*;
+use strum::IntoEnumIterator;
 
 pub struct GetProcessorNodeParams {
     pub normalise_at_end: bool,
@@ -54,6 +55,7 @@ pub fn get_processor_function(name: PermuteNodeName) -> ProcessorFn {
     match name {
         PermuteNodeName::Reverse => reverse,
         PermuteNodeName::Chorus => random_chorus,
+        PermuteNodeName::Phaser => random_phaser,
         PermuteNodeName::DoubleSpeed => double_speed,
         PermuteNodeName::Flutter => random_flutter,
         PermuteNodeName::HalfSpeed => half_speed,
@@ -238,6 +240,40 @@ pub fn random_chorus(params: &ProcessorParams) -> ProcessorParams {
     let _ = update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
         permutation,
         PermuteNodeName::Chorus,
+        PermuteNodeEvent::NodeProcessComplete,
+    ));
+    new_samples
+}
+
+pub fn random_phaser(params: &ProcessorParams) -> ProcessorParams {
+    let update_sender = params.update_sender.to_owned();
+    let permutation = params.permutation.clone();
+    let _ = update_sender.send(PermuteUpdate::UpdatePermuteNodeStarted(
+        params.permutation.clone(),
+        PermuteNodeName::Phaser,
+        PermuteNodeEvent::NodeProcessStarted,
+    ));
+
+    let mut rng = thread_rng();
+
+    let stages = PhaserStages::iter().choose(&mut rng).unwrap();
+
+    let phaser_params = PhaserParams {
+        base_freq: rng.gen_range(300.0..700.0),
+        lfo_rate: rng.gen_range(0.2..2.0), // Maybe a separate one for faster?
+        q: rng.gen_range(0.15..0.5),
+        stages: stages,
+        lfo_depth: rng.gen_range(0.5..0.95),
+        stage_hz: 0.0,
+        dry_mix: 1.0,
+        wet_mix: 1.0,
+    };
+
+    let new_samples = phaser(&params.to_owned(), &phaser_params);
+
+    let _ = update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
+        permutation,
+        PermuteNodeName::Phaser,
         PermuteNodeEvent::NodeProcessComplete,
     ));
     new_samples
