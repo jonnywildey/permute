@@ -79,6 +79,9 @@ impl SharedState {
     }
 
     pub fn add_file(&mut self, file: String) {
+        if self.files.iter().any(|f| *f == file) {
+            return;
+        }
         let _ = &self.files.push(file);
     }
 
