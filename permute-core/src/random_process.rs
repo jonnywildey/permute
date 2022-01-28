@@ -79,7 +79,7 @@ pub fn random_metallic_delay(params: &ProcessorParams) -> Result<ProcessorParams
     ))?;
     let mut rng = thread_rng();
 
-    let sec_10 = (params.spec.sample_rate as f64 * 0.1) as usize;
+    let sec_10 = (params.sample_rate as f64 * 0.1) as usize;
     let delay_params = DelayLineParams {
         feedback_factor: rng.gen_range(0_f64..0.9),
         delay_sample_length: rng.gen_range(10..sec_10),
@@ -106,8 +106,8 @@ pub fn random_rhythmic_delay(params: &ProcessorParams) -> Result<ProcessorParams
     ))?;
     let mut rng = thread_rng();
 
-    let sec_10 = (params.spec.sample_rate as f64 * 0.1) as usize;
-    let sec = params.spec.sample_rate as usize;
+    let sec_10 = (params.sample_rate as f64 * 0.1) as usize;
+    let sec = params.sample_rate as usize;
     let delay_params = DelayLineParams {
         feedback_factor: rng.gen_range(0_f64..0.9),
         delay_sample_length: rng.gen_range(sec_10..sec),
@@ -216,8 +216,8 @@ pub fn random_chorus(params: &ProcessorParams) -> Result<ProcessorParams, Permut
     ))?;
     let mut rng = thread_rng();
 
-    let millis_low = (params.spec.sample_rate as f64 / 1000_f64 * 4_f64) as usize;
-    let millis_high = (params.spec.sample_rate as f64 / 1000_f64 * 20_f64) as usize;
+    let millis_low = (params.sample_rate as f64 / 1000_f64 * 4_f64) as usize;
+    let millis_high = (params.sample_rate as f64 / 1000_f64 * 20_f64) as usize;
     let delay_params = DelayLineParams {
         feedback_factor: rng.gen_range(0_f64..0.8_f64),
         delay_sample_length: rng.gen_range(millis_low..millis_high),
