@@ -1,16 +1,19 @@
-import { Box, Button, GridItem, Heading, Center, IconButton } from "@chakra-ui/react";
+import { Box, Button, GridItem, Heading, Center, IconButton, PropsOf, CloseButton, Text, Progress, CircularProgress } from "@chakra-ui/react";
 import { ViewIcon } from  "@chakra-ui/icons"
+import type { IPermutationOutput } from "permute-node";
 
 export interface IOutputProps {
   output: string;
   setOutput: () => void;
+  permutationOutputs: IPermutationOutput[];
   showFile: (file: string) => void;
 }
 
 const buttonBg = "brand.500";
 const bg = "brand.25";
+const fileBorderColour = "brand.150";
 
-export const Output: React.FC<IOutputProps> = ({ output, showFile, setOutput }) => {
+export const Output: React.FC<IOutputProps> = ({ output, showFile, setOutput, permutationOutputs }) => {
   const directory = output ? 
   <Box 
     display="flex" 
@@ -38,12 +41,59 @@ export const Output: React.FC<IOutputProps> = ({ output, showFile, setOutput }) 
         {output}
     </Heading>
   </Box> : null;
+
+const outputBoxes = permutationOutputs
+.filter(f => f.progress === 100)
+.map((file, i) => {
+    const props: PropsOf<typeof Box> = {
+      key: file.output,
+      borderBottom: "1px solid",
+      borderBottomColor: fileBorderColour,
+      color: "gray.700"
+    };
+    if (i === 0) {
+      props.borderTop = "1px solid";
+      props.borderTopColor = fileBorderColour;
+    }
+    return (<Box {...props}>
+      <Heading 
+        size="sm" 
+        width="80%"         
+        display="inline"
+        color="gray.600"
+        pl={2}
+      >{file.output}</Heading>
+      {/* <CloseButton
+        display="inline"
+        float="right"
+        size="sm"
+        onClick={() => removeFile(file.path)} 
+        />   */}
+      <Box
+      display="flex"
+      justifyContent="space-between"
+      alignItems="center"
+      >
+        <IconButton  
+          aria-label="show" 
+          variant="ghost"
+          size="sm"
+          icon={<ViewIcon  />} 
+          onClick={() => showFile(file.output)} 
+          />
+      </Box>
+    </Box>);
+  });
+
   return <GridItem rowSpan={17} colSpan={3} bg={bg} pt={4}>
     <Heading textAlign="center" size="lg" color="gray.600">Output</Heading>
     <Center>
     <Button mt={3} bg={buttonBg} width="75%" onClick={setOutput} color="gray.800">Select Output Directory</Button>
     </Center>
     {directory}
+    <Box overflowY="scroll" height="310px">
+      {outputBoxes}
+    </Box>
   </GridItem>
 
 }

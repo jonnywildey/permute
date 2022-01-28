@@ -13,6 +13,7 @@ import { useEffect, useState } from 'react';
 import { Processors } from './Processors';
 import { IFileStat } from 'main/IFileStat';
 import { Welcome } from './Welcome';
+import { CreateAudioContext } from './AudioContext';
 
 export interface IAppState {
   permuteState: IPermuteState;
@@ -161,7 +162,12 @@ const Content = () => {
         processorPool={processorPool} 
         setProcessorEnabled={setProcessorEnabled} 
       />
-      <Output output={output} setOutput={setOutput} showFile={showFile} />
+      <Output 
+        output={output} 
+        setOutput={setOutput} 
+        showFile={showFile} 
+        permutationOutputs={permutationOutputs} 
+      />
       <BottomBar
         permutationOutputs={permutationOutputs}
         runProcessor={runProcessor}
@@ -186,7 +192,9 @@ const Content = () => {
 export default function App() {
   return (
     <ChakraProvider theme={theme}>
-      <Content />
+      <CreateAudioContext>
+        <Content />
+      </CreateAudioContext>
     </ChakraProvider>
   );
 }

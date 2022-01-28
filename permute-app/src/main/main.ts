@@ -11,7 +11,7 @@
 import 'core-js/stable';
 import 'regenerator-runtime/runtime';
 import path from 'path';
-import { app, BrowserWindow, shell } from 'electron';
+import { app, BrowserWindow, shell, protocol } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import MenuBuilder from './menu';
@@ -127,6 +127,11 @@ app.on('window-all-closed', () => {
 app
   .whenReady()
   .then(() => {
+    protocol.registerFileProtocol('audio', (request, callback) => {
+    const url = request.url.substring(7)
+    callback(decodeURI(path.normalize(url)))
+  })
+
     createWindow();
     app.on('activate', () => {
       // On macOS it's common to re-create a window in the app when the

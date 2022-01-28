@@ -27,6 +27,7 @@ export interface IPermuteState {
 export interface IPermutationOutput {
   output: string;
   progress: number;
+  processors: string[];
 }
 
 export type GetStateCallback = (state: IPermuteState) => void;

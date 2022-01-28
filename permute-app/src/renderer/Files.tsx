@@ -1,7 +1,8 @@
 import { Box, GridItem, Heading, Input, IconButton, CloseButton, PropsOf, Text, Button, Center } from "@chakra-ui/react";
 import { IFileStat } from "main/IFileStat";
-import { ViewIcon } from  "@chakra-ui/icons"
-import { useState } from "react";
+import { ViewIcon, ArrowForwardIcon } from  "@chakra-ui/icons"
+import { useContext, useState } from "react";
+import { AudioContext } from "./AudioContext";
 
 export interface IFilesProps {
   files: IFileStat[];
@@ -16,6 +17,7 @@ const fileBorderColour = "brand.150";
 
 export const Files: React.FC<IFilesProps> = ({ files, addFiles, removeFile, showFile }) => {
   const [isDrag, setDrag] = useState(false);
+  const { playFile } = useContext(AudioContext);
 
   const onDrop: React.DragEventHandler<HTMLInputElement> = (e) => {
     let files: string[] = [];
@@ -63,6 +65,15 @@ export const Files: React.FC<IFilesProps> = ({ files, addFiles, removeFile, show
       justifyContent="space-between"
       alignItems="center"
       >
+
+      <IconButton  
+          aria-label="show" 
+          variant="ghost"
+          size="sm"
+          icon={<ArrowForwardIcon />} 
+          onClick={() => playFile(file.path)} 
+        />
+        
         <IconButton  
           aria-label="show" 
           variant="ghost"
@@ -99,7 +110,7 @@ export const Files: React.FC<IFilesProps> = ({ files, addFiles, removeFile, show
           </Button>
         </Center>
       </Box>
-    <Box overflowY="scroll" height="386px">
+    <Box overflowY="scroll" height="380px">
     {fileBoxes}
     </Box>
   </GridItem>

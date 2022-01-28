@@ -203,11 +203,21 @@ impl Processor {
                     }
                     let permutation_outputs = cx.empty_array();
                     for i in 0..state.permutation_outputs.len() {
+                        let permutation_output = &state.permutation_outputs[i];
                         let output_obj = cx.empty_object();
-                        let output = cx.string(state.permutation_outputs[i].output.clone());
+                        let output = cx.string(permutation_output.output.clone());
                         output_obj.set(&mut cx, "output", output)?;
-                        let progress = cx.number(state.permutation_outputs[i].progress);
+                        let progress = cx.number(permutation_output.progress);
                         output_obj.set(&mut cx, "progress", progress)?;
+
+                        let node_names = cx.empty_array();
+                        for j in 0..permutation_output.processors.len() {
+                            let display_name = cx.string(get_processor_display_name(
+                                permutation_output.processors[j],
+                            ));
+                            node_names.set(&mut cx, j as u32, display_name)?;
+                        }
+                        output_obj.set(&mut cx, "processors", node_names)?;
                         permutation_outputs.set(&mut cx, i as u32, output_obj)?;
                     }
 
