@@ -1,5 +1,5 @@
 use biquad::Errors as FilterErrors;
-use hound::Error as HoundError;
+use sndfile::SndFileError;
 use std::fmt::Display;
 use std::io;
 use std::sync::mpsc::SendError;
@@ -9,14 +9,14 @@ use crate::permute_files::PermuteUpdate;
 #[derive(Debug)]
 pub enum PermuteError {
     SendError(SendError<PermuteUpdate>),
-    Hound(HoundError),
+    Snd(SndFileError),
     IO(io::Error),
     Filter(FilterErrors),
 }
 
-impl From<HoundError> for PermuteError {
-    fn from(error: HoundError) -> Self {
-        PermuteError::Hound(error)
+impl From<SndFileError> for PermuteError {
+    fn from(error: SndFileError) -> Self {
+        PermuteError::Snd(error)
     }
 }
 

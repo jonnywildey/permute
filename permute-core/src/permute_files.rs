@@ -1,7 +1,7 @@
 use crate::permute_error::PermuteError;
 use crate::process::*;
 use crate::random_process::*;
-use hound::{SampleFormat, WavReader, WavSpec, WavWriter};
+use sndfile::*;
 use std::path::Path;
 use std::sync::mpsc;
 use std::thread;
@@ -71,15 +71,31 @@ fn permute_file(
     }: PermuteFilesParams,
     file: String,
 ) -> Result<(), PermuteError> {
-    let mut reader = WavReader::open(file.clone())?;
-    let spec = reader.spec();
+    let mut snd = sndfile::OpenOptions::ReadOnly(ReadOptions::Auto).from_path(file.clone())?;
 
-    let processor_spec = WavSpec {
-        channels: spec.channels,
-        sample_rate: spec.sample_rate,
+    let spec = WavSpec {
         bits_per_sample: 64,
         sample_format: SampleFormat::Float,
+        sample_rate: snd.get_samplerate(),
+        channels: snd.get_channels(),
     };
+    let sample_rate = spec.sample_rate;
+
+    // todo add error
+    let samples_64: Vec<f64> = snd.read_all_to_vec().unwrap();
+
+    for i in 0..10000 {
+        if (i % 100 == 0) {
+            println!("i {}", samples_64[i]);
+        }
+    }
+
+    // let processor_spec = WavSpec {
+    //     channels: spec.channels,
+    //     sample_rate: spec.sample_rate,
+    //     bits_per_sample: 64,
+    //     sample_format: SampleFormat::Float,
+    // };
 
     // Set all values to -1..1
     let denormalise_factor = match spec.bits_per_sample {
@@ -91,10 +107,10 @@ fn permute_file(
         _ => 1_f64,
     };
 
-    let samples_64 = reader
-        .samples::<i32>()
-        .map(|x| (x.unwrap()) as f64 * normalise_factor)
-        .collect::<Vec<f64>>();
+    // let samples_64 = reader
+    //     .samples::<i32>()
+    //     .map(|x| (x.unwrap()) as f64 * normalise_factor)
+    //     .collect::<Vec<f64>>();
     let input_trail_buffer =
         vec![0_f64; (spec.sample_rate as f64 * input_trail * spec.channels as f64).ceil() as usize];
     let output_trail_buffer = vec![
@@ -129,12 +145,12 @@ fn permute_file(
             output: output_i.clone(),
             processor_pool: processor_pool.clone(),
             processors: processors.clone(),
-            original_sample_rate: spec.sample_rate,
+            original_sample_rate: sample_rate,
             node_index: 0,
         };
         let processor_params = ProcessorParams {
             samples: samples_64.clone(),
-            spec: processor_spec,
+            spec: spec.clone(),
             sample_length: sample_length,
             permutation: permutation.clone(),
             update_sender: update_sender.to_owned(),
@@ -153,20 +169,32 @@ fn permute_file(
             processor_params: processor_params.clone(),
             processors: processor_fns.to_vec(),
         })?;
-        let mut pro_writer = WavWriter::create(output, spec).expect("Error in output");
+        let mut snd = sndfile::OpenOptions::WriteOnly(WriteOptions::new(
+            MajorFormat::WAV,
+            SubtypeFormat::PCM_24,
+            Endian::Little,
+            processor_params.spec.sample_rate,
+            processor_params.spec.channels,
+        ))
+        .from_path(processor_params.permutation.output.clone())?;
 
-        for mut s in output_params.samples {
-            // overload protection
-            if s >= 1.0 {
-                s = 1.0;
-            }
-            if s <= -1.0 {
-                s = -1.0;
-            }
-            let t = (s * denormalise_factor) as i32;
-            pro_writer.write_sample(t).expect("Error writing file");
-        }
-        pro_writer.finalize().expect("Error writing file");
+        snd.write_from_iter(output_params.samples.clone().into_iter())
+            .unwrap();
+
+        // let mut pro_writer = WavWriter::create(output, spec).expect("Error in output");
+
+        // for mut s in output_params.samples {
+        //     // overload protection
+        //     if s >= 1.0 {
+        //         s = 1.0;
+        //     }
+        //     if s <= -1.0 {
+        //         s = -1.0;
+        //     }
+        //     let t = (s * denormalise_factor) as i32;
+        //     pro_writer.write_sample(t).expect("Error writing file");
+        // }
+        // pro_writer.finalize().expect("Error writing file");
     }
     Ok(())
 }

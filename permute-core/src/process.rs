@@ -9,7 +9,7 @@ pub type ProcessorFn = fn(&ProcessorParams) -> Result<ProcessorParams, PermuteEr
 
 #[derive(Debug, Clone)]
 pub struct ProcessorParams {
-    pub spec: hound::WavSpec,
+    pub spec: WavSpec,
     pub samples: Vec<f64>,
     pub sample_length: usize,
     pub permutation: Permutation,
@@ -17,15 +17,34 @@ pub struct ProcessorParams {
     pub update_sender: mpsc::Sender<PermuteUpdate>,
 }
 
-#[derive(Debug, Clone)]
+// Borrow Hound spec for now.
+#[derive(Debug, Clone, Copy)]
+pub enum SampleFormat {
+    /// Wave files with the `WAVE_FORMAT_IEEE_FLOAT` format tag store samples as floating point
+    /// values.
+    ///
+    /// Values are normally in the range [-1.0, 1.0].
+    Float,
+    /// Wave files with the `WAVE_FORMAT_PCM` format tag store samples as integer values.
+    Int,
+}
 
+#[derive(Debug, Clone, Copy)]
+pub struct WavSpec {
+    pub channels: usize,
+    pub sample_rate: usize,
+    pub bits_per_sample: u16,
+    pub sample_format: SampleFormat,
+}
+
+#[derive(Debug, Clone)]
 pub struct Permutation {
     pub file: String,
     pub permutation_index: usize,
     pub output: String,
     pub processor_pool: Vec<PermuteNodeName>,
     pub processors: Vec<PermuteNodeName>,
-    pub original_sample_rate: u32,
+    pub original_sample_rate: usize,
     pub node_index: usize,
 }
 
@@ -97,7 +116,7 @@ pub struct DelayLineParams {
 
 pub fn change_sample_rate(
     params: ProcessorParams,
-    new_sample_rate: u32,
+    new_sample_rate: usize,
 ) -> Result<ProcessorParams, PermuteError> {
     if params.spec.sample_rate == new_sample_rate {
         return Ok(params);
@@ -359,7 +378,7 @@ pub fn change_speed(
     };
 }
 
-fn split_channels(samples: Vec<f64>, channels: u16) -> Vec<Vec<f64>> {
+fn split_channels(samples: Vec<f64>, channels: usize) -> Vec<Vec<f64>> {
     let channels: usize = channels as usize;
     let mut by_channels: Vec<Vec<f64>> = vec![];
     for c in 0..channels {
@@ -559,7 +578,7 @@ pub fn filter(
 ) -> Result<ProcessorParams, PermuteError> {
     // Cutoff and sampling frequencies
     let f0 = frequency.hz();
-    let fs = spec.sample_rate.hz();
+    let fs = (spec.sample_rate as u32).hz();
     let q = q.unwrap_or(Q_BUTTERWORTH_F64);
 
     // Create coefficients for the biquads
@@ -667,7 +686,7 @@ fn phase_stage(
             let base_freq = base_freq + (i as f64 * stage_hz);
             let coeffs = Coefficients::<f64>::from_params(
                 FilterType::AllPass,
-                (params.spec.sample_rate).hz(),
+                (params.spec.sample_rate as u32).hz(),
                 base_freq.hz(),
                 q,
             )?;
@@ -690,7 +709,7 @@ fn phase_stage(
             }
             let new_coeffs = Coefficients::<f64>::from_params(
                 FilterType::AllPass,
-                params.spec.sample_rate.hz(),
+                (params.spec.sample_rate as u32).hz(),
                 freq.hz(),
                 q,
             )?;
@@ -703,15 +722,15 @@ fn phase_stage(
     Ok(new_samples)
 }
 
-pub fn lfo_sin(sample: usize, sample_rate: u32, lfo_rate: f64) -> f64 {
+pub fn lfo_sin(sample: usize, sample_rate: usize, lfo_rate: f64) -> f64 {
     (sample as f64 / sample_rate as f64 * 2.0 * PI * lfo_rate).sin()
 }
 
-pub fn lfo_cos(sample: usize, sample_rate: u32, lfo_rate: f64) -> f64 {
+pub fn lfo_cos(sample: usize, sample_rate: usize, lfo_rate: f64) -> f64 {
     (sample as f64 / sample_rate as f64 * 2.0 * PI * lfo_rate).cos()
 }
 
-pub fn lfo_tri(sample: usize, sample_rate: u32, lfo_rate: f64) -> f64 {
+pub fn lfo_tri(sample: usize, sample_rate: usize, lfo_rate: f64) -> f64 {
     // according to internet y = (A/P) * (P - abs(x % (2*P) - P) )
     // P = sample rate / 2
     // A = 2 (will need to subtract 1 to 0 center)
@@ -721,19 +740,8 @@ pub fn lfo_tri(sample: usize, sample_rate: u32, lfo_rate: f64) -> f64 {
     return ((2.0 / p) * (p - ((sample as f64 + p / 2.0) % cycle - p).abs())) - 1.0;
 }
 
-pub fn lfo_tri_exp(sample: usize, sample_rate: u32, lfo_rate: f64, exp: f64) -> f64 {
+pub fn lfo_tri_exp(sample: usize, sample_rate: usize, lfo_rate: f64, exp: f64) -> f64 {
     let cycle = sample_rate as f64 / lfo_rate as f64;
     let p = cycle / 2.0;
     return ((2.0 / p) * (p - ((sample as f64 + p / 2.0) % cycle - p).abs())).powf(exp) - 1.0;
-}
-
-pub fn lfo_quad(sample: usize, sample_rate: u32, lfo_rate: f64) -> f64 {
-    let cycle: u32 = sample_rate / lfo_rate as u32; // rounding error here. no guarantee lfo_rate matches
-    let pos: f64 = (sample as u32 % cycle) as f64;
-    let half_cycle: f64 = (cycle as f64) / 2.0;
-    if pos <= half_cycle {
-        return pos / half_cycle;
-    } else {
-        return 1.0 - ((pos - half_cycle) / half_cycle);
-    }
 }
