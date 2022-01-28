@@ -12,6 +12,7 @@ pub enum PermuteError {
     Snd(SndFileError),
     IO(io::Error),
     Filter(FilterErrors),
+    Unknown(()),
 }
 
 impl From<SndFileError> for PermuteError {
@@ -35,6 +36,12 @@ impl From<io::Error> for PermuteError {
 impl From<FilterErrors> for PermuteError {
     fn from(error: FilterErrors) -> Self {
         PermuteError::Filter(error)
+    }
+}
+
+impl From<()> for PermuteError {
+    fn from(error: ()) -> Self {
+        PermuteError::Unknown(error)
     }
 }
 

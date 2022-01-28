@@ -1,5 +1,6 @@
 use biquad::*;
 use serde::{Deserialize, Serialize};
+use sndfile::{Endian, SubtypeFormat};
 use std::{f64::consts::PI, sync::mpsc};
 use strum::EnumIter;
 
@@ -9,32 +10,16 @@ pub type ProcessorFn = fn(&ProcessorParams) -> Result<ProcessorParams, PermuteEr
 
 #[derive(Debug, Clone)]
 pub struct ProcessorParams {
-    pub spec: WavSpec,
     pub samples: Vec<f64>,
     pub sample_length: usize,
     pub permutation: Permutation,
 
-    pub update_sender: mpsc::Sender<PermuteUpdate>,
-}
-
-// Borrow Hound spec for now.
-#[derive(Debug, Clone, Copy)]
-pub enum SampleFormat {
-    /// Wave files with the `WAVE_FORMAT_IEEE_FLOAT` format tag store samples as floating point
-    /// values.
-    ///
-    /// Values are normally in the range [-1.0, 1.0].
-    Float,
-    /// Wave files with the `WAVE_FORMAT_PCM` format tag store samples as integer values.
-    Int,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct WavSpec {
     pub channels: usize,
     pub sample_rate: usize,
-    pub bits_per_sample: u16,
-    pub sample_format: SampleFormat,
+    pub file_format: SubtypeFormat,
+    pub endian: Endian,
+
+    pub update_sender: mpsc::Sender<PermuteUpdate>,
 }
 
 #[derive(Debug, Clone)]
@@ -74,9 +59,12 @@ pub fn reverse(
     ProcessorParams {
         samples,
         sample_length,
-        spec,
         update_sender,
         permutation,
+        channels,
+        endian,
+        file_format,
+        sample_rate,
     }: &ProcessorParams,
 ) -> Result<ProcessorParams, PermuteError> {
     update_sender.send(PermuteUpdate::UpdatePermuteNodeStarted(
@@ -85,7 +73,7 @@ pub fn reverse(
         PermuteNodeEvent::NodeProcessStarted,
     ))?;
     let mut new_samples = samples.clone();
-    let channels = spec.channels as i32;
+    let channels = *channels as i32;
 
     for i in 0..*sample_length {
         let channel_offset: i32 = (channels * -1 + 1) + 2 * (i as i32 % channels);
@@ -100,8 +88,11 @@ pub fn reverse(
     ))?;
     return Ok(ProcessorParams {
         samples: new_samples,
-        spec: *spec,
         sample_length: *sample_length,
+        channels: channels as usize,
+        endian: *endian,
+        file_format: *file_format,
+        sample_rate: *sample_rate,
         update_sender: update_sender.to_owned(),
         permutation: permutation.to_owned(),
     });
@@ -118,11 +109,11 @@ pub fn change_sample_rate(
     params: ProcessorParams,
     new_sample_rate: usize,
 ) -> Result<ProcessorParams, PermuteError> {
-    if params.spec.sample_rate == new_sample_rate {
+    if params.sample_rate == new_sample_rate {
         return Ok(params);
     }
     let mut new_params = params.clone();
-    let speed = params.spec.sample_rate as f64 / new_sample_rate as f64;
+    let speed = params.sample_rate as f64 / new_sample_rate as f64;
 
     if speed >= 2.0 {
         new_params = multi_channel_filter(
@@ -151,15 +142,15 @@ pub fn change_sample_rate_high(params: &ProcessorParams) -> Result<ProcessorPara
         PermuteNodeEvent::NodeProcessStarted,
     ))?;
 
-    let new_sample_rate = match params.spec.sample_rate {
-        0..=48000 => params.spec.sample_rate * 4,
-        48001..=96000 => params.spec.sample_rate * 2,
-        _ => params.spec.sample_rate,
+    let new_sample_rate = match params.sample_rate {
+        0..=48000 => params.sample_rate * 4,
+        48001..=96000 => params.sample_rate * 2,
+        _ => params.sample_rate,
     };
 
     let mut new_params = change_sample_rate(new_params, new_sample_rate)?;
-    new_params.permutation.original_sample_rate = params.spec.sample_rate;
-    new_params.spec.sample_rate = new_sample_rate;
+    new_params.permutation.original_sample_rate = params.sample_rate;
+    new_params.sample_rate = new_sample_rate;
 
     update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
         new_params.permutation.clone(),
@@ -196,7 +187,10 @@ pub fn delay_line(
     ProcessorParams {
         samples,
         sample_length,
-        spec,
+        channels,
+        endian,
+        file_format,
+        sample_rate,
         update_sender,
         permutation,
     }: &ProcessorParams,
@@ -209,7 +203,7 @@ pub fn delay_line(
 ) -> Result<ProcessorParams, PermuteError> {
     // Ensure sample length matches channel count
     let sample_length = *sample_length;
-    let delay_sample_length = delay_sample_length - (delay_sample_length % spec.channels as usize);
+    let delay_sample_length = delay_sample_length - (delay_sample_length % *channels);
     let mut new_samples = vec![0_f64; sample_length];
 
     for i in delay_sample_length..sample_length {
@@ -231,7 +225,10 @@ pub fn delay_line(
     let new_feedback_factor = feedback_factor.powf(1.5); // try and make feedback a bit less non linear
     let new_processor_params = ProcessorParams {
         samples: new_samples,
-        spec: *spec,
+        channels: *channels,
+        endian: *endian,
+        file_format: *file_format,
+        sample_rate: *sample_rate,
         sample_length: sample_length,
         update_sender: update_sender.to_owned(),
         permutation: permutation.to_owned(),
@@ -250,36 +247,45 @@ pub fn delay_line(
     return Ok(new_processor_params);
 }
 
-pub fn gain(
-    ProcessorParams {
-        samples,
-        sample_length,
-        spec,
-        update_sender,
-        permutation,
-    }: ProcessorParams,
-    gain_factor: f64,
-) -> ProcessorParams {
-    let mut new_samples = samples.clone();
+// pub fn gain(
+//     ProcessorParams {
+//         samples,
+//         sample_length,
+//         channels,
+//         endian,
+//         file_format,
+//         sample_rate,
+//         update_sender,
+//         permutation,
+//     }: ProcessorParams,
+//     gain_factor: f64,
+// ) -> ProcessorParams {
+//     let mut new_samples = samples.clone();
 
-    for i in 0..sample_length {
-        new_samples[i] = samples[i] * gain_factor;
-    }
+//     for i in 0..sample_length {
+//         new_samples[i] = samples[i] * gain_factor;
+//     }
 
-    return ProcessorParams {
-        samples: new_samples,
-        spec: spec,
-        sample_length: sample_length,
-        update_sender,
-        permutation,
-    };
-}
+//     return ProcessorParams {
+//         samples: new_samples,
+//         channels,
+//         endian,
+//         file_format,
+//         sample_rate,
+//         sample_length: sample_length,
+//         update_sender,
+//         permutation,
+//     };
+// }
 
 pub fn ceiling(
     ProcessorParams {
         samples,
         sample_length,
-        spec,
+        channels,
+        endian,
+        file_format,
+        sample_rate,
         update_sender,
         permutation,
     }: ProcessorParams,
@@ -303,7 +309,10 @@ pub fn ceiling(
 
     return ProcessorParams {
         samples: new_samples,
-        spec: spec,
+        channels,
+        endian,
+        file_format,
+        sample_rate,
         sample_length: sample_length,
         update_sender,
         permutation,
@@ -341,13 +350,15 @@ pub fn change_speed(
     ProcessorParams {
         samples,
         sample_length,
-        spec,
+        channels,
+        endian,
+        file_format,
+        sample_rate,
         update_sender,
         permutation,
     }: ProcessorParams,
     speed: f64,
 ) -> ProcessorParams {
-    let channels = spec.channels as usize;
     let mut new_sample_length: usize = ((sample_length as f64) / speed).ceil() as usize;
     let sample_mod = new_sample_length % channels as usize;
     if sample_mod > 0 {
@@ -371,7 +382,10 @@ pub fn change_speed(
 
     return ProcessorParams {
         samples: new_samples,
-        spec: spec,
+        channels,
+        endian,
+        file_format,
+        sample_rate,
         sample_length: new_sample_length,
         update_sender,
         permutation,
@@ -419,15 +433,18 @@ pub fn vibrato(
     ProcessorParams {
         samples,
         sample_length: _,
-        spec,
+        channels,
+        endian,
+        file_format,
+        sample_rate,
         update_sender,
         permutation,
     }: ProcessorParams,
     VibratoParams { speed_hz, depth }: VibratoParams,
 ) -> Result<ProcessorParams, PermuteError> {
     // let adjusted_depth = depth.powf(2_f64) * 512_f64; // ideally 1 should be a somewhat usable value
-    let adjusted_depth = depth * spec.sample_rate as f64 * 2_f64.powf(-7.0);
-    let channel_samples = split_channels(samples, spec.channels);
+    let adjusted_depth = depth * sample_rate as f64 * 2_f64.powf(-7.0);
+    let channel_samples = split_channels(samples, channels);
     let mut new_channel_samples: Vec<Result<Vec<f64>, PermuteError>> = vec![];
 
     for c in 0..channel_samples.len() {
@@ -440,7 +457,7 @@ pub fn vibrato(
         let mut speed: f64;
         let mut cos_amplitude: f64;
         for i in 0..channel_length {
-            cos_amplitude = (i as f64 / spec.sample_rate as f64 * 2.0 * PI * speed_hz).cos();
+            cos_amplitude = (i as f64 / sample_rate as f64 * 2.0 * PI * speed_hz).cos();
             speed = 1_f64 + cos_amplitude;
 
             let offset_f = (i as f64 - 1_f64) + (speed * adjusted_depth);
@@ -466,7 +483,10 @@ pub fn vibrato(
 
     return Ok(ProcessorParams {
         samples: interleave_samples,
-        spec: spec,
+        channels,
+        endian,
+        file_format,
+        sample_rate,
         sample_length: interleave_sample_length,
         update_sender,
         permutation,
@@ -505,8 +525,11 @@ pub fn chorus(
     return Ok(ProcessorParams {
         sample_length: summed.len(),
         samples: summed,
-        spec: vibratod.spec,
         update_sender,
+        channels: vibratod.channels,
+        endian: vibratod.endian,
+        file_format: vibratod.file_format,
+        sample_rate: vibratod.sample_rate,
         permutation: params.permutation,
     });
 }
@@ -532,7 +555,7 @@ pub fn multi_channel_filter(
     filter_params: &FilterParams,
 ) -> Result<ProcessorParams, PermuteError> {
     let copied_params = params.clone();
-    let channel_samples = split_channels(params.samples.to_owned(), params.spec.channels);
+    let channel_samples = split_channels(params.samples.to_owned(), params.channels);
 
     let split_samples = channel_samples
         .iter()
@@ -542,7 +565,10 @@ pub fn multi_channel_filter(
                     permutation: copied_params.permutation.clone(),
                     sample_length: cs.len(),
                     samples: cs.to_vec(),
-                    spec: copied_params.spec.clone(),
+                    channels: params.channels,
+                    endian: params.endian,
+                    file_format: params.file_format,
+                    sample_rate: params.sample_rate,
                     update_sender: copied_params.update_sender.to_owned(),
                 },
                 &filter_params.clone(),
@@ -556,7 +582,10 @@ pub fn multi_channel_filter(
         permutation: copied_params.permutation,
         sample_length: interleaved_samples.len(),
         samples: interleaved_samples,
-        spec: copied_params.spec,
+        channels: copied_params.channels,
+        endian: copied_params.endian,
+        file_format: copied_params.file_format,
+        sample_rate: copied_params.sample_rate,
         update_sender: copied_params.update_sender,
     })
 }
@@ -565,7 +594,10 @@ pub fn filter(
     ProcessorParams {
         samples,
         sample_length,
-        spec,
+        channels,
+        endian,
+        file_format,
+        sample_rate,
         update_sender,
         permutation,
     }: &ProcessorParams,
@@ -578,7 +610,7 @@ pub fn filter(
 ) -> Result<ProcessorParams, PermuteError> {
     // Cutoff and sampling frequencies
     let f0 = frequency.hz();
-    let fs = (spec.sample_rate as u32).hz();
+    let fs = (*sample_rate as u32).hz();
     let q = q.unwrap_or(Q_BUTTERWORTH_F64);
 
     // Create coefficients for the biquads
@@ -604,7 +636,10 @@ pub fn filter(
 
     return Ok(ProcessorParams {
         samples: new_samples,
-        spec: *spec,
+        channels: *channels,
+        endian: *endian,
+        file_format: *file_format,
+        sample_rate: *sample_rate,
         sample_length: *sample_length,
         update_sender: update_sender.to_owned(),
         permutation: permutation.to_owned(),
@@ -639,7 +674,7 @@ pub fn phaser(
     params: &ProcessorParams,
     phaser_params: &PhaserParams,
 ) -> Result<ProcessorParams, PermuteError> {
-    let channel_samples = split_channels(params.samples.to_owned(), params.spec.channels);
+    let channel_samples = split_channels(params.samples.to_owned(), params.channels);
 
     let split_params = channel_samples
         .iter()
@@ -664,7 +699,10 @@ pub fn phaser(
     return Ok(ProcessorParams {
         sample_length: summed.len(),
         samples: summed,
-        spec: params.spec,
+        channels: params.channels,
+        endian: params.endian,
+        file_format: params.file_format,
+        sample_rate: params.sample_rate,
         update_sender: params.update_sender.to_owned(),
         permutation: params.permutation.to_owned(),
     });
@@ -686,7 +724,7 @@ fn phase_stage(
             let base_freq = base_freq + (i as f64 * stage_hz);
             let coeffs = Coefficients::<f64>::from_params(
                 FilterType::AllPass,
-                (params.spec.sample_rate as u32).hz(),
+                (params.sample_rate as u32).hz(),
                 base_freq.hz(),
                 q,
             )?;
@@ -698,7 +736,7 @@ fn phase_stage(
         .collect();
     let mut new_samples = samples.clone();
     let mut lfo_amplitude: f64;
-    let sample_rate = params.spec.sample_rate;
+    let sample_rate = params.sample_rate;
     for (base_freq, mut filter) in filters?.iter() {
         for i in 0..samples.len() {
             lfo_amplitude = lfo_tri(i, sample_rate, lfo_rate);
@@ -709,7 +747,7 @@ fn phase_stage(
             }
             let new_coeffs = Coefficients::<f64>::from_params(
                 FilterType::AllPass,
-                (params.spec.sample_rate as u32).hz(),
+                (params.sample_rate as u32).hz(),
                 freq.hz(),
                 q,
             )?;

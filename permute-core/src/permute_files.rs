@@ -72,52 +72,16 @@ fn permute_file(
     file: String,
 ) -> Result<(), PermuteError> {
     let mut snd = sndfile::OpenOptions::ReadOnly(ReadOptions::Auto).from_path(file.clone())?;
+    let sample_rate = snd.get_samplerate();
+    let channels = snd.get_channels();
+    let file_format = snd.get_subtype_format();
+    let samples_64: Vec<f64> = snd.read_all_to_vec()?;
+    let endian = snd.get_endian();
 
-    let spec = WavSpec {
-        bits_per_sample: 64,
-        sample_format: SampleFormat::Float,
-        sample_rate: snd.get_samplerate(),
-        channels: snd.get_channels(),
-    };
-    let sample_rate = spec.sample_rate;
-
-    // todo add error
-    let samples_64: Vec<f64> = snd.read_all_to_vec().unwrap();
-
-    for i in 0..10000 {
-        if (i % 100 == 0) {
-            println!("i {}", samples_64[i]);
-        }
-    }
-
-    // let processor_spec = WavSpec {
-    //     channels: spec.channels,
-    //     sample_rate: spec.sample_rate,
-    //     bits_per_sample: 64,
-    //     sample_format: SampleFormat::Float,
-    // };
-
-    // Set all values to -1..1
-    let denormalise_factor = match spec.bits_per_sample {
-        0..=24 => 2_f64.powf((spec.bits_per_sample - 1) as f64) - 1_f64,
-        _ => 1_f64,
-    };
-    let normalise_factor: f64 = match spec.bits_per_sample {
-        0..=24 => 1_f64 / denormalise_factor,
-        _ => 1_f64,
-    };
-
-    // let samples_64 = reader
-    //     .samples::<i32>()
-    //     .map(|x| (x.unwrap()) as f64 * normalise_factor)
-    //     .collect::<Vec<f64>>();
     let input_trail_buffer =
-        vec![0_f64; (spec.sample_rate as f64 * input_trail * spec.channels as f64).ceil() as usize];
-    let output_trail_buffer = vec![
-        0_f64;
-        (spec.sample_rate as f64 * output_trail * spec.channels as f64).ceil()
-            as usize
-    ];
+        vec![0_f64; (sample_rate as f64 * input_trail * channels as f64).ceil() as usize];
+    let output_trail_buffer =
+        vec![0_f64; (sample_rate as f64 * output_trail * channels as f64).ceil() as usize];
     let samples_64 = [input_trail_buffer, samples_64, output_trail_buffer].concat();
 
     let sample_length = samples_64.len();
@@ -142,7 +106,7 @@ fn permute_file(
         let permutation = Permutation {
             file: file.clone(),
             permutation_index: i,
-            output: output_i.clone(),
+            output: output_i,
             processor_pool: processor_pool.clone(),
             processors: processors.clone(),
             original_sample_rate: sample_rate,
@@ -150,9 +114,12 @@ fn permute_file(
         };
         let processor_params = ProcessorParams {
             samples: samples_64.clone(),
-            spec: spec.clone(),
-            sample_length: sample_length,
+            sample_length,
             permutation: permutation.clone(),
+            channels,
+            sample_rate,
+            file_format,
+            endian,
             update_sender: update_sender.to_owned(),
         };
         let _ = update_sender.send(PermuteUpdate::UpdateSetProcessors(
@@ -164,37 +131,20 @@ fn permute_file(
     }
 
     for (processor_fns, processor_params) in generated_processors.iter() {
-        let output = processor_params.permutation.output.clone();
         let output_params = run_processors(RunProcessorsParams {
             processor_params: processor_params.clone(),
             processors: processor_fns.to_vec(),
         })?;
         let mut snd = sndfile::OpenOptions::WriteOnly(WriteOptions::new(
             MajorFormat::WAV,
-            SubtypeFormat::PCM_24,
-            Endian::Little,
-            processor_params.spec.sample_rate,
-            processor_params.spec.channels,
+            output_params.file_format,
+            output_params.endian,
+            output_params.sample_rate,
+            output_params.channels,
         ))
-        .from_path(processor_params.permutation.output.clone())?;
+        .from_path(output_params.permutation.output.clone())?;
 
-        snd.write_from_iter(output_params.samples.clone().into_iter())
-            .unwrap();
-
-        // let mut pro_writer = WavWriter::create(output, spec).expect("Error in output");
-
-        // for mut s in output_params.samples {
-        //     // overload protection
-        //     if s >= 1.0 {
-        //         s = 1.0;
-        //     }
-        //     if s <= -1.0 {
-        //         s = -1.0;
-        //     }
-        //     let t = (s * denormalise_factor) as i32;
-        //     pro_writer.write_sample(t).expect("Error writing file");
-        // }
-        // pro_writer.finalize().expect("Error writing file");
+        snd.write_from_iter(output_params.samples.clone().into_iter())?;
     }
     Ok(())
 }
@@ -235,18 +185,10 @@ pub fn run_processors(
             let new_params = processor(&params?)?;
             Ok(ProcessorParams {
                 permutation: Permutation {
-                    file: new_params.permutation.file,
                     node_index: new_params.permutation.node_index + 1,
-                    output: new_params.permutation.output,
-                    permutation_index: new_params.permutation.permutation_index,
-                    processor_pool: new_params.permutation.processor_pool,
-                    processors: new_params.permutation.processors,
-                    original_sample_rate: new_params.permutation.original_sample_rate,
+                    ..new_params.permutation
                 },
-                sample_length: new_params.sample_length,
-                samples: new_params.samples,
-                spec: new_params.spec,
-                update_sender: new_params.update_sender,
+                ..new_params
             })
         })
 }
