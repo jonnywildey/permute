@@ -42,9 +42,9 @@ export const Welcome: React.FC<WelcomeProps> = ({ isOpen, onClose }) => {
   </Text>
   <Heading size="md">Features missing</Heading>
   <List>
-    <ListItem>.wav files only</ListItem>
-    <ListItem>Phaser (If I can work it out)</ListItem>
+    <ListItem>AIFF and other file support</ListItem>
     <ListItem>Time stretching</ListItem>
+    <ListItem>In-app audio preview</ListItem>
     <ListItem>Filter FX</ListItem>
   </List>
   </ModalBody>
