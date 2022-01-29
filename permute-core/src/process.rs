@@ -48,6 +48,7 @@ pub enum PermuteNodeName {
     DoubleSpeed,
     Wow,
     Flutter,
+    Flange,
     Chorus,
     Phaser,
     Normalise,
