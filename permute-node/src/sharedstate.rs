@@ -40,6 +40,7 @@ impl SharedState {
             PermuteNodeName::DoubleSpeed,
             PermuteNodeName::Wow,
             PermuteNodeName::Flutter,
+            PermuteNodeName::Flange,
             PermuteNodeName::Chorus,
             PermuteNodeName::Phaser,
         ];

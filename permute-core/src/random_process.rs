@@ -1,3 +1,5 @@
+use std::f64::consts::E;
+
 use crate::{permute_error::PermuteError, permute_files::PermuteUpdate, process::*};
 use rand::prelude::*;
 use strum::IntoEnumIterator;
@@ -58,6 +60,7 @@ pub fn get_processor_function(name: PermuteNodeName) -> ProcessorFn {
         PermuteNodeName::Phaser => random_phaser,
         PermuteNodeName::DoubleSpeed => double_speed,
         PermuteNodeName::Flutter => random_flutter,
+        PermuteNodeName::Flange => random_zero_flange,
         PermuteNodeName::HalfSpeed => half_speed,
         PermuteNodeName::MetallicDelay => random_metallic_delay,
         PermuteNodeName::RhythmicDelay => random_rhythmic_delay,
@@ -79,7 +82,7 @@ pub fn random_metallic_delay(params: &ProcessorParams) -> Result<ProcessorParams
     ))?;
     let mut rng = thread_rng();
 
-    let sec_10 = (params.spec.sample_rate as f64 * 0.1) as usize;
+    let sec_10 = (params.sample_rate as f64 * 0.1) as usize;
     let delay_params = DelayLineParams {
         feedback_factor: rng.gen_range(0_f64..0.9),
         delay_sample_length: rng.gen_range(10..sec_10),
@@ -106,8 +109,8 @@ pub fn random_rhythmic_delay(params: &ProcessorParams) -> Result<ProcessorParams
     ))?;
     let mut rng = thread_rng();
 
-    let sec_10 = (params.spec.sample_rate as f64 * 0.1) as usize;
-    let sec = params.spec.sample_rate as usize;
+    let sec_10 = (params.sample_rate as f64 * 0.1) as usize;
+    let sec = params.sample_rate as usize;
     let delay_params = DelayLineParams {
         feedback_factor: rng.gen_range(0_f64..0.9),
         delay_sample_length: rng.gen_range(sec_10..sec),
@@ -191,11 +194,12 @@ pub fn random_flutter(params: &ProcessorParams) -> Result<ProcessorParams, Permu
     ))?;
     let mut rng = thread_rng();
 
+    let depth = rng.gen_range(0.1_f64..0.27_f64).powf(2.0); // try and push values towards lower values
     let new_samples = vibrato(
         params.to_owned(),
         VibratoParams {
-            speed_hz: rng.gen_range(3_f64..20_f64),
-            depth: rng.gen_range(0.05_f64..0.5_f64),
+            speed_hz: rng.gen_range(5_f64..20_f64),
+            depth,
         },
     )?;
     update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
@@ -216,8 +220,8 @@ pub fn random_chorus(params: &ProcessorParams) -> Result<ProcessorParams, Permut
     ))?;
     let mut rng = thread_rng();
 
-    let millis_low = (params.spec.sample_rate as f64 / 1000_f64 * 4_f64) as usize;
-    let millis_high = (params.spec.sample_rate as f64 / 1000_f64 * 20_f64) as usize;
+    let millis_low = (params.sample_rate as f64 / 1000_f64 * 4_f64) as usize;
+    let millis_high = (params.sample_rate as f64 / 1000_f64 * 20_f64) as usize;
     let delay_params = DelayLineParams {
         feedback_factor: rng.gen_range(0_f64..0.8_f64),
         delay_sample_length: rng.gen_range(millis_low..millis_high),
@@ -277,6 +281,62 @@ pub fn random_phaser(params: &ProcessorParams) -> Result<ProcessorParams, Permut
         PermuteNodeEvent::NodeProcessComplete,
     ))?;
     Ok(new_samples)
+}
+
+pub fn random_zero_flange(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
+    let update_sender = params.update_sender.to_owned();
+    let permutation = params.permutation.clone();
+    update_sender.send(PermuteUpdate::UpdatePermuteNodeStarted(
+        params.permutation.clone(),
+        PermuteNodeName::Flange,
+        PermuteNodeEvent::NodeProcessStarted,
+    ))?;
+    let mut rng = thread_rng();
+
+    let speed_hz = rng.gen_range(0.01_f64..1.1_f64);
+    let depth = rng.gen_range(0.05_f64..0.2_f64);
+    let delay_sample_length = params.sample_rate as f64 / 1000_f64 * rng.gen_range(1_f64..15_f64);
+    let wet = rng.gen_range(-0.9_f64..-0.4_f64);
+
+    let delayed_params = DelayLineParams {
+        feedback_factor: 0.0,
+        delay_sample_length: delay_sample_length as usize,
+        dry_gain_factor: 0.0,
+        wet_gain_factor: 1.0,
+    };
+    let half_delayed_params = DelayLineParams {
+        feedback_factor: 0.0,
+        delay_sample_length: delay_sample_length as usize / 2,
+        dry_gain_factor: 0.0,
+        wet_gain_factor: 1.0,
+    };
+
+    let delayed = delay_line(params, &delayed_params)?;
+    let delayed_vib = vibrato(delayed, VibratoParams { speed_hz, depth })?;
+    let half_delayed = delay_line(params, &half_delayed_params)?;
+
+    let summed = sum(vec![
+        SampleLine {
+            samples: delayed_vib.samples,
+            gain_factor: 1_f64,
+        },
+        SampleLine {
+            samples: half_delayed.samples,
+            gain_factor: wet,
+        },
+    ]);
+
+    let flanged = ProcessorParams {
+        samples: summed,
+        ..delayed_vib
+    };
+
+    update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
+        permutation,
+        PermuteNodeName::Flange,
+        PermuteNodeEvent::NodeProcessComplete,
+    ))?;
+    Ok(flanged)
 }
 
 pub fn normalise(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
