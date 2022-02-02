@@ -115,9 +115,9 @@ impl SharedState {
         permutation: Permutation,
         processors: Vec<PermuteNodeName>,
     ) {
-        let output = permutation.output.clone();
+        let path = permutation.output.clone();
         let _ = &self.permutation_outputs.push(OutputProgress {
-            output,
+            output: path,
             permutation: permutation.clone(),
             processors,
             progress: 0,

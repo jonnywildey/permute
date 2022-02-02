@@ -1,6 +1,9 @@
-import { Box, Button, GridItem, Heading, Center, IconButton, PropsOf, CloseButton, Text, Progress, CircularProgress } from "@chakra-ui/react";
-import { ViewIcon } from  "@chakra-ui/icons"
+import { Box, Button, GridItem, Heading, Center, IconButton, PropsOf } from "@chakra-ui/react";
+import { ViewIcon } from "@chakra-ui/icons"
 import type { IPermutationOutput } from "permute-node";
+import { PlayIcon } from "./PlayIcon";
+import { useContext } from "react";
+import { AudioContext } from "./AudioContext";
 
 export interface IOutputProps {
   output: string;
@@ -14,81 +17,89 @@ const bg = "brand.25";
 const fileBorderColour = "brand.150";
 
 export const Output: React.FC<IOutputProps> = ({ output, showFile, setOutput, permutationOutputs }) => {
-  const directory = output ? 
-  <Box 
-    display="flex" 
-    padding={3} 
-    mt={5}
-    alignItems="center" 
-    borderTop="1px"
-    borderTopColor="gray.300" 
-    borderBottom="1px"
-    borderBottomColor="gray.300" 
-    color="gray.800"
+  const { playFile } = useContext(AudioContext);
+  const directory = output ?
+    <Box
+      display="flex"
+      padding={3}
+      mt={5}
+      alignItems="center"
+      borderTop="1px"
+      borderTopColor="gray.300"
+      borderBottom="1px"
+      borderBottomColor="gray.300"
+      color="gray.800"
     >
-    <IconButton 
-      aria-label="show" 
-      variant="ghost"
-      size="sm"
-      icon={<ViewIcon  />} 
-      onClick={() => showFile(output)} 
+      <IconButton
+        aria-label="show"
+        variant="ghost"
+        size="sm"
+        icon={<ViewIcon />}
+        onClick={() => showFile(output)}
       />
-    <Heading 
-      ml={3}
-      className="output-heading"
-      size="sm" 
-        >
+      <Heading
+        ml={3}
+        className="output-heading"
+        size="sm"
+      >
         {output}
-    </Heading>
-  </Box> : null;
+      </Heading>
+    </Box> : null;
 
-const outputBoxes = permutationOutputs
-.filter(f => f.progress === 100)
-.map((file, i) => {
-    const props: PropsOf<typeof Box> = {
-      key: file.output,
-      borderBottom: "1px solid",
-      borderBottomColor: fileBorderColour,
-      color: "gray.700"
-    };
-    if (i === 0) {
-      props.borderTop = "1px solid";
-      props.borderTopColor = fileBorderColour;
-    }
-    return (<Box {...props}>
-      <Heading 
-        size="sm" 
-        width="80%"         
-        display="inline"
-        color="gray.600"
-        pl={2}
-      >{file.output}</Heading>
-      {/* <CloseButton
+  const outputBoxes = permutationOutputs
+    .filter(f => f.progress === 100)
+    .map((file, i) => {
+      const props: PropsOf<typeof Box> = {
+        key: file.path,
+        borderBottom: "1px solid",
+        borderBottomColor: fileBorderColour,
+        color: "gray.700"
+      };
+      if (i === 0) {
+        props.borderTop = "1px solid";
+        props.borderTopColor = fileBorderColour;
+      }
+      return (<Box {...props}>
+        <Heading
+          size="sm"
+          width="80%"
+          display="inline"
+          color="gray.600"
+          pl={2}
+        >{file.name}</Heading>
+        {/* <CloseButton
         display="inline"
         float="right"
         size="sm"
         onClick={() => removeFile(file.path)} 
         />   */}
-      <Box
-      display="flex"
-      justifyContent="space-between"
-      alignItems="center"
-      >
-        <IconButton  
-          aria-label="show" 
-          variant="ghost"
-          size="sm"
-          icon={<ViewIcon  />} 
-          onClick={() => showFile(file.output)} 
+        <Box
+          display="flex"
+          alignItems="center"
+        >
+          <IconButton
+            aria-label="show"
+            variant="ghost"
+            size="sm"
+            icon={<PlayIcon />}
+            onClick={() => playFile(file.path)}
           />
-      </Box>
-    </Box>);
-  });
+          <IconButton
+            aria-label="show"
+            variant="ghost"
+            size="sm"
+            icon={<ViewIcon />}
+            onClick={() => showFile(file.path)}
+          />
+          {file.durationSec} secs
+        </Box>
+      </Box>);
+    });
 
   return <GridItem rowSpan={17} colSpan={3} bg={bg} pt={4}>
     <Heading textAlign="center" size="lg" color="gray.600">Output</Heading>
     <Center>
-    <Button mt={3} bg={buttonBg} width="75%" onClick={setOutput} color="gray.800">Select Output Directory</Button>
+      <Button mt={3} bg={buttonBg} width="75%" onClick={setOutput} color="gray.800">Select Output Directory</Button>
     </Center>
     {directory}
     <Box overflowY="scroll" height="310px">

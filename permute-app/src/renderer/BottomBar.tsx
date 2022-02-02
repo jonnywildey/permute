@@ -1,7 +1,7 @@
 import { GridItem, Button, CircularProgress, Slider, Text,
   SliderTrack, SliderFilledTrack, SliderThumb, SliderMark, Switch, Heading, Grid, Tooltip 
 } from "@chakra-ui/react";
-import type { IPermutationOutput } from "permute-node";
+import type { IPermutationOutput, IPermutationInput } from "permute-node";
 
 export interface IBottomBarProps {
   runProcessor: () => void;
@@ -13,7 +13,7 @@ export interface IBottomBarProps {
   inputTrail: number;
   outputTrail: number;
   output: string;
-  files: string[];
+  files: IPermutationInput[];
   setDepth: (depth: number) => void;
   setPermutations: (permutations: number) => void;
   setNormalised: (normaliseAtEnd: boolean) => void;
@@ -237,7 +237,7 @@ export interface IRunProps {
   processing: boolean;
   permutationOutputs: IPermutationOutput[];
   output: string;
-  files: string[];
+  files: IPermutationInput[];
 }
 
 const Run: React.FC<IRunProps> = ({

@@ -1,9 +1,6 @@
 import { ipcMain, dialog, app } from 'electron';
 import { createPermuteProcessor, IPermuteState } from "permute-node";
-import { promises as fs } from "fs";
-import { basename } from "path";
 import { shell } from 'electron';
-import { IFileStat } from './IFileStat';
 import path from "path";
 
 const configPath = path.join(app.getPath('userData'), "config.json");
@@ -55,18 +52,6 @@ ipcMain.on('set-output', async (_, param) => {
 ipcMain.on('get-state', async (event) => {
   const state = await processor.getState();
   event.reply('get-state', state);
-});
-ipcMain.on('get-file-stats', async (event, files: string[]) => {
-  const stats = await Promise.all(files.map( async file => {
-    const sizeMb =  await fs.stat(file).then( s => (s.size / 1048576).toFixed(2));
-    const name = basename(file);
-    return {
-      path: file,
-      name,
-      sizeMb,
-    } as IFileStat
-  }));
-  event.reply('get-file-stats', stats);
 });
 ipcMain.on('show-file', async (_, file) => {
   shell.showItemInFolder(file);

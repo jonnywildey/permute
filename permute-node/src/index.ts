@@ -14,7 +14,7 @@ export interface IPermuteState {
   highSampleRate: boolean,
   inputTrail: number,
   outputTrail: 0,
-  files: string[],
+  files: IPermutationInput[],
   permutations: number,
   permutationDepth: number,
   processorCount: number,
@@ -24,10 +24,17 @@ export interface IPermuteState {
   permutationOutputs: IPermutationOutput[];
 };
 
+export interface IPermutationInput {
+  path: string;
+  name: string;
+}
+
 export interface IPermutationOutput {
-  output: string;
+  path: string;
   progress: number;
   processors: string[];
+  name: string;
+  durationSeconds: number;
 }
 
 export type GetStateCallback = (state: IPermuteState) => void;

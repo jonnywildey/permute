@@ -76,6 +76,7 @@ fn permute_file(
     let channels = snd.get_channels();
     let file_format = snd.get_subtype_format();
     let samples_64: Vec<f64> = snd.read_all_to_vec()?;
+    let input_duration_sec = samples_64.len() as f64 / sample_rate as f64 / channels as f64;
     let endian = snd.get_endian();
 
     let input_trail_buffer =
@@ -110,6 +111,8 @@ fn permute_file(
             processor_pool: processor_pool.clone(),
             processors: processors.clone(),
             original_sample_rate: sample_rate,
+            input_duration_sec,
+            output_duration_sec: input_duration_sec,
             node_index: 0,
         };
         let processor_params = ProcessorParams {
@@ -131,10 +134,13 @@ fn permute_file(
     }
 
     for (processor_fns, processor_params) in generated_processors.iter() {
-        let output_params = run_processors(RunProcessorsParams {
+        let mut output_params = run_processors(RunProcessorsParams {
             processor_params: processor_params.clone(),
             processors: processor_fns.to_vec(),
         })?;
+        output_params.permutation.output_duration_sec = output_params.samples.len() as f64
+            / output_params.sample_rate as f64
+            / output_params.channels as f64;
         let mut snd = sndfile::OpenOptions::WriteOnly(WriteOptions::new(
             MajorFormat::WAV,
             output_params.file_format,

@@ -11,13 +11,11 @@ import { theme } from './theme';
 import type { IPermuteState } from "permute-node";
 import { useEffect, useState } from 'react';
 import { Processors } from './Processors';
-import { IFileStat } from 'main/IFileStat';
 import { Welcome } from './Welcome';
 import { CreateAudioContext } from './AudioContext';
 
 export interface IAppState {
   permuteState: IPermuteState;
-  files: IFileStat[];
 }
 
 const defaultAppState: IAppState = {
@@ -27,7 +25,6 @@ const defaultAppState: IAppState = {
       permutationOutputs: [], 
       processorPool: [], 
     } as any,
-    files: [],
 }
 
 
@@ -41,6 +38,7 @@ const Content = () => {
   const {
     allProcessors,
     permutationDepth,
+    files,
     output,
     permutations,
     normaliseAtEnd,
@@ -56,9 +54,7 @@ const Content = () => {
   useEffect(() => {
     const setup = async () => {
       const permuteState: IPermuteState = await window.Electron.ipcRenderer.getState();
-      const fileStats = await window.Electron.ipcRenderer.getFileStats(permuteState.files);
       setState({
-        files: fileStats,
         permuteState,
       });
     }
@@ -110,14 +106,12 @@ const Content = () => {
   const addFiles = async (files: string[]) => {
     files.map(f => window.Electron.ipcRenderer.addFile(f));
     const permuteState = await window.Electron.ipcRenderer.getState();
-    const fileStats = await window.Electron.ipcRenderer.getFileStats(permuteState.files);
-    setState({ permuteState, files: fileStats });
+    setState({ permuteState });
   };
   const removeFile = async (file: string) => {
     window.Electron.ipcRenderer.removeFile(file);
     const permuteState = await window.Electron.ipcRenderer.getState();
-    const fileStats = await window.Electron.ipcRenderer.getFileStats(permuteState.files);
-    setState({ permuteState, files: fileStats });
+    setState({ permuteState });
   };
   const showFile = async (file: string) => {
     window.Electron.ipcRenderer.showFile(file);
@@ -152,7 +146,7 @@ const Content = () => {
       <Welcome isOpen={isOpen} onClose={onClose} />
       <TopBar openWelcome={openWelcome} />
       <Files 
-      files={state.files} 
+      files={files} 
       addFiles={addFiles} 
       removeFile={removeFile} 
       showFile={showFile}
@@ -182,7 +176,7 @@ const Content = () => {
         setNormalised={setNormalised}
         setInputTrail={setInputTrail}
         setOutputTrail={setOutputTrail}
-        files={state.permuteState.files}
+        files={files}
         output={output}
       />
     </Grid>

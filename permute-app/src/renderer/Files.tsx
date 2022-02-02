@@ -1,11 +1,12 @@
 import { Box, GridItem, Heading, Input, IconButton, CloseButton, PropsOf, Text, Button, Center } from "@chakra-ui/react";
-import { IFileStat } from "main/IFileStat";
-import { ViewIcon, ArrowForwardIcon } from  "@chakra-ui/icons"
+import { ViewIcon } from "@chakra-ui/icons"
 import { useContext, useState } from "react";
 import { AudioContext } from "./AudioContext";
+import { PlayIcon } from "./PlayIcon";
+import type { IPermutationInput } from "permute-node";
 
 export interface IFilesProps {
-  files: IFileStat[];
+  files: IPermutationInput[];
   addFiles: (files: string[]) => void;
   removeFile: (file: string) => void;
   showFile: (file: string) => void;
@@ -37,7 +38,7 @@ export const Files: React.FC<IFilesProps> = ({ files, addFiles, removeFile, show
 
   const fileBoxes = files.map((file, i) => {
     const props: PropsOf<typeof Box> = {
-      key: file.name,
+      key: file,
       borderBottom: "1px solid",
       borderBottomColor: fileBorderColour,
       color: "gray.700"
@@ -47,45 +48,40 @@ export const Files: React.FC<IFilesProps> = ({ files, addFiles, removeFile, show
       props.borderTopColor = fileBorderColour;
     }
     return (<Box {...props}>
-      <Heading 
-        size="sm" 
-        width="80%"         
+      <Heading
+        size="sm"
+        width="80%"
         display="inline"
         color="gray.600"
         pl={2}
       >{file.name}</Heading>
-      <CloseButton 
+      <CloseButton
         display="inline"
         float="right"
         size="sm"
-        onClick={() => removeFile(file.path)} 
-        />  
+        onClick={() => removeFile(file.path)}
+      />
       <Box
-      display="flex"
-      justifyContent="space-between"
-      alignItems="center"
+        display="flex"
+        alignItems="center"
+        width="100%"
       >
 
-      <IconButton  
-          aria-label="show" 
+        <IconButton
+          aria-label="show"
           variant="ghost"
           size="sm"
-          icon={<ArrowForwardIcon />} 
-          onClick={() => playFile(file.path)} 
+          icon={<PlayIcon />}
+          onClick={() => playFile(file.path)}
         />
-        
-        <IconButton  
-          aria-label="show" 
+
+        <IconButton
+          aria-label="show"
           variant="ghost"
           size="sm"
-          icon={<ViewIcon  />} 
-          onClick={() => showFile(file.path)} 
-          />
-        <Text
-          display="inline"
-          float="right"
-          pr={2}
-        >{file.sizeMb} mb</Text>
+          icon={<ViewIcon />}
+          onClick={() => showFile(file.path)}
+        />
       </Box>
     </Box>);
   });
@@ -95,23 +91,23 @@ export const Files: React.FC<IFilesProps> = ({ files, addFiles, removeFile, show
     <Box className="file-upload-container"
     >
       <Center>
-        <Button width="75%" bgColor={isDrag ? buttonBg : buttonBg} color="gray.800">Select files 
-          <Input 
+        <Button width="75%" bgColor={isDrag ? buttonBg : buttonBg} color="gray.800">Select files
+          <Input
             accept=".wav"
-            className="file-upload" 
+            className="file-upload"
             position="absolute"
-            type="file" 
-            multiple 
-            onDrop={onDrop} 
-            onChange={onChange} 
+            type="file"
+            multiple
+            onDrop={onDrop}
+            onChange={onChange}
             onDragEnter={() => setDrag(true)}
             onDragLeave={() => setDrag(false)}
-            />
-          </Button>
-        </Center>
-      </Box>
-    <Box overflowY="scroll" height="380px">
-    {fileBoxes}
+          />
+        </Button>
+      </Center>
+    </Box>
+    <Box overflowY="scroll" height="370px">
+      {fileBoxes}
     </Box>
   </GridItem>
 
