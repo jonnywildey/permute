@@ -30,8 +30,6 @@ pub struct Permutation {
     pub processor_pool: Vec<PermuteNodeName>,
     pub processors: Vec<PermuteNodeName>,
     pub original_sample_rate: usize,
-    pub input_duration_sec: f64,
-    pub output_duration_sec: f64,
     pub node_index: usize,
 }
 
