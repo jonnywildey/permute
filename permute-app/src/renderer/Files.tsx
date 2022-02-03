@@ -88,7 +88,7 @@ export const Files: React.FC<IFilesProps> = ({ files, addFiles, removeFile, show
           variant="ghost"
           size="xs"
           icon={<PlayIcon />}
-          onClick={() => playFile(file.path)}
+          onClick={() => playFile(file)}
         />
         <IconButton
           aria-label="show"

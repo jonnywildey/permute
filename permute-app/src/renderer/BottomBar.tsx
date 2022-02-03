@@ -2,6 +2,7 @@ import { GridItem, Button, CircularProgress, Slider, Text,
   SliderTrack, SliderFilledTrack, SliderThumb, SliderMark, Switch, Heading, Grid, Tooltip 
 } from "@chakra-ui/react";
 import type { IPermutationOutput, IPermutationInput } from "permute-node";
+import { AudioPlayer } from "./AudioPlayer";
 
 export interface IBottomBarProps {
   runProcessor: () => void;
@@ -45,7 +46,7 @@ export const BottomBar: React.FC<IBottomBarProps> = ({
         width="100%"
         height="100%"
       >
-        <GridItem rowSpan={2} colSpan={3} padding={3} />
+        <AudioPlayer />
         {InputTrail(inputTrail, setInputTrail)}
         {Depth(depth, setDepth)}
 
@@ -60,7 +61,7 @@ export const BottomBar: React.FC<IBottomBarProps> = ({
 }
 
 function InputTrail(inputTrail: number, setInputTrail: (trail: number) => void) {
-  return <GridItem rowSpan={1} colSpan={2} pr={4}>
+  return <GridItem rowSpan={1} colSpan={2} pr={4} pl={4}>
        <Tooltip openDelay={200} label={<Text fontSize="lg">
       Adds extra seconds to the end of the audio file. Useful when using effects like delay with reverse
     </Text>}>
@@ -194,7 +195,7 @@ function Permutations(permutations: number, setPermutations: (permutations: numb
 }
 
 function OutputTrail(outputTrail: number, setOutputTrail: (trail: number) => void) {
-  return <GridItem rowSpan={1} colSpan={2} pr={4} pt={3}>
+  return <GridItem rowSpan={1} colSpan={2} pr={4} pt={3} pl={4}>
     <Tooltip openDelay={200} label={<Text fontSize="lg">
       Adds extra seconds to the end of the audio file. Useful when using effects like delay
     </Text>}>
@@ -270,7 +271,7 @@ const Run: React.FC<IRunProps> = ({
       fontSize="2xl"
       shadow="sm"
     >
-      {!processing ? "Run" : <CircularProgress value={progress} size={8} />}
+      {!processing ? "Run" : <CircularProgress value={progress} color="brand.300" size={8} />}
     </Button>
   </GridItem>;
 }

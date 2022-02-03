@@ -72,7 +72,7 @@ export const Output: React.FC<IOutputProps> = ({ output, showFile, setOutput, pe
           variant="ghost"
           size="xs"
           icon={<PlayIcon />}
-          onClick={() => playFile(file.path)}
+          onClick={() => playFile(file)}
         />
         <IconButton
           aria-label="show"

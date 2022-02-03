@@ -26,7 +26,7 @@ impl AudioInfo {
         let sample_rate = snd.get_samplerate();
         let channels = snd.get_channels();
         let length = snd.len().unwrap();
-        let duration_sec = length as f64 / sample_rate as f64 / channels as f64;
+        let duration_sec = length as f64 / sample_rate as f64;
 
         let name = Path::new(&path)
             .file_name()

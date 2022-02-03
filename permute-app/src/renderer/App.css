@@ -64,3 +64,8 @@ body {
 .output-image .audio-svg {
     fill: var(--chakra-colors-brand-125);
 }
+.play-image .audio-svg {
+    fill: var(--chakra-colors-brand-125);
+    height: 70px;
+    width: 100%;
+}

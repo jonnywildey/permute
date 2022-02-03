@@ -37,7 +37,7 @@ export interface IPermutationOutput {
   image: string;
   processors: string[];
   name: string;
-  durationSeconds: number;
+  durationSec: number;
 }
 
 export type GetStateCallback = (state: IPermuteState) => void;
