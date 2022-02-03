@@ -78,8 +78,8 @@ export const Output: React.FC<IOutputProps> = ({ output, showFile, setOutput, pe
         </Box>
         <Box 
           width="100%"
-          pl={1}
-          pr={1}
+          pl={2}
+          pr={2}
           mt="-4px"
           mb="-8px"
           dangerouslySetInnerHTML={{ __html: file.image }} 

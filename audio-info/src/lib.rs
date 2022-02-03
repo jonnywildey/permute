@@ -63,23 +63,42 @@ impl AudioInfo {
             values.sort_by(|a, b| a.partial_cmp(b).unwrap());
             frame_values[i] = values[frame_size / 50 * 49];
         }
+
+        // generate path
+        // assume 16:9 aspect ratio.
         let mut path = String::default();
+        let vertical_factor = 450.0; // 900 / 2
+        let horizontal_step = 1600.0 / frames as f64;
         for i in 0..frame_values.len() {
-            // let prev = (frame_values[i - 1] * 100.0).round().to_string();
-            let current = (50.0 + frame_values[i] * 50.0).round().to_string();
+            let pos_v = (vertical_factor + frame_values[i] * vertical_factor)
+                .round()
+                .to_string();
             if i == 0 {
-                path += &format!("M{} {} ", i, current);
+                path += &format!("M{} {}", (i as f64 * horizontal_step) as usize, pos_v);
             } else {
-                path += &format!("L{} {} ", i, current);
+                path += &format!("L{} {}", (i as f64 * horizontal_step) as usize, pos_v);
             }
         }
         // and backwards
         for i in (0..frame_values.len()).rev() {
-            // let prev = (frame_values[i - 1] * 100.0).round().to_string();
-            let current = (50.0 - frame_values[i] * 50.0).round().to_string();
-            path += &format!("L{} {} ", i, current);
+            let neg_v = (vertical_factor - frame_values[i] * vertical_factor)
+                .round()
+                .to_string();
+            if i == 0 {
+                path += &format!("L{} {} ", (i as f64 * horizontal_step) as usize, neg_v);
+                // loop back to origin
+                let pos_v = (vertical_factor + frame_values[i] * vertical_factor)
+                    .round()
+                    .to_string();
+                path += &format!("L{} {} ", (i as f64 * horizontal_step) as usize, pos_v);
+            } else {
+                let current = (vertical_factor - frame_values[i] * vertical_factor)
+                    .round()
+                    .to_string();
+                path += &format!("L{} {} ", (i as f64 * horizontal_step) as usize, current);
+            }
         }
-        let svg = format!("<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" viewBox=\"0 0 100 100\" preserveAspectRatio=\"none\" class=\"audio-svg\"><path class=\"audio-svg-path\" d=\"{}\"/></svg>", path);
+        let svg = format!("<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" viewBox=\"0 0 1600 900\" preserveAspectRatio=\"none\" class=\"audio-svg\"><path class=\"audio-svg-path\" d=\"{}\"/></svg>", path);
         Ok(svg)
     }
 }

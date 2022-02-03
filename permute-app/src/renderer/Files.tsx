@@ -76,8 +76,8 @@ export const Files: React.FC<IFilesProps> = ({ files, addFiles, removeFile, show
           width="100%"
           mt="-4px"
           mb="-8px"
-                    pl={1}
-          pr={1}
+                    pl={2}
+          pr={2}
           dangerouslySetInnerHTML={{ __html: file.image }} 
           />
         <Box
