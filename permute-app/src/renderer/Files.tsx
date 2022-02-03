@@ -4,7 +4,7 @@ import { useContext, useState } from "react";
 import { AudioContext } from "./AudioContext";
 import { PlayIcon } from "./PlayIcon";
 import type { IPermutationInput } from "permute-node";
-import { round } from "lodash";
+import { displayTime } from "./displayTime";
 
 export interface IFilesProps {
   files: IPermutationInput[];
@@ -45,12 +45,9 @@ export const Files: React.FC<IFilesProps> = ({ files, addFiles, removeFile, show
       pos: "relative",
       color: "gray.700",
     };
-    if (i === 0) {
-      props.borderTop = "1px solid";
-      props.borderTopColor = fileBorderColour;
-    }
     return (<Box {...props}>
       <Box
+        pt={1}
         display="flex"
         alignItems="center"
         width="100%"
@@ -97,24 +94,42 @@ export const Files: React.FC<IFilesProps> = ({ files, addFiles, removeFile, show
           aria-label="show"
           variant="ghost"
           size="xs"
+          alignSelf="center"
           icon={<ViewIcon />}
           onClick={() => showFile(file.path)}
         />
         <Text pr={2} width="100%" textAlign="right" color="gray.500" fontSize="sm" lineHeight={1}>
-          { round(file.durationSec, 2) }s
+          { displayTime(file.durationSec)}
         </Text>
         </Box>
     </Box>);
   });
 
-  return <GridItem rowSpan={17} colSpan={3} bg={bg} pt={4}>
+  return <GridItem rowSpan={17} colSpan={3} bg={bg} pt={4} 
+        borderRadius={20}
+        display="flex"
+        flexDirection="column"
+        overflow="hidden"
+        overflowY="scroll"
+        height="100%"
+        shadow="base"
+  >
     <Heading textAlign="center" size="lg" color="gray.600">Files</Heading>
     <Box className="file-upload-container"
+     borderBottom={fileBoxes.length ? "1px solid" : "none"}
+     borderBottomColor="gray.400"
     >
       <Center>
-        <Button width="75%" bgColor={isDrag ? buttonBg : buttonBg} color="gray.800">Select files
+        <Button 
+          width="75%" 
+          bgColor={isDrag ? buttonBg : buttonBg} 
+          color="gray.50" 
+          fontSize="lg"
+          cursor="pointer"
+          shadow="base">
+            Select files
           <Input
-            accept=".wav"
+            accept=".wav,.aif"
             className="file-upload"
             position="absolute"
             type="file"
@@ -127,9 +142,10 @@ export const Files: React.FC<IFilesProps> = ({ files, addFiles, removeFile, show
         </Button>
       </Center>
     </Box>
-    <Box overflowY="scroll" height="370px">
+    <Box height="100%" overflowY="scroll">
       {fileBoxes}
     </Box>
   </GridItem>
 
 }
+

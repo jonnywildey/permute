@@ -1,3 +1,33 @@
+body {
+   /* background: var(--chakra-colors-brand-75) !important; */
+   background-image: url("../img/bg2.png") !important;
+   /* animation: background-move 100s ease-in-out 2s infinite alternate; */
+   background-size: cover;
+}
+
+@keyframes background-move {
+  0% {
+    background-position: 0%;
+    background-position-y: 0%;
+  }
+  20% {
+    background-position: 8%;
+    background-position-y: 4%;
+  }
+  40% {
+    background-position: 3%;
+    background-position-y: 7%;
+  }
+  60% {
+    background-position: 7%;
+    background-position-y: 2%;
+  }
+  100% {
+    background-position: 10%;
+    background-position-y: 10%;
+  }
+}
+
 .output-heading {
   direction: rtl;
   text-align: left;
@@ -8,8 +38,8 @@
 
 .file-upload-container {
   position: relative;
-  margin: 8px;
-  margin-bottom: 20px;
+  padding: 8px;
+  padding-bottom: 20px;
 }
 
 .file-upload {
@@ -26,8 +56,11 @@
 }
 
 .audio-svg {
-    fill: #6898c521;
+    fill: var(--chakra-colors-brand-100);
     stroke: #000404;
     height: 28px;
     width: 100%;
+}
+.output-image .audio-svg {
+    fill: var(--chakra-colors-brand-125);
 }

@@ -12,18 +12,19 @@ export const theme = extendTheme(
   {
     colors: {
       brand: {
-        25: "#bed3ee38",
+        25: "#bed3ee52",
         50: "#CDBCD3",
         75: "#3ee9c414",
-        100: "#A293D6",
-        150: "#BED3EF",
+        100: "#a293d6c7",
+        125: "#93c8d6c7",
+        150: "#bed3efb5",
         200: "#3A3659",
         300: "#52B74D",
         400: "#6D7D99",
         500: "#CBA7DA",
         600: "#3EE8C5",
         650: "#3ee9c44d",
-        700: "#C0BDF0"
+        700: "#3ee8c5d9"
       }
     },
     fonts: {

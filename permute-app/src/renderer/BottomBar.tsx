@@ -31,11 +31,13 @@ export const BottomBar: React.FC<IBottomBarProps> = ({
   normaliseAtEnd, outputTrail, permutations
 }) => {
   return (
-    <GridItem rowSpan={5} colSpan={12}
+    <GridItem rowSpan={6} colSpan={12}
       bg={bg} borderTop="0.5px solid" borderTopColor={borderColour}
       pt={3}
       pb={3}
       color="gray.700"
+              borderRadius={20}
+                shadow="md"
     >
       <Grid
         templateRows={`repeat(2, 1fr)`}
@@ -66,33 +68,35 @@ function InputTrail(inputTrail: number, setInputTrail: (trail: number) => void) 
     </Tooltip>
     <Slider aria-label='slider-ex-2'
       min={0} max={8} step={1}
-      colorScheme='pink' value={inputTrail} onChange={setInputTrail}
+      colorScheme='brand' value={inputTrail} onChange={setInputTrail}
+            color="gray.600"
+      fontSize='sm'
     >
-      <SliderMark value={0} mt='2' ml='-0.75' fontSize='sm'>
+      <SliderMark value={0} mt='2' ml='-0.75'>
         0
       </SliderMark>
-      <SliderMark value={1} mt='2' ml='-0.75' fontSize='sm'>
+      <SliderMark value={1} mt='2' ml='-0.75'>
         1
       </SliderMark>
-      <SliderMark value={2} mt='2' ml='-0.75' fontSize='sm'>
+      <SliderMark value={2} mt='2' ml='-0.75'>
         2
       </SliderMark>
-      <SliderMark value={3} mt='2' ml='-0.75' fontSize='sm'>
+      <SliderMark value={3} mt='2' ml='-0.75'>
         3
       </SliderMark>
-      <SliderMark value={4} mt='2' ml='-0.75' fontSize='sm'>
+      <SliderMark value={4} mt='2' ml='-0.75'>
         4
       </SliderMark>
-      <SliderMark value={5} mt='2' ml='-0.75' fontSize='sm'>
+      <SliderMark value={5} mt='2' ml='-0.75'>
         5
       </SliderMark>
-      <SliderMark value={6} mt='2' ml='-0.75' fontSize='sm'>
+      <SliderMark value={6} mt='2' ml='-0.75'>
         6
       </SliderMark>
-      <SliderMark value={7} mt='2' ml='-0.75' fontSize='sm'>
+      <SliderMark value={7} mt='2' ml='-0.75'>
         7
       </SliderMark>
-      <SliderMark value={8} mt='2' ml='-0.75' fontSize='sm'>
+      <SliderMark value={8} mt='2' ml='-0.75'>
         8
       </SliderMark>
 
@@ -114,18 +118,20 @@ function Depth(depth: number, setDepth: (depth: number) => void) {
     </Tooltip>
     <Slider aria-label='slider-ex-2'
       min={1} max={4} step={1}
-      colorScheme='pink' value={depth} onChange={setDepth}
+      colorScheme='brand' value={depth} onChange={setDepth}
+            color="gray.600"
+      fontSize='sm'
     >
-      <SliderMark value={1} mt='2' ml='-0.75' fontSize='sm'>
+      <SliderMark value={1} mt='2' ml='-0.75'>
         1
       </SliderMark>
-      <SliderMark value={2} mt='2' ml='-0.75' fontSize='sm'>
+      <SliderMark value={2} mt='2' ml='-0.75'>
         2
       </SliderMark>
-      <SliderMark value={3} mt='2' ml='-0.75' fontSize='sm'>
+      <SliderMark value={3} mt='2' ml='-0.75'>
         3
       </SliderMark>
-      <SliderMark value={4} mt='2' ml='-0.75' fontSize='sm'>
+      <SliderMark value={4} mt='2' ml='-0.75'>
         4
       </SliderMark>
       <SliderTrack>
@@ -147,33 +153,35 @@ function Permutations(permutations: number, setPermutations: (permutations: numb
     </Tooltip>
     <Slider aria-label='slider-ex-2'
       min={1} max={9} step={1}
-      colorScheme='pink' value={permutations} onChange={setPermutations}
+      colorScheme='brand' value={permutations} onChange={setPermutations}
+      color="gray.600"
+      fontSize='sm'
     >
-      <SliderMark value={1} mt='2' ml='-0.75' fontSize='sm'>
+      <SliderMark value={1} mt='2' ml='-0.75' >
         1
       </SliderMark>
-      <SliderMark value={2} mt='2' ml='-0.75' fontSize='sm'>
+      <SliderMark value={2} mt='2' ml='-0.75'>
         2
       </SliderMark>
-      <SliderMark value={3} mt='2' ml='-0.75' fontSize='sm'>
+      <SliderMark value={3} mt='2' ml='-0.75'>
         3
       </SliderMark>
-      <SliderMark value={4} mt='2' ml='-0.75' fontSize='sm'>
+      <SliderMark value={4} mt='2' ml='-0.75'>
         4
       </SliderMark>
-      <SliderMark value={5} mt='2' ml='-0.75' fontSize='sm'>
+      <SliderMark value={5} mt='2' ml='-0.75'>
         5
       </SliderMark>
-      <SliderMark value={6} mt='2' ml='-0.75' fontSize='sm'>
+      <SliderMark value={6} mt='2' ml='-0.75'>
         6
       </SliderMark>
-      <SliderMark value={7} mt='2' ml='-0.75' fontSize='sm'>
+      <SliderMark value={7} mt='2' ml='-0.75'>
         7
       </SliderMark>
-      <SliderMark value={8} mt='2' ml='-0.75' fontSize='sm'>
+      <SliderMark value={8} mt='2' ml='-0.75'>
         8
       </SliderMark>
-      <SliderMark value={9} mt='2' ml='-0.75' fontSize='sm'>
+      <SliderMark value={9} mt='2' ml='-0.75'>
         9
       </SliderMark>
 
@@ -194,33 +202,35 @@ function OutputTrail(outputTrail: number, setOutputTrail: (trail: number) => voi
     </Tooltip>
     <Slider aria-label='slider-ex-2'
       min={0} max={8} step={1}
-      colorScheme='pink' value={outputTrail} onChange={setOutputTrail}
+      colorScheme='brand' value={outputTrail} onChange={setOutputTrail}
+            color="gray.600"
+      fontSize='sm'
     >
-      <SliderMark value={0} mt='2' ml='-0.75' fontSize='sm'>
+      <SliderMark value={0} mt='2' ml='-0.75'>
         0
       </SliderMark>
-      <SliderMark value={1} mt='2' ml='-0.75' fontSize='sm'>
+      <SliderMark value={1} mt='2' ml='-0.75'>
         1
       </SliderMark>
-      <SliderMark value={2} mt='2' ml='-0.75' fontSize='sm'>
+      <SliderMark value={2} mt='2' ml='-0.75'>
         2
       </SliderMark>
-      <SliderMark value={3} mt='2' ml='-0.75' fontSize='sm'>
+      <SliderMark value={3} mt='2' ml='-0.75'>
         3
       </SliderMark>
-      <SliderMark value={4} mt='2' ml='-0.75' fontSize='sm'>
+      <SliderMark value={4} mt='2' ml='-0.75'>
         4
       </SliderMark>
-      <SliderMark value={5} mt='2' ml='-0.75' fontSize='sm'>
+      <SliderMark value={5} mt='2' ml='-0.75'>
         5
       </SliderMark>
-      <SliderMark value={6} mt='2' ml='-0.75' fontSize='sm'>
+      <SliderMark value={6} mt='2' ml='-0.75'>
         6
       </SliderMark>
-      <SliderMark value={7} mt='2' ml='-0.75' fontSize='sm'>
+      <SliderMark value={7} mt='2' ml='-0.75'>
         7
       </SliderMark>
-      <SliderMark value={8} mt='2' ml='-0.75' fontSize='sm'>
+      <SliderMark value={8} mt='2' ml='-0.75'>
         8
       </SliderMark>
 
@@ -258,6 +268,7 @@ const Run: React.FC<IRunProps> = ({
       bg={buttonBg}
       color="gray.50"
       fontSize="2xl"
+      shadow="sm"
     >
       {!processing ? "Run" : <CircularProgress value={progress} size={8} />}
     </Button>
@@ -265,13 +276,13 @@ const Run: React.FC<IRunProps> = ({
 }
 
 function Normalise(normaliseAtEnd: boolean, setNormalised: (normaliseAtEnd: boolean) => void) {
-  return <GridItem rowSpan={1} colSpan={2} pl="33%">
+  return <GridItem rowSpan={1} colSpan={2} pl="33%" >
     <Tooltip openDelay={200} label={<Text fontSize="lg">
       If enabled, normalises audio to ensure there is no digital clipping <b>(recommended)</b>
     </Text>}>
       <Heading size="sm">Normalise</Heading>
     </Tooltip>
-    <Switch colorScheme="pink"
+    <Switch colorScheme="brand"
       isChecked={normaliseAtEnd} onChange={(e) => setNormalised(e.target.checked)} ml={2} />
   </GridItem>;
 }

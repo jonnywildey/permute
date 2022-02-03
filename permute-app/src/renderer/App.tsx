@@ -139,9 +139,10 @@ const Content = () => {
     <Grid
       templateRows='repeat(24, 1fr)'
       templateColumns='repeat(12, 1fr)'
-      gap={0}
-      height="702px"
-      width="1024px"
+      gap={3}
+      padding={2}
+      width="100%"
+      height="100vh"
     >
       <Welcome isOpen={isOpen} onClose={onClose} />
       <TopBar openWelcome={openWelcome} />

@@ -19,5 +19,7 @@ export const Processor: React.FC<IProcessorProps> = ({
     color="gray.700"
     onClick={onClick} 
     width="100%"
+    shadow="sm"
+    borderRadius={20}
     >{name}</Button>
 ) 
