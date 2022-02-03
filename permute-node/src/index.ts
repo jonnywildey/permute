@@ -27,11 +27,14 @@ export interface IPermuteState {
 export interface IPermutationInput {
   path: string;
   name: string;
+  durationSec: number;
+  image: string;
 }
 
 export interface IPermutationOutput {
   path: string;
   progress: number;
+  image: string;
   processors: string[];
   name: string;
   durationSeconds: number;

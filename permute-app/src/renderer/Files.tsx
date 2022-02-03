@@ -1,9 +1,10 @@
-import { Box, GridItem, Heading, Input, IconButton, CloseButton, PropsOf, Text, Button, Center } from "@chakra-ui/react";
+import { Box, GridItem, Heading, Input, IconButton, CloseButton, PropsOf, Button, Center, Image } from "@chakra-ui/react";
 import { ViewIcon } from "@chakra-ui/icons"
 import { useContext, useState } from "react";
 import { AudioContext } from "./AudioContext";
 import { PlayIcon } from "./PlayIcon";
 import type { IPermutationInput } from "permute-node";
+import { round } from "lodash";
 
 export interface IFilesProps {
   files: IPermutationInput[];
@@ -47,6 +48,7 @@ export const Files: React.FC<IFilesProps> = ({ files, addFiles, removeFile, show
       props.borderTop = "1px solid";
       props.borderTopColor = fileBorderColour;
     }
+    console.log("image", file.image);
     return (<Box {...props}>
       <Heading
         size="sm"
@@ -65,8 +67,8 @@ export const Files: React.FC<IFilesProps> = ({ files, addFiles, removeFile, show
         display="flex"
         alignItems="center"
         width="100%"
+        pos="relative"
       >
-
         <IconButton
           aria-label="show"
           variant="ghost"
@@ -74,7 +76,6 @@ export const Files: React.FC<IFilesProps> = ({ files, addFiles, removeFile, show
           icon={<PlayIcon />}
           onClick={() => playFile(file.path)}
         />
-
         <IconButton
           aria-label="show"
           variant="ghost"
@@ -82,6 +83,8 @@ export const Files: React.FC<IFilesProps> = ({ files, addFiles, removeFile, show
           icon={<ViewIcon />}
           onClick={() => showFile(file.path)}
         />
+        { round(file.durationSec, 2) } secs
+        <Image background="gray.200" width={100} height={50} src={`data:image/svg+xml;utf8,${file.image}`} />
       </Box>
     </Box>);
   });

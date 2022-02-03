@@ -1,9 +1,10 @@
-import { Box, Button, GridItem, Heading, Center, IconButton, PropsOf } from "@chakra-ui/react";
+import { Box, Button, GridItem, Heading, Center, IconButton, PropsOf, Image } from "@chakra-ui/react";
 import { ViewIcon } from "@chakra-ui/icons"
 import type { IPermutationOutput } from "permute-node";
 import { PlayIcon } from "./PlayIcon";
 import { useContext } from "react";
 import { AudioContext } from "./AudioContext";
+import { round } from "lodash";
 
 export interface IOutputProps {
   output: string;
@@ -91,7 +92,9 @@ export const Output: React.FC<IOutputProps> = ({ output, showFile, setOutput, pe
             icon={<ViewIcon />}
             onClick={() => showFile(file.path)}
           />
-          {file.durationSec} secs
+        { round(file.durationSec, 2) }s
+        <Image background="gray.200" width={170} height={10} src={`data:image/svg+xml;utf8,${file.image}`} />
+
         </Box>
       </Box>);
     });

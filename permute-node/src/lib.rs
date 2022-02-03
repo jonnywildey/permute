@@ -4,9 +4,7 @@ use neon::prelude::*;
 use permute::display_node::*;
 use permute::permute_files::*;
 use sharedstate::*;
-use std::ffi::OsStr;
 use std::fmt::Error;
-use std::path::Path;
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
 
@@ -191,16 +189,15 @@ impl Processor {
                     let files = cx.empty_array();
                     for i in 0..state.files.len() {
                         let input_obj = cx.empty_object();
-                        let path = cx.string(state.files[i].clone());
-                        let name = Path::new(&state.files[i])
-                            .file_name()
-                            .unwrap_or(OsStr::new(""))
-                            .to_str()
-                            .unwrap_or(&"");
-                        let name = cx.string(name);
+                        let path = cx.string(state.files[i].path.clone());
+                        let name = cx.string(state.files[i].name.clone());
+                        let image = cx.string(state.files[i].image.clone());
+                        let duration_sec = cx.number(state.files[i].duration_sec);
 
                         input_obj.set(&mut cx, "path", path)?;
                         input_obj.set(&mut cx, "name", name)?;
+                        input_obj.set(&mut cx, "image", image)?;
+                        input_obj.set(&mut cx, "durationSec", duration_sec)?;
 
                         files.set(&mut cx, i as u32, input_obj)?;
                     }
@@ -220,18 +217,13 @@ impl Processor {
                         let output_obj = cx.empty_object();
                         let output = cx.string(permutation_output.output.clone());
                         output_obj.set(&mut cx, "path", output)?;
-                        let name = Path::new(&permutation_output.output)
-                            .file_name()
-                            .unwrap_or(OsStr::new(""))
-                            .to_str()
-                            .unwrap_or(&"");
-                        let name = cx.string(name);
+                        let name = cx.string(permutation_output.audio_info.name.clone());
                         output_obj.set(&mut cx, "name", name)?;
-
+                        let image = cx.string(permutation_output.audio_info.image.clone());
+                        output_obj.set(&mut cx, "image", image)?;
                         let progress = cx.number(permutation_output.progress);
                         output_obj.set(&mut cx, "progress", progress)?;
-                        let duration_sec =
-                            cx.number(permutation_output.permutation.output_duration_sec);
+                        let duration_sec = cx.number(permutation_output.audio_info.duration_sec);
                         output_obj.set(&mut cx, "durationSec", duration_sec)?;
 
                         let node_names = cx.empty_array();
