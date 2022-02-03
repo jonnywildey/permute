@@ -1,4 +1,4 @@
-import { Box, GridItem, Heading, Input, IconButton, CloseButton, PropsOf, Button, Center, Image } from "@chakra-ui/react";
+import { Box, GridItem, Heading, Input, IconButton, CloseButton, PropsOf, Button, Center, Image, Text } from "@chakra-ui/react";
 import { ViewIcon } from "@chakra-ui/icons"
 import { useContext, useState } from "react";
 import { AudioContext } from "./AudioContext";
@@ -39,53 +39,71 @@ export const Files: React.FC<IFilesProps> = ({ files, addFiles, removeFile, show
 
   const fileBoxes = files.map((file, i) => {
     const props: PropsOf<typeof Box> = {
-      key: file,
+      key: file.path,
       borderBottom: "1px solid",
       borderBottomColor: fileBorderColour,
-      color: "gray.700"
+      pos: "relative",
+      color: "gray.700",
     };
     if (i === 0) {
       props.borderTop = "1px solid";
       props.borderTopColor = fileBorderColour;
     }
-    console.log("image", file.image);
     return (<Box {...props}>
+      <Box
+        display="flex"
+        alignItems="center"
+        width="100%"
+        pos="relative"
+        justifyContent="space-between"
+        >
       <Heading
         size="sm"
         width="80%"
         display="inline"
         color="gray.600"
         pl={2}
-      >{file.name}</Heading>
+        >{file.name}</Heading>
       <CloseButton
         display="inline"
         float="right"
+        color="gray.600"
         size="sm"
         onClick={() => removeFile(file.path)}
-      />
-      <Box
+        />
+        </Box>
+        <Box 
+          width="100%"
+          mt="-4px"
+          mb="-8px"
+                    pl={1}
+          pr={1}
+          dangerouslySetInnerHTML={{ __html: file.image }} 
+          />
+        <Box
         display="flex"
-        alignItems="center"
+        alignItems="baseline"
         width="100%"
         pos="relative"
-      >
+        >
         <IconButton
           aria-label="show"
           variant="ghost"
-          size="sm"
+          size="xs"
           icon={<PlayIcon />}
           onClick={() => playFile(file.path)}
         />
         <IconButton
           aria-label="show"
           variant="ghost"
-          size="sm"
+          size="xs"
           icon={<ViewIcon />}
           onClick={() => showFile(file.path)}
         />
-        { round(file.durationSec, 2) } secs
-        <Image background="gray.200" width={100} height={50} src={`data:image/svg+xml;utf8,${file.image}`} />
-      </Box>
+        <Text pr={2} width="100%" textAlign="right" color="gray.500" fontSize="sm" lineHeight={1}>
+          { round(file.durationSec, 2) }s
+        </Text>
+        </Box>
     </Box>);
   });
 

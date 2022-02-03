@@ -52,16 +52,16 @@ impl AudioInfo {
 
         let mut frame_values: Vec<f64> = vec![0.0; frames];
 
-        // get average values
+        // get 99th-ish percentile values
         for i in 0..frames {
             let start = frame_size * i;
             let end = frame_size * (i + 1);
-            let mut max: f64 = 0.0;
+            let mut values: Vec<f64> = vec![];
             for j in start..end {
-                max += samples_64[j].abs();
+                values.push(samples_64[j].abs());
             }
-            max /= frame_size as f64;
-            frame_values[i] = max;
+            values.sort_by(|a, b| a.partial_cmp(b).unwrap());
+            frame_values[i] = values[frame_size / 50 * 49];
         }
         let mut path = String::default();
         for i in 0..frame_values.len() {
@@ -79,7 +79,7 @@ impl AudioInfo {
             let current = (50.0 - frame_values[i] * 50.0).round().to_string();
             path += &format!("L{} {} ", i, current);
         }
-        let svg = format!("<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" viewBox=\"0 0 100 100\" ><path d=\"{}\" /> </svg>", path);
+        let svg = format!("<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" viewBox=\"0 0 100 100\" preserveAspectRatio=\"none\" class=\"audio-svg\"><path class=\"audio-svg-path\" d=\"{}\"/></svg>", path);
         Ok(svg)
     }
 }

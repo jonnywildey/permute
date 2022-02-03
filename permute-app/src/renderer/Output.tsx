@@ -1,4 +1,4 @@
-import { Box, Button, GridItem, Heading, Center, IconButton, PropsOf, Image } from "@chakra-ui/react";
+import { Box, Button, GridItem, Heading, Center, IconButton, PropsOf, Image, Text } from "@chakra-ui/react";
 import { ViewIcon } from "@chakra-ui/icons"
 import type { IPermutationOutput } from "permute-node";
 import { PlayIcon } from "./PlayIcon";
@@ -61,42 +61,55 @@ export const Output: React.FC<IOutputProps> = ({ output, showFile, setOutput, pe
         props.borderTopColor = fileBorderColour;
       }
       return (<Box {...props}>
-        <Heading
-          size="sm"
-          width="80%"
-          display="inline"
-          color="gray.600"
-          pl={2}
-        >{file.name}</Heading>
-        {/* <CloseButton
-        display="inline"
-        float="right"
-        size="sm"
-        onClick={() => removeFile(file.path)} 
-        />   */}
-        <Box
-          display="flex"
-          alignItems="center"
+      <Box
+        display="flex"
+        alignItems="center"
+        width="100%"
+        pos="relative"
+        justifyContent="space-between"
         >
-          <IconButton
-            aria-label="show"
-            variant="ghost"
-            size="sm"
-            icon={<PlayIcon />}
-            onClick={() => playFile(file.path)}
-          />
-          <IconButton
-            aria-label="show"
-            variant="ghost"
-            size="sm"
-            icon={<ViewIcon />}
-            onClick={() => showFile(file.path)}
-          />
-        { round(file.durationSec, 2) }s
-        <Image background="gray.200" width={170} height={10} src={`data:image/svg+xml;utf8,${file.image}`} />
-
+      <Heading
+        size="sm"
+        width="80%"
+        display="inline"
+        color="gray.600"
+        pl={2}
+        >{file.name}</Heading>
         </Box>
-      </Box>);
+        <Box 
+          width="100%"
+          pl={1}
+          pr={1}
+          mt="-4px"
+          mb="-8px"
+          dangerouslySetInnerHTML={{ __html: file.image }} 
+          />
+        <Box
+        display="flex"
+        alignItems="baseline"
+        width="100%"
+        pos="relative"
+        >
+        <IconButton
+          aria-label="show"
+          variant="ghost"
+          size="xs"
+          icon={<PlayIcon />}
+          onClick={() => playFile(file.path)}
+        />
+        <IconButton
+          aria-label="show"
+          variant="ghost"
+          size="xs"
+          icon={<ViewIcon />}
+          onClick={() => showFile(file.path)}
+        />
+        <Text pr={2} width="100%" textAlign="right" color="gray.500" fontSize="sm" lineHeight={1}>
+          { round(file.durationSec, 2) }s
+          {file.processors}
+        </Text>
+        </Box>
+    </Box>);
     });
 
   return <GridItem rowSpan={17} colSpan={3} bg={bg} pt={4}>

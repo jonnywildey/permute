@@ -24,3 +24,10 @@
   padding: 0;
   top: 0px
 }
+
+.audio-svg {
+    fill: #6898c521;
+    stroke: #a8dde38c;
+    height: 28px;
+    width: 100%;
+}
