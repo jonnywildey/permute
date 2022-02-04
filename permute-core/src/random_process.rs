@@ -1,5 +1,3 @@
-use std::f64::consts::E;
-
 use crate::{permute_error::PermuteError, permute_files::PermuteUpdate, process::*};
 use rand::prelude::*;
 use strum::IntoEnumIterator;
@@ -59,6 +57,7 @@ pub fn get_processor_function(name: PermuteNodeName) -> ProcessorFn {
         PermuteNodeName::Chorus => random_chorus,
         PermuteNodeName::Phaser => random_phaser,
         PermuteNodeName::DoubleSpeed => double_speed,
+        PermuteNodeName::RandomPitch => random_pitch,
         PermuteNodeName::Flutter => random_flutter,
         PermuteNodeName::Flange => random_zero_flange,
         PermuteNodeName::HalfSpeed => half_speed,
@@ -94,6 +93,29 @@ pub fn random_metallic_delay(params: &ProcessorParams) -> Result<ProcessorParams
     update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
         params.permutation.clone(),
         PermuteNodeName::MetallicDelay,
+        PermuteNodeEvent::NodeProcessComplete,
+    ))?;
+    Ok(new_params)
+}
+
+pub fn random_pitch(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
+    let update_sender = params.update_sender.to_owned();
+    update_sender.send(PermuteUpdate::UpdatePermuteNodeStarted(
+        params.permutation.clone(),
+        PermuteNodeName::RandomPitch,
+        PermuteNodeEvent::NodeProcessStarted,
+    ))?;
+    let mut rng = thread_rng();
+
+    let speeds: [f64; 10] =
+        [-10.0, -8.0, -7.0, -5.0, -2.0, 2.0, 5.0, 7.0, 8.0, 10.0].map(|v| 2_f64.powf(v / 12.0));
+
+    let speed = speeds[rng.gen_range(0..speeds.len())];
+
+    let new_params = change_speed(params.clone(), speed);
+    update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
+        params.permutation.clone(),
+        PermuteNodeName::RandomPitch,
         PermuteNodeEvent::NodeProcessComplete,
     ))?;
     Ok(new_params)

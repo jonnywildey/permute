@@ -131,7 +131,7 @@ fn permute_file(
     }
 
     for (processor_fns, processor_params) in generated_processors.iter() {
-        let output_params = run_processors(RunProcessorsParams {
+        let mut output_params = run_processors(RunProcessorsParams {
             processor_params: processor_params.clone(),
             processors: processor_fns.to_vec(),
         })?;
