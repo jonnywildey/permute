@@ -46,6 +46,7 @@ pub enum PermuteNodeName {
     MetallicDelay,
     HalfSpeed,
     DoubleSpeed,
+    RandomPitch,
     Wow,
     Flutter,
     Flange,

@@ -57,6 +57,7 @@ fn main() {
         PermuteNodeName::RhythmicDelay,
         PermuteNodeName::HalfSpeed,
         PermuteNodeName::DoubleSpeed,
+        PermuteNodeName::RandomPitch,
         PermuteNodeName::Wow,
         PermuteNodeName::Flutter,
         PermuteNodeName::Chorus,

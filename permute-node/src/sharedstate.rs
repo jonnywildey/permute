@@ -40,10 +40,11 @@ impl SharedState {
             PermuteNodeName::RhythmicDelay,
             PermuteNodeName::HalfSpeed,
             PermuteNodeName::DoubleSpeed,
+            PermuteNodeName::RandomPitch,
             PermuteNodeName::Wow,
             PermuteNodeName::Flutter,
-            PermuteNodeName::Flange,
             PermuteNodeName::Chorus,
+            PermuteNodeName::Flange,
             PermuteNodeName::Phaser,
         ];
         Self {

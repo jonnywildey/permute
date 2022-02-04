@@ -16,8 +16,7 @@ import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
-import "./ipc";
-
+import './ipc';
 
 export default class AppUpdater {
   constructor() {
@@ -28,8 +27,6 @@ export default class AppUpdater {
 }
 
 let mainWindow: BrowserWindow | null = null;
-
-
 
 if (process.env.NODE_ENV === 'production') {
   const sourceMapSupport = require('source-map-support');
@@ -128,9 +125,9 @@ app
   .whenReady()
   .then(() => {
     protocol.registerFileProtocol('audio', (request, callback) => {
-    const url = request.url.substring(7)
-    callback(decodeURI(path.normalize(url)))
-  })
+      const url = request.url.substring(7);
+      callback(decodeURI(path.normalize(url)));
+    });
 
     createWindow();
     app.on('activate', () => {
