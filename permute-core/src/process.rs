@@ -361,34 +361,42 @@ pub fn change_speed(
     }: ProcessorParams,
     speed: f64,
 ) -> ProcessorParams {
-    let mut new_sample_length: usize = ((sample_length as f64) / speed).ceil() as usize;
-    let sample_mod = new_sample_length % channels as usize;
-    if sample_mod > 0 {
-        new_sample_length = new_sample_length - sample_mod;
-    }
-    let mut new_samples = vec![0_f64; new_sample_length];
+    let channel_samples = split_channels(samples, channels);
+    let mut new_channel_samples: Vec<Result<Vec<f64>, PermuteError>> = vec![];
 
-    new_samples[0] = samples[0];
-    let mut ptr1: usize;
-    let mut ptr2: usize;
-    let mut new_ptr: usize;
-    for c_offset in 0..channels {
-        for i in (0..new_sample_length / channels).step_by(channels) {
-            ptr1 = channels * (((i as f64 - 1_f64) * speed).floor() as usize) + c_offset;
-            ptr2 = channels * ((i as f64 * speed).floor() as usize) + c_offset;
-            new_ptr = (channels * i) + c_offset;
+    for c in 0..channel_samples.len() {
+        let cs = &channel_samples[c];
+        let new_sample_length: usize = ((cs.len() as f64) / speed).ceil() as usize;
+        let mut ns = vec![0_f64; new_sample_length];
 
-            new_samples[new_ptr] = samples[ptr1] + ((samples[ptr2] - samples[ptr1]) * speed);
+        let mut v1: f64;
+        let mut v2: f64;
+        let len = new_sample_length - 1;
+        for i in 0..len {
+            let offset_f = (i as f64 - 1_f64) * speed;
+            let offset = offset_f.floor() as usize;
+            let frac = offset_f - offset as f64;
+
+            v1 = cs[offset];
+            v2 = cs[offset + 1];
+
+            ns[i] = v1 + (v2 - v1) * frac;
         }
+        new_channel_samples.push(Ok(ns));
     }
+
+    let new_channel_samples = new_channel_samples.into_iter().collect();
+
+    let interleave_samples = interleave_channels(new_channel_samples).unwrap();
+    let interleave_sample_length = interleave_samples.len();
 
     return ProcessorParams {
-        samples: new_samples,
+        samples: interleave_samples,
         channels,
         endian,
         file_format,
         sample_rate,
-        sample_length: new_sample_length,
+        sample_length: interleave_sample_length,
         update_sender,
         permutation,
     };

@@ -52,17 +52,17 @@ fn main() {
     );
 
     let processor_pool: Vec<PermuteNodeName> = vec![
-        PermuteNodeName::Reverse,
-        PermuteNodeName::MetallicDelay,
-        PermuteNodeName::RhythmicDelay,
-        PermuteNodeName::HalfSpeed,
-        PermuteNodeName::DoubleSpeed,
+        // PermuteNodeName::Reverse,
+        // PermuteNodeName::MetallicDelay,
+        // PermuteNodeName::RhythmicDelay,
+        // PermuteNodeName::HalfSpeed,
+        // PermuteNodeName::DoubleSpeed,
         PermuteNodeName::RandomPitch,
-        PermuteNodeName::Wow,
-        PermuteNodeName::Flutter,
-        PermuteNodeName::Chorus,
-        PermuteNodeName::Phaser,
-        PermuteNodeName::Flange,
+        // PermuteNodeName::Wow,
+        // PermuteNodeName::Flutter,
+        // PermuteNodeName::Chorus,
+        // PermuteNodeName::Phaser,
+        // PermuteNodeName::Flange,
     ];
 
     let processor_count: Option<i32> = match args.processor_count {
