@@ -132,6 +132,7 @@ export const Files: React.FC<IFilesProps> = ({ files, addFiles, removeFile, show
             accept=".wav,.aif"
             className="file-upload"
             position="absolute"
+            cursor="pointer"
             type="file"
             multiple
             onDrop={onDrop}

@@ -6,7 +6,7 @@ import { LargePauseIcon } from "./PauseIcon";
 import { LargeStopIcon } from "./StopIcon";
 
 export const AudioPlayer: React.FC = () => {
-  const { resume, pause, stop, file, setOnPlayUpdate, isPlaying } = useContext(AudioContext);
+  const { resume, pause, stop, file, setOnPlayUpdate, isPlaying, setPosition } = useContext(AudioContext);
   const [secs, setSecs] = useState<number>(0);
 
   useEffect(() => {
@@ -19,22 +19,40 @@ export const AudioPlayer: React.FC = () => {
     return <GridItem rowSpan={2} colSpan={3} padding={3} mr={2} pos="relative" ></GridItem>
   }
 
+  const onClick: React.DragEventHandler<HTMLDivElement> = (ev) => {
+    debugger;
+    const x = ev.nativeEvent.offsetX;
+    const width = document.getElementById("audio-image")!.offsetWidth;
+    const progress = x / width;
+    const newSecs = file.durationSec * progress;
+    setPosition(newSecs);
+    ev.stopPropagation();
+  }
+  const allowDrop: React.DragEventHandler<HTMLDivElement> = (ev) => {
+    ev.preventDefault();
+  };
+
   return <GridItem rowSpan={2} colSpan={3} padding={3} mr={2} pos="relative">
     <Box pl={2} pr={2} marginBottom="-70px" width="100%">
       <Box
         width="100%"
         className="play-image"
+        onDragOver={allowDrop}
+        id="audio-image"
         dangerouslySetInnerHTML={{ __html: file.image }} 
+        onClick={onClick}
         />
       <Box 
         bg="brand.150"
-        borderRight="1px solid"
-        borderRightColor="brand.100"
         className="audio-position"
-        pos="relative" 
+        pos="relative"
+        onClick={onClick} 
         bottom="70px" 
         height="70px"
+        onDragOver={allowDrop}
         fontSize="lg" 
+        borderRight="1px solid"
+        borderRightColor="brand.100"
         width={`${progress}%`} 
       >&nbsp;</Box>
     </Box>

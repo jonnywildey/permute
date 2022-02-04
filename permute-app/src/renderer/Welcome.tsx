@@ -9,7 +9,7 @@ export const Welcome: React.FC<WelcomeProps> = ({ isOpen, onClose }) => {
   return (
     <Modal onClose={onClose} isOpen={isOpen}>
       <ModalOverlay />
-        <ModalContent>
+        <ModalContent className="modal">
                     <ModalCloseButton />
 
   <ModalBody>
@@ -22,12 +22,12 @@ export const Welcome: React.FC<WelcomeProps> = ({ isOpen, onClose }) => {
     Audio source files are run through random chains of processors with 
     randomised parameters into an output directory. 
     As every run is likely to produce different results it is 
-    often useful to process the same file multiple times. This can be done by increasing 
+    often helpful to process the same file multiple times. This can be done by increasing 
     the <i>permutations</i> field. 
    </Text>
    <Text fontSize="lg" mb={2}>
     The <i>depth</i> controls how long the chain of processors should be. 
-    Depths of 3 or more tend to result in very noisy outputs
+    Depths of 3 or more tend to result in very abstract outputs
    </Text>
    <Text fontSize="lg" mb={2}>
     It is recommended you keep the <b>normalise</b> feature enabled,
@@ -35,16 +35,14 @@ export const Welcome: React.FC<WelcomeProps> = ({ isOpen, onClose }) => {
   </Text>
   <Heading size="md">To start</Heading>
   <Text fontSize="lg" mb={4}>
-    Drag a WAV file (or more) into the <b>Select Files area</b>. 
+    Drag an audio file (AIF or WAV) file (or more) into the <b>Select Files area</b>. 
     Select an <b>output directory</b>.
     Click <b>run</b>.
     Have fun!
   </Text>
-  <Heading size="md">Features missing</Heading>
+  <Heading size="md">Coming soon</Heading>
   <List>
-    <ListItem>AIFF and other file support</ListItem>
     <ListItem>Time stretching</ListItem>
-    <ListItem>In-app audio preview</ListItem>
     <ListItem>Filter FX</ListItem>
   </List>
   </ModalBody>

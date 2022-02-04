@@ -7,6 +7,7 @@ export interface IAudioContext {
   stop: () => void;
   resume: () => void;
   setOnPlayUpdate: (cb: (secs: number) => void) => void;
+  setPosition: (secs: number) => void;
   isPlaying: boolean;
   file: IPermutationInput;
 }
@@ -97,10 +98,19 @@ export const CreateAudioContext: React.FC = ({ children }) => {
     setState({ ...state, onPlayUpdate: cb });
   }
 
+  const setPosition = (secs: number) => {
+    const audio = audioEl.current!;
+    audio.currentTime = secs;
+    if (state.onPlayUpdate) {
+      state.onPlayUpdate(secs);
+    }
+  }
+
   const value: IAudioContext = {
     playFile,
     setOnPlayUpdate,
     isPlaying: state.isPlaying,
+    setPosition,
     resume,
     pause,
     stop,

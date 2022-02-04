@@ -1,7 +1,6 @@
 body {
-   /* background: var(--chakra-colors-brand-75) !important; */
    background-image: url("../img/bg2.png") !important;
-   /* animation: background-move 100s ease-in-out 2s infinite alternate; */
+   animation: background-move 100s ease-in-out 2s 4 alternate;
    background-size: cover;
 }
 
@@ -64,8 +63,14 @@ body {
 .output-image .audio-svg {
     fill: var(--chakra-colors-brand-125);
 }
+
 .play-image .audio-svg {
     fill: var(--chakra-colors-brand-125);
     height: 70px;
     width: 100%;
+}
+
+.modal {
+  background-image: url("../img/bg2.png") !important;
+  background-size: 400% !important;
 }
