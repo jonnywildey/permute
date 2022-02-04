@@ -41,7 +41,7 @@ export const Output: React.FC<IOutputProps> = ({
 
   const outputBoxes = permutationOutputs
     .filter((f) => f.progress === 100 && f.image)
-    .map((file, i) => {
+    .map((file) => {
       const props: PropsOf<typeof Box> = {
         key: file.path,
         borderBottom: '1px solid',
@@ -73,7 +73,7 @@ export const Output: React.FC<IOutputProps> = ({
             label={
               <List>
                 {file.processors.map((p, i) => (
-                  <ListItem>
+                  <ListItem key={p}>
                     {i + 1}: {p}
                   </ListItem>
                 ))}

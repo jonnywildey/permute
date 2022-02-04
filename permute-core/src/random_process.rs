@@ -108,7 +108,7 @@ pub fn random_pitch(params: &ProcessorParams) -> Result<ProcessorParams, Permute
     let mut rng = thread_rng();
 
     let speeds: [f64; 10] =
-        [-10.0, -8.0, -7.0, -5.0, -2.0, 2.0, 5.0, 7.0, 8.0, 10.0].map(|v| 2_f64.powf(v));
+        [-10.0, -8.0, -7.0, -5.0, -2.0, 2.0, 5.0, 7.0, 8.0, 10.0].map(|v| 2_f64.powf(v / 12.0));
 
     let speed = speeds[rng.gen_range(0..speeds.len())];
 

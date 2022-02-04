@@ -62,15 +62,15 @@ export const BottomBar: React.FC<IBottomBarProps> = ({
       bg={bg}
       borderTop="0.5px solid"
       borderTopColor={borderColour}
-      pt={3}
-      pb={3}
       color="gray.700"
       borderRadius={20}
       shadow="md"
       minHeight="100%"
-      overflowY="auto"
-    >
+      >
       <Grid
+        mt={3}
+        mb={3}
+        overflowY="auto"
         templateRows="repeat(2, 1fr)"
         templateColumns="repeat(12, 1fr)"
         width="100%"
