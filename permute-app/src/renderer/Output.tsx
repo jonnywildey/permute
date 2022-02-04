@@ -73,7 +73,7 @@ export const Output: React.FC<IOutputProps> = ({
             label={
               <List>
                 {file.processors.map((p, i) => (
-                  <ListItem key={p}>
+                  <ListItem key={`${p}${i}`}>
                     {i + 1}: {p}
                   </ListItem>
                 ))}

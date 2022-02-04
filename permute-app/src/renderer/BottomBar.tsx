@@ -66,7 +66,7 @@ export const BottomBar: React.FC<IBottomBarProps> = ({
       borderRadius={20}
       shadow="md"
       minHeight="100%"
-      >
+    >
       <Grid
         mt={3}
         mb={3}

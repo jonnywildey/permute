@@ -1,12 +1,11 @@
-import '@fontsource/dongle/400.css';
-import '@fontsource/dongle/300.css';
-import '@fontsource/dongle/700.css';
 import './App.css';
 import {
   ChakraProvider,
   Grid,
   useDisclosure,
   useToast,
+  Spinner,
+  Center,
 } from '@chakra-ui/react';
 import type { IPermuteState } from 'permute-node';
 import { useEffect, useState } from 'react';
@@ -17,7 +16,6 @@ import { BottomBar } from './BottomBar';
 import { theme } from './theme';
 import { Processors } from './Processors';
 import { Welcome } from './Welcome';
-import { CreateAudioContext } from './AudioContext';
 
 export interface IAppState {
   permuteState: IPermuteState;
@@ -192,10 +190,21 @@ const Content = () => {
 };
 
 export default function App() {
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    setTimeout(() => setLoading(false), 1000);
+  }, []);
   return (
     <ChakraProvider theme={theme}>
       <CreateAudioContext>
-        <Content />
+        {loading ? (
+          <Center width="100vw" height="100vh">
+            Loading
+            <Spinner ml={2} size="xl" color="brand.600" />
+          </Center>
+        ) : (
+          <Content />
+        )}
       </CreateAudioContext>
     </ChakraProvider>
   );
