@@ -1,0 +1,4 @@
+/lib-sndfile-src
+/libsndfile-binaries
+/sndfile.rs
+/sndfile-sys

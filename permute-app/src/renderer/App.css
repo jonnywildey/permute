@@ -1,7 +1,13 @@
+:root {
+  --chakra-fonts-body: Dongle;
+  --chakra-fonts-heading: Dongle;
+}
+
 body {
    background-image: url("../img/bg2.png") !important;
    animation: background-move 100s ease-in-out 2s 4 alternate;
    background-size: cover;
+   font-family: Dongle, sans-serif;
 }
 
 @keyframes background-move {

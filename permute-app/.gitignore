@@ -21,6 +21,7 @@ node_modules
 release/app/dist
 release/build
 .erb/dll
+assets/pkg-scripts/libsndfile.1.dylib
 
 .idea
 npm-debug.log.*

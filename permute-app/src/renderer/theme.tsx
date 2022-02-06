@@ -5,13 +5,6 @@ import '@fontsource/dongle/300.css';
 import '@fontsource/dongle/700.css';
 
 export const theme = extendTheme(
-  createBreakpoints({
-    sm: '1200em',
-    md: '1200em',
-    lg: '1200em',
-    xl: '1200em',
-    '2xl': '1200em',
-  }),
   {
     colors: {
       brand: {
@@ -31,8 +24,8 @@ export const theme = extendTheme(
       },
     },
     fonts: {
-      heading: 'dongle',
-      body: 'dongle',
+      heading: 'Dongle, sans-serif',
+      body: 'Dongle, sans-serif',
     },
     components: {
       Toast: {
@@ -41,5 +34,12 @@ export const theme = extendTheme(
         },
       },
     },
-  }
+  },
+  createBreakpoints({
+    sm: '1200em',
+    md: '1200em',
+    lg: '1200em',
+    xl: '1200em',
+    '2xl': '1200em',
+  }),
 );

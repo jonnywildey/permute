@@ -1,4 +1,7 @@
 import './App.css';
+import '@fontsource/dongle/400.css';
+import '@fontsource/dongle/300.css';
+import '@fontsource/dongle/700.css';
 import {
   ChakraProvider,
   Grid,
@@ -199,7 +202,6 @@ export default function App() {
       <CreateAudioContext>
         {loading ? (
           <Center width="100vw" height="100vh">
-            Loading
             <Spinner ml={2} size="xl" color="brand.600" />
           </Center>
         ) : (
