@@ -1,7 +1,7 @@
 use biquad::*;
 use serde::{Deserialize, Serialize};
 use sndfile::{Endian, SubtypeFormat};
-use std::{f64::consts::PI, sync::mpsc};
+use std::{f64::consts::PI, slice::ChunksMut, sync::mpsc};
 use strum::EnumIter;
 
 use crate::{permute_error::PermuteError, permute_files::PermuteUpdate};
@@ -44,9 +44,13 @@ pub enum PermuteNodeName {
     Reverse,
     RhythmicDelay,
     MetallicDelay,
+
+    TimeStretch,
+
     HalfSpeed,
     DoubleSpeed,
     RandomPitch,
+
     Wow,
     Flutter,
     Flange,
@@ -351,13 +355,13 @@ pub fn sum(sample_lines: Vec<SampleLine>) -> Vec<f64> {
 pub fn change_speed(
     ProcessorParams {
         samples,
-        sample_length,
         channels,
         endian,
         file_format,
         sample_rate,
         update_sender,
         permutation,
+        ..
     }: ProcessorParams,
     speed: f64,
 ) -> ProcessorParams {
@@ -768,6 +772,115 @@ fn phase_stage(
     }
 
     Ok(new_samples)
+}
+
+pub struct TimeStretchParams {
+    pub grain_samples: usize,
+    pub blend_samples: usize, // exclusive in grain
+    pub stretch_factor: usize,
+}
+
+pub fn time_stretch(
+    params: &ProcessorParams,
+    TimeStretchParams {
+        grain_samples,
+        blend_samples,
+        stretch_factor,
+    }: TimeStretchParams,
+) -> Result<ProcessorParams, PermuteError> {
+    let mut new_samples: Vec<f64> = vec![];
+
+    let mut new_chunks: Vec<Vec<f64>> = vec![];
+    let mut samples = params.samples.clone();
+    let chunks = samples.chunks_mut(grain_samples + blend_samples * 2);
+
+    for chunk in chunks {
+        let chunk_len = chunk.len();
+        chunk[0] = 0.0;
+        chunk[chunk_len - 1] = 0.0;
+        for j in 1..chunk_len {
+            if j < blend_samples {
+                chunk[j] = chunk[j] * (j as f64 / blend_samples as f64);
+                let l = chunk_len - 1 - j;
+                chunk[l] = chunk[l] * (j as f64 / blend_samples as f64)
+            }
+        }
+        for _ in 0..stretch_factor {
+            new_chunks.push(chunk.to_vec())
+        }
+    }
+
+    for i in 0..new_chunks.len() {
+        let current_chunk = &new_chunks[i];
+        for (i, s) in current_chunk.into_iter().enumerate() {
+            new_samples.push(*s);
+        }
+    }
+
+    Ok(ProcessorParams {
+        sample_length: new_samples.len(),
+        samples: new_samples,
+        ..params.clone()
+    })
+}
+
+pub fn time_stretch_cross(
+    params: &ProcessorParams,
+    TimeStretchParams {
+        grain_samples,
+        blend_samples,
+        stretch_factor,
+    }: TimeStretchParams,
+) -> Result<ProcessorParams, PermuteError> {
+    let mut new_samples: Vec<f64> = vec![];
+
+    let count = 1;
+    let mut counter = 0;
+
+    let mut chunks: Vec<usize> = vec![0];
+    for i in 1..params.sample_length {
+        let a = params.samples[i - 1];
+        let b = params.samples[i];
+        if (a > 0.0 && b < 0.0) || (a < 0.0 && b > 0.0) {
+            if i > chunks.last().unwrap() + grain_samples {
+                counter += 1;
+            }
+        }
+        if counter == count {
+            chunks.push(i);
+            counter = 0;
+        }
+    }
+    chunks.push(params.sample_length - 1);
+
+    for i in 1..chunks.len() {
+        let a = chunks[i - 1];
+        let b = chunks[i];
+
+        for _ in 0..stretch_factor {
+            let blend = match blend_samples {
+                d if (d / 2) > b - a => blend_samples / 2,
+                _ => b - a,
+            };
+            for j in a..b {
+                if (j - a < blend) {
+                    let v = (j - a) as f64 / blend as f64 / 2.0;
+                    new_samples.push(params.samples[j] * v);
+                } else if (b - j < blend) {
+                    let v = (b - j) as f64 / blend as f64 / 2.0;
+                    new_samples.push(params.samples[j] * v);
+                } else {
+                    new_samples.push(params.samples[j]);
+                }
+            }
+        }
+    }
+
+    Ok(ProcessorParams {
+        sample_length: new_samples.len(),
+        samples: new_samples,
+        ..params.clone()
+    })
 }
 
 pub fn lfo_sin(sample: usize, sample_rate: usize, lfo_rate: f64) -> f64 {

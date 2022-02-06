@@ -53,6 +53,7 @@ pub fn generate_processor_sequence(
 
 pub fn get_processor_function(name: PermuteNodeName) -> ProcessorFn {
     match name {
+        PermuteNodeName::TimeStretch => random_time_stretch,
         PermuteNodeName::Reverse => reverse,
         PermuteNodeName::Chorus => random_chorus,
         PermuteNodeName::Phaser => random_phaser,
@@ -118,6 +119,28 @@ pub fn random_pitch(params: &ProcessorParams) -> Result<ProcessorParams, Permute
         PermuteNodeName::RandomPitch,
         PermuteNodeEvent::NodeProcessComplete,
     ))?;
+    Ok(new_params)
+}
+
+pub fn random_time_stretch(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
+    start_event!(PermuteNodeName::TimeStretch, params);
+
+    let mut rng = thread_rng();
+    let grain = [
+        200, 400, 600, 1000, 1600, 2000, 2400, 3000, 4000, 10000, 20000,
+    ];
+    let stretch = [2, 3, 4];
+    let blend = [10, 12, 16, 20, 8, 80, 160, 1200, 2000, 4000];
+
+    let new_params = time_stretch_cross(
+        &params,
+        TimeStretchParams {
+            grain_samples: grain[rng.gen_range(0..grain.len())],
+            stretch_factor: stretch[rng.gen_range(0..stretch.len())],
+            blend_samples: blend[rng.gen_range(0..blend.len())],
+        },
+    )?;
+    complete_event!(PermuteNodeName::TimeStretch, new_params);
     Ok(new_params)
 }
 
@@ -377,3 +400,28 @@ pub fn normalise(params: &ProcessorParams) -> Result<ProcessorParams, PermuteErr
     ))?;
     Ok(new_samples)
 }
+
+macro_rules! start_event {
+    ($name:expr, $params:expr) => {{
+        $params
+            .update_sender
+            .send(PermuteUpdate::UpdatePermuteNodeStarted(
+                $params.permutation.clone(),
+                $name,
+                PermuteNodeEvent::NodeProcessStarted,
+            ))?;
+    }};
+}
+pub(crate) use start_event;
+macro_rules! complete_event {
+    ($name:expr, $params:expr) => {{
+        $params
+            .update_sender
+            .send(PermuteUpdate::UpdatePermuteNodeStarted(
+                $params.permutation.clone(),
+                $name,
+                PermuteNodeEvent::NodeProcessComplete,
+            ))?;
+    }};
+}
+pub(crate) use complete_event;

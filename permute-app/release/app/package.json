@@ -14,7 +14,7 @@
     "postinstall": "npm run electron-rebuild && npm run link-modules"
   },
   "dependencies": {
-    "permute-node": "../../../permute-node/permute-node-0.1.0.tgz"
+    "permute-node": "../../../permute-node"
   },
   "license": "MIT"
 }

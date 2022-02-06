@@ -36,6 +36,7 @@ impl SharedState {
     pub fn init(update_sender: mpsc::Sender<PermuteUpdate>) -> Self {
         let all_processors = vec![
             PermuteNodeName::Reverse,
+            PermuteNodeName::TimeStretch,
             PermuteNodeName::MetallicDelay,
             PermuteNodeName::RhythmicDelay,
             PermuteNodeName::HalfSpeed,
