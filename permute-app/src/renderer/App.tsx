@@ -1,45 +1,50 @@
+import './App.css';
 import '@fontsource/dongle/400.css';
 import '@fontsource/dongle/300.css';
 import '@fontsource/dongle/700.css';
-import './App.css';
-import { ChakraProvider, Grid, useDisclosure, useToast } from '@chakra-ui/react';
+import {
+  ChakraProvider,
+  Grid,
+  useDisclosure,
+  useToast,
+  Spinner,
+  Center,
+} from '@chakra-ui/react';
+import type { IPermuteState } from 'permute-node';
+import { useEffect, useState } from 'react';
 import { Files } from './Files';
 import { TopBar } from './TopBar';
 import { Output } from './Output';
 import { BottomBar } from './BottomBar';
 import { theme } from './theme';
-import type { IPermuteState } from "permute-node";
-import { useEffect, useState } from 'react';
 import { Processors } from './Processors';
-import { IFileStat } from 'main/IFileStat';
 import { Welcome } from './Welcome';
+import { CreateAudioContext } from './AudioContext';
 
 export interface IAppState {
   permuteState: IPermuteState;
-  files: IFileStat[];
 }
 
 const defaultAppState: IAppState = {
-  permuteState: { 
-      allProcessors: [],
-      files: [], 
-      permutationOutputs: [], 
-      processorPool: [], 
-    } as any,
+  permuteState: {
+    allProcessors: [],
     files: [],
-}
-
+    permutationOutputs: [],
+    processorPool: [],
+  } as any,
+};
 
 const Content = () => {
   const [state, setState] = useState<IAppState>(defaultAppState);
   const toast = useToast();
   const { isOpen, onOpen, onClose } = useDisclosure({
-    defaultIsOpen: !state.permuteState.output
+    defaultIsOpen: !state.permuteState.output,
   });
 
   const {
     allProcessors,
     permutationDepth,
+    files,
     output,
     permutations,
     normaliseAtEnd,
@@ -54,13 +59,12 @@ const Content = () => {
   };
   useEffect(() => {
     const setup = async () => {
-      const permuteState: IPermuteState = await window.Electron.ipcRenderer.getState();
-      const fileStats = await window.Electron.ipcRenderer.getFileStats(permuteState.files);
+      const permuteState: IPermuteState =
+        await window.Electron.ipcRenderer.getState();
       setState({
-        files: fileStats,
         permuteState,
       });
-    }
+    };
     setup();
   }, []);
 
@@ -72,15 +76,16 @@ const Content = () => {
           status: 'error',
           duration: 5000,
           isClosable: true,
-       });
+        });
       } else {
-      const description = `${pState.files.length * pState.permutations} files permuted!`;
-      toast({
+        const description = `${pState.files.length * pState.permutations
+          } files permuted!`;
+        toast({
           description,
           status: 'success',
           duration: 5000,
           isClosable: true,
-       });
+        });
       }
       setState({ ...state, permuteState: pState });
     };
@@ -107,29 +112,27 @@ const Content = () => {
     refreshState();
   };
   const addFiles = async (files: string[]) => {
-    files.map(f => window.Electron.ipcRenderer.addFile(f));
+    files.map((f) => window.Electron.ipcRenderer.addFile(f));
     const permuteState = await window.Electron.ipcRenderer.getState();
-    const fileStats = await window.Electron.ipcRenderer.getFileStats(permuteState.files);
-    setState({ permuteState, files: fileStats });
+    setState({ permuteState });
   };
   const removeFile = async (file: string) => {
     window.Electron.ipcRenderer.removeFile(file);
     const permuteState = await window.Electron.ipcRenderer.getState();
-    const fileStats = await window.Electron.ipcRenderer.getFileStats(permuteState.files);
-    setState({ permuteState, files: fileStats });
+    setState({ permuteState });
   };
   const showFile = async (file: string) => {
     window.Electron.ipcRenderer.showFile(file);
   };
   const setOutput = async () => {
     window.Electron.ipcRenderer.openOutputDialog(([output]: [string]) => {
-        window.Electron.ipcRenderer.setOutput(output);
-        refreshState();
-      });
-  }
+      window.Electron.ipcRenderer.setOutput(output);
+      refreshState();
+    });
+  };
   const openWelcome = () => {
     onOpen();
-  }
+  };
 
   const setProcessorEnabled = (name: string, enable: boolean) => {
     if (enable) {
@@ -138,30 +141,36 @@ const Content = () => {
       window.Electron.ipcRenderer.removeProcessor(name);
     }
     refreshState();
-  }
+  };
 
   return (
     <Grid
-      templateRows='repeat(24, 1fr)'
-      templateColumns='repeat(12, 1fr)'
-      gap={0}
-      height="702px"
-      width="1024px"
+      templateRows="repeat(24, 1fr)"
+      templateColumns="repeat(12, 1fr)"
+      gap={3}
+      padding={2}
+      width="100%"
+      height="100vh"
     >
       <Welcome isOpen={isOpen} onClose={onClose} />
       <TopBar openWelcome={openWelcome} />
-      <Files 
-      files={state.files} 
-      addFiles={addFiles} 
-      removeFile={removeFile} 
-      showFile={showFile}
+      <Files
+        files={files}
+        addFiles={addFiles}
+        removeFile={removeFile}
+        showFile={showFile}
       />
-      <Processors 
-        allProcessors={allProcessors} 
-        processorPool={processorPool} 
-        setProcessorEnabled={setProcessorEnabled} 
+      <Processors
+        allProcessors={allProcessors}
+        processorPool={processorPool}
+        setProcessorEnabled={setProcessorEnabled}
       />
-      <Output output={output} setOutput={setOutput} showFile={showFile} />
+      <Output
+        output={output}
+        setOutput={setOutput}
+        showFile={showFile}
+        permutationOutputs={permutationOutputs}
+      />
       <BottomBar
         permutationOutputs={permutationOutputs}
         runProcessor={runProcessor}
@@ -176,7 +185,7 @@ const Content = () => {
         setNormalised={setNormalised}
         setInputTrail={setInputTrail}
         setOutputTrail={setOutputTrail}
-        files={state.permuteState.files}
+        files={files}
         output={output}
       />
     </Grid>
@@ -184,9 +193,21 @@ const Content = () => {
 };
 
 export default function App() {
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    setTimeout(() => setLoading(false), 1000);
+  }, []);
   return (
     <ChakraProvider theme={theme}>
-      <Content />
+      <CreateAudioContext>
+        {loading ? (
+          <Center width="100vw" height="100vh">
+            <Spinner ml={2} size="xl" color="brand.600" />
+          </Center>
+        ) : (
+          <Content />
+        )}
+      </CreateAudioContext>
     </ChakraProvider>
   );
 }

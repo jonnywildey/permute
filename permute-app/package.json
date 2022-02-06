@@ -1,5 +1,5 @@
 {
-  "name": "electron-react-boilerplate",
+  "name": "permute-app",
   "description": "A foundation for scalable desktop apps",
   "scripts": {
     "build": "concurrently \"npm run build:main\" \"npm run build:renderer\"",
@@ -7,7 +7,7 @@
     "build:renderer": "cross-env NODE_ENV=production TS_NODE_TRANSPILE_ONLY=true webpack --config ./.erb/configs/webpack.config.renderer.prod.ts",
     "rebuild": "electron-rebuild --parallel --types prod,dev,optional --module-dir release/app",
     "lint": "cross-env NODE_ENV=development eslint . --ext .js,.jsx,.ts,.tsx",
-    "package": "ts-node ./.erb/scripts/clean.js dist && npm run build && electron-builder build --publish never",
+    "package": "cp ../lib-sndfile-src/libsndfile.1.0.31.dylib assets/pkg-scripts/libsndfile.1.dylib && ts-node ./.erb/scripts/clean.js dist && npm run build && electron-builder build --publish never",
     "postinstall": "ts-node .erb/scripts/check-native-dep.js && electron-builder install-app-deps && cross-env NODE_ENV=development TS_NODE_TRANSPILE_ONLY=true webpack --config ./.erb/configs/webpack.config.renderer.dev.dll.ts && opencollective-postinstall",
     "start": "ts-node ./.erb/scripts/check-port-in-use.js && npm run start:renderer",
     "start:main": "cross-env NODE_ENV=development electron -r ts-node/register/transpile-only ./src/main/main.ts",
@@ -31,7 +31,7 @@
   },
   "build": {
     "productName": "Permute",
-    "appId": "org.erb.Permute",
+    "appId": "Permute",
     "asar": true,
     "asarUnpack": "**\\*.{node,dll}",
     "files": [
@@ -42,9 +42,8 @@
     "afterSign": ".erb/scripts/notarize.js",
     "mac": {
       "target": {
-        "target": "default",
+        "target": "pkg",
         "arch": [
-          "arm64",
           "x64"
         ]
       },
@@ -52,21 +51,13 @@
       "hardenedRuntime": true,
       "entitlements": "assets/entitlements.mac.plist",
       "entitlementsInherit": "assets/entitlements.mac.plist",
-      "gatekeeperAssess": false
-    },
-    "dmg": {
-      "contents": [
-        {
-          "x": 130,
-          "y": 220
-        },
-        {
-          "x": 410,
-          "y": 220,
-          "type": "link",
-          "path": "/Applications"
-        }
+      "gatekeeperAssess": false,
+      "extraDistFiles": [
+        "./release/app/node_modules/permute-node/permute-library/libsndfile.1.dylib"
       ]
+    },
+    "pkg": {
+      "scripts": "pkg-scripts"
     },
     "win": {
       "target": [

@@ -1,3 +1,5 @@
+use audio_info::AudioFileError;
+use audio_info::AudioInfo;
 use neon::prelude::*;
 use permute::display_node::*;
 use permute::permute_files::*;
@@ -12,7 +14,6 @@ use std::thread::JoinHandle;
 #[derive(Debug, Clone)]
 pub struct SharedState {
     // permute file params
-    pub files: Vec<String>,
     pub output: String,
     pub error: String,
     pub input_trail: f64,
@@ -28,6 +29,7 @@ pub struct SharedState {
     pub update_sender: mpsc::Sender<PermuteUpdate>,
     pub processing: bool,
     pub permutation_outputs: Vec<OutputProgress>,
+    pub files: Vec<AudioInfo>,
 }
 
 impl SharedState {
@@ -38,14 +40,15 @@ impl SharedState {
             PermuteNodeName::RhythmicDelay,
             PermuteNodeName::HalfSpeed,
             PermuteNodeName::DoubleSpeed,
+            PermuteNodeName::RandomPitch,
             PermuteNodeName::Wow,
             PermuteNodeName::Flutter,
-            PermuteNodeName::Flange,
             PermuteNodeName::Chorus,
+            PermuteNodeName::Flange,
             PermuteNodeName::Phaser,
         ];
         Self {
-            files: vec![],
+            // files: vec![],
             high_sample_rate: false,
             input_trail: 0.0,
             normalise_at_end: true,
@@ -60,12 +63,13 @@ impl SharedState {
             all_processors,
             processing: false,
             permutation_outputs: vec![],
+            files: vec![],
         }
     }
 
     fn to_permute_params(&self) -> PermuteFilesParams {
         PermuteFilesParams {
-            files: self.files.clone(),
+            files: self.files.iter().map(|ai| ai.path.clone()).collect(),
             high_sample_rate: self.high_sample_rate,
             input_trail: self.input_trail,
             normalise_at_end: self.normalise_at_end,
@@ -79,15 +83,19 @@ impl SharedState {
         }
     }
 
-    pub fn add_file(&mut self, file: String) {
-        if self.files.iter().any(|f| *f == file) {
-            return;
+    pub fn add_file(&mut self, file: String) -> Result<(), AudioFileError> {
+        if self.files.iter().any(|f| f.path == file) {
+            return Ok(());
         }
-        let _ = &self.files.push(file);
+        let mut audio_info = AudioInfo::default();
+        audio_info.update_file(file)?;
+        self.files.push(audio_info);
+        Ok(())
     }
 
     pub fn remove_file(&mut self, file: String) {
-        self.files.retain(|f| *f != file);
+        // self.files.retain(|f| *f != file);
+        self.files.retain(|f| f.path != file);
     }
 
     pub fn add_processor(&mut self, name: String) {
@@ -115,12 +123,13 @@ impl SharedState {
         permutation: Permutation,
         processors: Vec<PermuteNodeName>,
     ) {
-        let output = permutation.output.clone();
+        let path = permutation.output.clone();
         let _ = &self.permutation_outputs.push(OutputProgress {
-            output,
+            output: path,
             permutation: permutation.clone(),
             processors,
             progress: 0,
+            audio_info: AudioInfo::default(),
         });
     }
 
@@ -141,8 +150,15 @@ impl SharedState {
         }
     }
 
-    pub fn set_finished(&mut self) {
+    pub fn set_finished(&mut self) -> Result<(), AudioFileError> {
         self.processing = false;
+
+        for permutation_output in self.permutation_outputs.iter_mut() {
+            permutation_output
+                .audio_info
+                .update_file(permutation_output.output.clone())?;
+        }
+        Ok(())
     }
 
     pub fn set_normalised(&mut self, normalised: bool) {
@@ -183,6 +199,7 @@ pub struct OutputProgress {
     pub progress: i32,
     pub permutation: Permutation,
     pub processors: Vec<PermuteNodeName>,
+    pub audio_info: AudioInfo,
 }
 
 impl Finalize for OutputProgress {}
@@ -229,7 +246,7 @@ impl SharedState {
 
 #[derive(Serialize, Deserialize)]
 pub struct SharedStateSerializable {
-    pub files: Vec<String>,
+    pub files: Vec<AudioInfo>,
     pub output: String,
     pub input_trail: f64,
     pub output_trail: f64,

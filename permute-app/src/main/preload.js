@@ -8,15 +8,14 @@ contextBridge.exposeInMainWorld('Electron', {
     },
     runProcessor(updateFn, completeFn) {
       const listener = (event, ...args) => {
-        updateFn(...args)
+        updateFn(...args);
       };
       ipcRenderer.on('run-processor-update', listener);
       ipcRenderer.once('run-processor-ended', (event, ...args) => {
         ipcRenderer.removeListener('run-processor-update', listener);
-        completeFn(...args)
+        completeFn(...args);
       });
       ipcRenderer.send('run-processor');
-
     },
     addFile(file) {
       ipcRenderer.send('add-file', file);
@@ -60,8 +59,8 @@ contextBridge.exposeInMainWorld('Electron', {
     getFileStats(files) {
       return new Promise((res) => {
         ipcRenderer.once('get-file-stats', (event, ...args) => res(...args));
-        ipcRenderer.send('get-file-stats', files);  
+        ipcRenderer.send('get-file-stats', files);
       });
-    }
+    },
   },
 });

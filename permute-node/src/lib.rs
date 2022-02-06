@@ -188,8 +188,18 @@ impl Processor {
 
                     let files = cx.empty_array();
                     for i in 0..state.files.len() {
-                        let str = cx.string(state.files[i].clone());
-                        files.set(&mut cx, i as u32, str)?;
+                        let input_obj = cx.empty_object();
+                        let path = cx.string(state.files[i].path.clone());
+                        let name = cx.string(state.files[i].name.clone());
+                        let image = cx.string(state.files[i].image.clone());
+                        let duration_sec = cx.number(state.files[i].duration_sec);
+
+                        input_obj.set(&mut cx, "path", path)?;
+                        input_obj.set(&mut cx, "name", name)?;
+                        input_obj.set(&mut cx, "image", image)?;
+                        input_obj.set(&mut cx, "durationSec", duration_sec)?;
+
+                        files.set(&mut cx, i as u32, input_obj)?;
                     }
                     let processor_pool = cx.empty_array();
                     for i in 0..state.processor_pool.len() {
@@ -203,11 +213,27 @@ impl Processor {
                     }
                     let permutation_outputs = cx.empty_array();
                     for i in 0..state.permutation_outputs.len() {
+                        let permutation_output = &state.permutation_outputs[i];
                         let output_obj = cx.empty_object();
-                        let output = cx.string(state.permutation_outputs[i].output.clone());
-                        output_obj.set(&mut cx, "output", output)?;
-                        let progress = cx.number(state.permutation_outputs[i].progress);
+                        let output = cx.string(permutation_output.output.clone());
+                        output_obj.set(&mut cx, "path", output)?;
+                        let name = cx.string(permutation_output.audio_info.name.clone());
+                        output_obj.set(&mut cx, "name", name)?;
+                        let image = cx.string(permutation_output.audio_info.image.clone());
+                        output_obj.set(&mut cx, "image", image)?;
+                        let progress = cx.number(permutation_output.progress);
                         output_obj.set(&mut cx, "progress", progress)?;
+                        let duration_sec = cx.number(permutation_output.audio_info.duration_sec);
+                        output_obj.set(&mut cx, "durationSec", duration_sec)?;
+
+                        let node_names = cx.empty_array();
+                        for j in 0..permutation_output.processors.len() {
+                            let display_name = cx.string(get_processor_display_name(
+                                permutation_output.processors[j],
+                            ));
+                            node_names.set(&mut cx, j as u32, display_name)?;
+                        }
+                        output_obj.set(&mut cx, "processors", node_names)?;
                         permutation_outputs.set(&mut cx, i as u32, output_obj)?;
                     }
 
