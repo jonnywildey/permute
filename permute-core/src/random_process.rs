@@ -110,7 +110,7 @@ pub fn random_time_stretch(params: &ProcessorParams) -> Result<ProcessorParams, 
 
     let mut rng = thread_rng();
     let grain = [
-        200, 400, 600, 1000, 1600, 2000, 2400, 3000, 4000, 10000, 20000,
+        200, 400, 600, 1000, 1600, 2000, 2200, 2400, 2600, 2800, 3000, 4000, 10000, 20000,
     ];
     let stretch = [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 4];
     let blend = [10, 12, 16, 20, 8, 80, 160, 1200, 2000, 4000];
@@ -312,7 +312,7 @@ macro_rules! complete_event {
     ($name:expr, $params:expr) => {{
         $params
             .update_sender
-            .send(PermuteUpdate::UpdatePermuteNodeStarted(
+            .send(PermuteUpdate::UpdatePermuteNodeCompleted(
                 $params.permutation.clone(),
                 $name,
                 PermuteNodeEvent::NodeProcessComplete,
