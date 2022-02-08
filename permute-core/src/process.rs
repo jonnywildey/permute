@@ -47,6 +47,8 @@ pub enum PermuteNodeName {
 
     TimeStretch,
 
+    Saturate,
+
     HalfSpeed,
     DoubleSpeed,
     RandomPitch,
@@ -774,55 +776,29 @@ fn phase_stage(
     Ok(new_samples)
 }
 
+pub fn saturate(params: &ProcessorParams, factor: f64) -> Result<ProcessorParams, PermuteError> {
+    let new_samples = params
+        .samples
+        .iter()
+        .map(|f| {
+            let s = match f {
+                d if *d > 0.0 => 1.0,
+                _ => -1.0,
+            };
+            f.abs().powf(factor) * s
+        })
+        .collect();
+    Ok(ProcessorParams {
+        samples: new_samples,
+        ..params.clone()
+    })
+}
+
 pub struct TimeStretchParams {
     pub grain_samples: usize,
     pub blend_samples: usize, // exclusive in grain
     pub stretch_factor: usize,
 }
-
-// pub fn time_stretch(
-//     params: &ProcessorParams,
-//     TimeStretchParams {
-//         grain_samples,
-//         blend_samples,
-//         stretch_factor,
-//     }: TimeStretchParams,
-// ) -> Result<ProcessorParams, PermuteError> {
-//     let mut new_samples: Vec<f64> = vec![];
-
-//     let mut new_chunks: Vec<Vec<f64>> = vec![];
-//     let mut samples = params.samples.clone();
-//     let chunks = samples.chunks_mut(grain_samples + blend_samples * 2);
-
-//     for chunk in chunks {
-//         let chunk_len = chunk.len();
-//         chunk[0] = 0.0;
-//         chunk[chunk_len - 1] = 0.0;
-//         for j in 1..chunk_len {
-//             if j < blend_samples {
-//                 chunk[j] = chunk[j] * (j as f64 / blend_samples as f64);
-//                 let l = chunk_len - 1 - j;
-//                 chunk[l] = chunk[l] * (j as f64 / blend_samples as f64)
-//             }
-//         }
-//         for _ in 0..stretch_factor {
-//             new_chunks.push(chunk.to_vec())
-//         }
-//     }
-
-//     for i in 0..new_chunks.len() {
-//         let current_chunk = &new_chunks[i];
-//         for (i, s) in current_chunk.into_iter().enumerate() {
-//             new_samples.push(*s);
-//         }
-//     }
-
-//     Ok(ProcessorParams {
-//         sample_length: new_samples.len(),
-//         samples: new_samples,
-//         ..params.clone()
-//     })
-// }
 
 pub fn time_stretch_cross(
     params: &ProcessorParams,
@@ -858,8 +834,6 @@ pub fn time_stretch_cross(
     }
     chunks.push(params.sample_length - 1);
 
-    print!("chunks {:?}", chunks);
-
     let half_blend = blend_samples / 2;
 
     let chunk_tuples: Vec<(usize, usize)> = chunks
@@ -868,16 +842,16 @@ pub fn time_stretch_cross(
         .map(|(i, d)| {
             let a = d[0];
             let b = d[1];
-            if i == 0 {
-                return (a, b + half_blend);
-            } else if i + 2 == chunks.len() {
-                return (a, b);
-            } else {
-                return (a, b + half_blend);
-            }
+            return (a, b);
+            // if i == 0 {
+            //     return (a, b);
+            // } else if i + 2 == chunks.len() {
+            //     return (a, b);
+            // } else {
+            //     return (a, b);
+            // }
         })
         .collect();
-    println!("chunk tuples {:?}", chunk_tuples);
 
     for (i, (start, end)) in chunk_tuples.iter().enumerate() {
         for s in 0..stretch_factor {
@@ -887,59 +861,23 @@ pub fn time_stretch_cross(
                     if i == 0 && s == 0 {
                         new_samples.push(params.samples[j]);
                     } else {
-                        let len = new_samples.len();
-                        let f = 0.5 + (pos as f64 / (half_blend * 2) as f64);
+                        let len = new_samples.len() - 1;
+                        let f = (pos as f64 / (half_blend) as f64);
 
-                        new_samples[len - half_blend - pos] = (f);
+                        new_samples.push(params.samples[j] * f);
+                        // new_samples[len - pos] = params.samples[j];
                         // new_samples[len - half_blend - pos] =
                         //     (params.samples[j] * f) + new_samples[len - half_blend - pos];
                     }
-                } else if end - j < blend_samples {
-                    let f1 = 1.0 - ((end - j) as f64 / (half_blend * 2) as f64);
-                    new_samples.push(f1);
+                } else if end - j < half_blend {
+                    let f1 = ((end - j) as f64 / (half_blend) as f64);
+                    new_samples.push(params.samples[j] * f1);
                 } else {
                     new_samples.push(params.samples[j]);
                 }
             }
         }
     }
-
-    // for i in 1..chunks.len() {
-    //     let a = chunks[i - 1];
-    //     let b = chunks[i];
-
-    //     for _ in 0..stretch_factor {
-    //         // let blend = match blend_samples {
-    //         //     d if (d / 2) > b - a => blend_samples / 2,
-    //         //     _ => b - a,
-    //         // };
-    //         let blend = blend_samples;
-    //         for j in a..b {
-    //             // if j - a < blend {
-    //             //     let v = (j - a) as f64 / blend as f64 / 2.0;
-    //             //     new_samples.push(params.samples[j] * v);
-    //             // } else if b - j < blend {
-    //             if j - a < blend {
-    //                 // if a == 0 {
-    //                 new_samples.push(params.samples[j])
-    //                 // }
-    //             } else if b - j < blend {
-    //                 let f = (b - j) as f64 / blend as f64 / 2.0;
-    //                 let v1 = params.samples[j] * f;
-    //                 let ncp = j + blend;
-    //                 // new_samples.push(v1);
-    //                 if ncp < params.sample_length - 1 {
-    //                     let fi = 1.0 - f;
-    //                     new_samples.push(v1 + (fi * params.samples[ncp]));
-    //                 } else {
-    //                     new_samples.push(params.samples[j]);
-    //                 }
-    //             } else {
-    //                 new_samples.push(params.samples[j]);
-    //             }
-    //         }
-    //     }
-    // }
 
     Ok(ProcessorParams {
         sample_length: new_samples.len(),

@@ -1,1 +1,2 @@
-cargo build --release && RUST_BACKTRACE=full target/release/permute --file examples/sin100hz2.wav  --output ./renders/ --inputTrail=0 --outputTrail=0  --permutations=1 --normalise --processorCount=1 --processor='Time stretch'
+cargo build --release && RUST_BACKTRACE=full target/release/permute --file examples/sin100hz2.wav  --output ./renders/ --inputTrail=0 --outputTrail=0  --permutations=1  --normalise --processorCount=1 --processor='Saturate'
+cargo build --release && RUST_BACKTRACE=full target/release/permute --file examples/amen.wav  --output ./renders/ --inputTrail=0 --outputTrail=0  --permutations=8  --normalise --processorCount=1 --processor='Saturate'

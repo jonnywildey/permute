@@ -54,6 +54,7 @@ pub fn generate_processor_sequence(
 pub fn get_processor_function(name: PermuteNodeName) -> ProcessorFn {
     match name {
         PermuteNodeName::TimeStretch => random_time_stretch,
+        PermuteNodeName::Saturate => random_saturate,
         PermuteNodeName::Reverse => reverse,
         PermuteNodeName::Chorus => random_chorus,
         PermuteNodeName::Phaser => random_phaser,
@@ -90,6 +91,18 @@ pub fn random_metallic_delay(params: &ProcessorParams) -> Result<ProcessorParams
     Ok(new_params)
 }
 
+pub fn random_saturate(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
+    start_event!(PermuteNodeName::Saturate, params);
+    let mut rng = thread_rng();
+
+    let factors = [0.35, 0.5, 0.6, 0.75, 0.8, 0.95, 1.25];
+    let factor = factors[rng.gen_range(0..factors.len())];
+
+    let new_params = saturate(&params.clone(), factor)?;
+    complete_event!(PermuteNodeName::Saturate, new_params);
+    Ok(new_params)
+}
+
 pub fn random_pitch(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
     start_event!(PermuteNodeName::RandomPitch, params);
     let mut rng = thread_rng();
@@ -109,13 +122,15 @@ pub fn random_time_stretch(params: &ProcessorParams) -> Result<ProcessorParams, 
     start_event!(PermuteNodeName::TimeStretch, params);
 
     let mut rng = thread_rng();
-    // let grain = [
-    //     200, 400, 600, 1000, 1600, 2000, 2200, 2400, 2600, 2800, 3000, 4000, 10000, 20000,
-    // ];
-    let grain = [10000];
+    let grain = [
+        200, 400, 600, 1000, 1600, 2000, 2200, 2400, 2600, 2800, 3000, 4000, 10000, 20000,
+    ];
+    // let grain = [2000];
     let stretch = [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 4];
-    // let blend = [10, 12, 16, 20, 8, 80, 160, 1200, 2000, 4000];
-    let blend = [100];
+    let blend = [
+        20, 40, 80, 100, 140, 160, 180, 200, 220, 240, 300, 340, 400, 500, 1200, 2000, 4000,
+    ];
+    // let blend = [80];
 
     let new_params = time_stretch_cross(
         &params,
