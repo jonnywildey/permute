@@ -109,11 +109,13 @@ pub fn random_time_stretch(params: &ProcessorParams) -> Result<ProcessorParams, 
     start_event!(PermuteNodeName::TimeStretch, params);
 
     let mut rng = thread_rng();
-    let grain = [
-        200, 400, 600, 1000, 1600, 2000, 2200, 2400, 2600, 2800, 3000, 4000, 10000, 20000,
-    ];
+    // let grain = [
+    //     200, 400, 600, 1000, 1600, 2000, 2200, 2400, 2600, 2800, 3000, 4000, 10000, 20000,
+    // ];
+    let grain = [10000];
     let stretch = [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 4];
-    let blend = [10, 12, 16, 20, 8, 80, 160, 1200, 2000, 4000];
+    // let blend = [10, 12, 16, 20, 8, 80, 160, 1200, 2000, 4000];
+    let blend = [100];
 
     let new_params = time_stretch_cross(
         &params,
