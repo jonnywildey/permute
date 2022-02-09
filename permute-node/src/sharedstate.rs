@@ -34,20 +34,6 @@ pub struct SharedState {
 
 impl SharedState {
     pub fn init(update_sender: mpsc::Sender<PermuteUpdate>) -> Self {
-        let all_processors = vec![
-            PermuteNodeName::Reverse,
-            PermuteNodeName::TimeStretch,
-            PermuteNodeName::MetallicDelay,
-            PermuteNodeName::RhythmicDelay,
-            PermuteNodeName::HalfSpeed,
-            PermuteNodeName::DoubleSpeed,
-            PermuteNodeName::RandomPitch,
-            PermuteNodeName::Wow,
-            PermuteNodeName::Flutter,
-            PermuteNodeName::Chorus,
-            PermuteNodeName::Flange,
-            PermuteNodeName::Phaser,
-        ];
         Self {
             // files: vec![],
             high_sample_rate: false,
@@ -60,8 +46,8 @@ impl SharedState {
             permutations: 3,
             processor_count: None,
             update_sender,
-            processor_pool: all_processors.clone(),
-            all_processors,
+            processor_pool: ALL_PROCESSORS.to_vec(),
+            all_processors: ALL_PROCESSORS.to_vec(),
             processing: false,
             permutation_outputs: vec![],
             files: vec![],
@@ -78,7 +64,10 @@ impl SharedState {
             output_trail: self.output_trail,
             permutation_depth: self.permutation_depth,
             permutations: self.permutations,
-            processor_count: self.processor_count,
+            processor_count: match self.permutation_depth {
+                0 => Some(1),
+                _ => None,
+            },
             processor_pool: self.processor_pool.clone(),
             update_sender: self.update_sender.to_owned(),
         }

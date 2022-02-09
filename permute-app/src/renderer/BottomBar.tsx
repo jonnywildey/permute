@@ -171,7 +171,8 @@ function Depth(depth: number, setDepth: (depth: number) => void) {
         label={
           <Text fontSize="lg">
             Controls how many processors the audio is run through. <br />
-            High depth values can run up to 32 processors and can be noisy
+            High depth values can run up to 32 processors and can be noisy / very long. <br />
+            Setting depth to 0 will always run the audio through 1 processor
           </Text>
         }
       >
@@ -181,7 +182,7 @@ function Depth(depth: number, setDepth: (depth: number) => void) {
       </Tooltip>
       <Slider
         aria-label="slider-ex-2"
-        min={1}
+        min={0}
         max={4}
         step={1}
         colorScheme="brand"
@@ -190,6 +191,9 @@ function Depth(depth: number, setDepth: (depth: number) => void) {
         color="gray.600"
         fontSize="sm"
       >
+        <SliderMark value={0} mt="2" ml="-0.75">
+          0
+        </SliderMark>
         <SliderMark value={1} mt="2" ml="-0.75">
           1
         </SliderMark>

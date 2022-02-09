@@ -53,7 +53,8 @@ pub fn generate_processor_sequence(
 
 pub fn get_processor_function(name: PermuteNodeName) -> ProcessorFn {
     match name {
-        PermuteNodeName::TimeStretch => random_time_stretch,
+        PermuteNodeName::GranularTimeStretch => random_granular_time_stretch,
+        PermuteNodeName::Fuzz => random_fuzz,
         PermuteNodeName::Saturate => random_saturate,
         PermuteNodeName::Reverse => reverse,
         PermuteNodeName::Chorus => random_chorus,
@@ -91,14 +92,22 @@ pub fn random_metallic_delay(params: &ProcessorParams) -> Result<ProcessorParams
     Ok(new_params)
 }
 
-pub fn random_saturate(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
-    start_event!(PermuteNodeName::Saturate, params);
+pub fn random_fuzz(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
+    start_event!(PermuteNodeName::Fuzz, params);
     let mut rng = thread_rng();
 
-    let factors = [0.35, 0.5, 0.6, 0.75, 0.8, 0.95, 1.25];
+    let factors = [0.6, 0.75, 0.8, 0.95, 1.25];
     let factor = factors[rng.gen_range(0..factors.len())];
 
-    let new_params = saturate(&params.clone(), factor)?;
+    let new_params = distort(&params.clone(), factor)?;
+    complete_event!(PermuteNodeName::Fuzz, new_params);
+    Ok(new_params)
+}
+
+pub fn random_saturate(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
+    start_event!(PermuteNodeName::Saturate, params);
+
+    let new_params = saturate(&params.clone())?;
     complete_event!(PermuteNodeName::Saturate, new_params);
     Ok(new_params)
 }
@@ -118,8 +127,10 @@ pub fn random_pitch(params: &ProcessorParams) -> Result<ProcessorParams, Permute
     Ok(new_params)
 }
 
-pub fn random_time_stretch(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
-    start_event!(PermuteNodeName::TimeStretch, params);
+pub fn random_granular_time_stretch(
+    params: &ProcessorParams,
+) -> Result<ProcessorParams, PermuteError> {
+    start_event!(PermuteNodeName::GranularTimeStretch, params);
 
     let mut rng = thread_rng();
     let grain = [
@@ -140,7 +151,7 @@ pub fn random_time_stretch(params: &ProcessorParams) -> Result<ProcessorParams, 
             blend_samples: blend[rng.gen_range(0..blend.len())],
         },
     )?;
-    complete_event!(PermuteNodeName::TimeStretch, new_params);
+    complete_event!(PermuteNodeName::GranularTimeStretch, new_params);
     Ok(new_params)
 }
 
@@ -212,10 +223,10 @@ pub fn random_chorus(params: &ProcessorParams) -> Result<ProcessorParams, Permut
 
     let mut rng = thread_rng();
 
-    let millis_low = (params.sample_rate as f64 / 1000_f64 * 4_f64) as usize;
+    let millis_low = (params.sample_rate as f64 / 1000_f64 * 7_f64) as usize;
     let millis_high = (params.sample_rate as f64 / 1000_f64 * 20_f64) as usize;
     let delay_params = DelayLineParams {
-        feedback_factor: rng.gen_range(0_f64..0.8_f64),
+        feedback_factor: rng.gen_range(0_f64..0.6_f64),
         delay_sample_length: rng.gen_range(millis_low..millis_high),
         dry_gain_factor: 1_f64,
         wet_gain_factor: rng.gen_range(0.7..1_f64),
@@ -223,7 +234,7 @@ pub fn random_chorus(params: &ProcessorParams) -> Result<ProcessorParams, Permut
 
     let vibrato_params = VibratoParams {
         speed_hz: rng.gen_range(0.5_f64..5_f64),
-        depth: rng.gen_range(0.2_f64..0.4_f64),
+        depth: rng.gen_range(0.1_f64..0.2_f64),
     };
 
     let new_params = chorus(

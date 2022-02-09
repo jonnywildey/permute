@@ -56,7 +56,7 @@ fn main() {
 
     let processor_pool: Vec<PermuteNodeName> = match args.processor.as_str() {
         "" => vec![
-            PermuteNodeName::TimeStretch,
+            PermuteNodeName::GranularTimeStretch,
             PermuteNodeName::Reverse,
             PermuteNodeName::MetallicDelay,
             PermuteNodeName::RhythmicDelay,

@@ -1,8 +1,11 @@
 use biquad::*;
 use serde::{Deserialize, Serialize};
 use sndfile::{Endian, SubtypeFormat};
-use std::{f64::consts::PI, sync::mpsc};
-use strum::EnumIter;
+use std::{
+    f64::consts::{E, PI},
+    sync::mpsc,
+};
+use strum::{EnumIter, IntoEnumIterator};
 
 use crate::{permute_error::PermuteError, permute_files::PermuteUpdate};
 
@@ -39,14 +42,15 @@ pub enum PermuteNodeEvent {
     NodeProcessComplete,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, EnumIter)]
 pub enum PermuteNodeName {
     Reverse,
     RhythmicDelay,
     MetallicDelay,
 
-    TimeStretch,
+    GranularTimeStretch,
 
+    Fuzz,
     Saturate,
 
     HalfSpeed,
@@ -62,6 +66,23 @@ pub enum PermuteNodeName {
     SampleRateConversionHigh,
     SampleRateConversionOriginal,
 }
+
+pub const ALL_PROCESSORS: [PermuteNodeName; 14] = [
+    PermuteNodeName::Reverse,
+    PermuteNodeName::GranularTimeStretch,
+    PermuteNodeName::Saturate,
+    PermuteNodeName::Fuzz,
+    PermuteNodeName::MetallicDelay,
+    PermuteNodeName::RhythmicDelay,
+    PermuteNodeName::HalfSpeed,
+    PermuteNodeName::DoubleSpeed,
+    PermuteNodeName::RandomPitch,
+    PermuteNodeName::Wow,
+    PermuteNodeName::Flutter,
+    PermuteNodeName::Chorus,
+    PermuteNodeName::Flange,
+    PermuteNodeName::Phaser,
+];
 
 pub fn reverse(
     ProcessorParams {
@@ -776,16 +797,28 @@ fn phase_stage(
     Ok(new_samples)
 }
 
-pub fn saturate(params: &ProcessorParams, factor: f64) -> Result<ProcessorParams, PermuteError> {
+pub fn distort(params: &ProcessorParams, factor: f64) -> Result<ProcessorParams, PermuteError> {
     let new_samples = params
         .samples
         .iter()
         .map(|f| {
-            let s = match f {
-                d if *d > 0.0 => 1.0,
-                _ => -1.0,
-            };
+            let s = f.signum();
             f.abs().powf(factor) * s
+        })
+        .collect();
+    Ok(ProcessorParams {
+        samples: new_samples,
+        ..params.clone()
+    })
+}
+
+pub fn saturate(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
+    let new_samples = params
+        .samples
+        .iter()
+        .map(|f| {
+            let s = f.signum();
+            s * (1.0 - E.powf(-1.0 * f.abs()))
         })
         .collect();
     Ok(ProcessorParams {
