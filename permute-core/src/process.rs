@@ -1,8 +1,11 @@
 use biquad::*;
 use serde::{Deserialize, Serialize};
 use sndfile::{Endian, SubtypeFormat};
-use std::{f64::consts::PI, sync::mpsc};
-use strum::EnumIter;
+use std::{
+    f64::consts::{E, PI},
+    sync::mpsc,
+};
+use strum::{EnumIter, IntoEnumIterator};
 
 use crate::{permute_error::PermuteError, permute_files::PermuteUpdate};
 
@@ -39,14 +42,21 @@ pub enum PermuteNodeEvent {
     NodeProcessComplete,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, EnumIter)]
 pub enum PermuteNodeName {
     Reverse,
     RhythmicDelay,
     MetallicDelay,
+
+    GranularTimeStretch,
+
+    Fuzz,
+    Saturate,
+
     HalfSpeed,
     DoubleSpeed,
     RandomPitch,
+
     Wow,
     Flutter,
     Flange,
@@ -56,6 +66,23 @@ pub enum PermuteNodeName {
     SampleRateConversionHigh,
     SampleRateConversionOriginal,
 }
+
+pub const ALL_PROCESSORS: [PermuteNodeName; 14] = [
+    PermuteNodeName::Reverse,
+    PermuteNodeName::GranularTimeStretch,
+    PermuteNodeName::Saturate,
+    PermuteNodeName::Fuzz,
+    PermuteNodeName::MetallicDelay,
+    PermuteNodeName::RhythmicDelay,
+    PermuteNodeName::HalfSpeed,
+    PermuteNodeName::DoubleSpeed,
+    PermuteNodeName::RandomPitch,
+    PermuteNodeName::Wow,
+    PermuteNodeName::Flutter,
+    PermuteNodeName::Chorus,
+    PermuteNodeName::Flange,
+    PermuteNodeName::Phaser,
+];
 
 pub fn reverse(
     ProcessorParams {
@@ -351,13 +378,13 @@ pub fn sum(sample_lines: Vec<SampleLine>) -> Vec<f64> {
 pub fn change_speed(
     ProcessorParams {
         samples,
-        sample_length,
         channels,
         endian,
         file_format,
         sample_rate,
         update_sender,
         permutation,
+        ..
     }: ProcessorParams,
     speed: f64,
 ) -> ProcessorParams {
@@ -768,6 +795,128 @@ fn phase_stage(
     }
 
     Ok(new_samples)
+}
+
+pub fn distort(params: &ProcessorParams, factor: f64) -> Result<ProcessorParams, PermuteError> {
+    let new_samples = params
+        .samples
+        .iter()
+        .map(|f| {
+            let s = f.signum();
+            f.abs().powf(factor) * s
+        })
+        .collect();
+    Ok(ProcessorParams {
+        samples: new_samples,
+        ..params.clone()
+    })
+}
+
+pub fn saturate(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
+    let new_samples = params
+        .samples
+        .iter()
+        .map(|f| {
+            let s = f.signum();
+            s * (1.0 - E.powf(-1.0 * f.abs()))
+        })
+        .collect();
+    Ok(ProcessorParams {
+        samples: new_samples,
+        ..params.clone()
+    })
+}
+
+pub struct TimeStretchParams {
+    pub grain_samples: usize,
+    pub blend_samples: usize, // exclusive in grain
+    pub stretch_factor: usize,
+}
+
+pub fn time_stretch_cross(
+    params: &ProcessorParams,
+    TimeStretchParams {
+        grain_samples,
+        blend_samples,
+        stretch_factor,
+    }: TimeStretchParams,
+) -> Result<ProcessorParams, PermuteError> {
+    let mut new_samples: Vec<f64> = vec![];
+
+    let blend_samples = match blend_samples {
+        d if d > grain_samples => grain_samples,
+        _ => blend_samples,
+    };
+
+    let count = 1;
+    let mut counter = 0;
+
+    let mut chunks: Vec<usize> = vec![0];
+    for i in (params.channels..params.sample_length).step_by(params.channels) {
+        let a = params.samples[i - params.channels];
+        let b = params.samples[i];
+        if (a > 0.0 && b < 0.0) || (a < 0.0 && b > 0.0) {
+            if i > chunks.last().unwrap() + grain_samples {
+                counter += 1;
+            }
+        }
+        if counter == count {
+            chunks.push(i);
+            counter = 0;
+        }
+    }
+    chunks.push(params.sample_length - 1);
+
+    let half_blend = blend_samples / 2;
+
+    let chunk_tuples: Vec<(usize, usize)> = chunks
+        .windows(2)
+        .enumerate()
+        .map(|(i, d)| {
+            let a = d[0];
+            let b = d[1];
+            return (a, b);
+            // if i == 0 {
+            //     return (a, b);
+            // } else if i + 2 == chunks.len() {
+            //     return (a, b);
+            // } else {
+            //     return (a, b);
+            // }
+        })
+        .collect();
+
+    for (i, (start, end)) in chunk_tuples.iter().enumerate() {
+        for s in 0..stretch_factor {
+            for j in *start..*end {
+                let pos = j - start;
+                if pos < half_blend {
+                    if i == 0 && s == 0 {
+                        new_samples.push(params.samples[j]);
+                    } else {
+                        let len = new_samples.len() - 1;
+                        let f = (pos as f64 / (half_blend) as f64);
+
+                        new_samples.push(params.samples[j] * f);
+                        // new_samples[len - pos] = params.samples[j];
+                        // new_samples[len - half_blend - pos] =
+                        //     (params.samples[j] * f) + new_samples[len - half_blend - pos];
+                    }
+                } else if end - j < half_blend {
+                    let f1 = ((end - j) as f64 / (half_blend) as f64);
+                    new_samples.push(params.samples[j] * f1);
+                } else {
+                    new_samples.push(params.samples[j]);
+                }
+            }
+        }
+    }
+
+    Ok(ProcessorParams {
+        sample_length: new_samples.len(),
+        samples: new_samples,
+        ..params.clone()
+    })
 }
 
 pub fn lfo_sin(sample: usize, sample_rate: usize, lfo_rate: f64) -> f64 {

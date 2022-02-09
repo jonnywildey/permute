@@ -53,6 +53,9 @@ pub fn generate_processor_sequence(
 
 pub fn get_processor_function(name: PermuteNodeName) -> ProcessorFn {
     match name {
+        PermuteNodeName::GranularTimeStretch => random_granular_time_stretch,
+        PermuteNodeName::Fuzz => random_fuzz,
+        PermuteNodeName::Saturate => random_saturate,
         PermuteNodeName::Reverse => reverse,
         PermuteNodeName::Chorus => random_chorus,
         PermuteNodeName::Phaser => random_phaser,
@@ -73,12 +76,7 @@ pub fn get_processor_function(name: PermuteNodeName) -> ProcessorFn {
 // Random processors
 
 pub fn random_metallic_delay(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
-    let update_sender = params.update_sender.to_owned();
-    update_sender.send(PermuteUpdate::UpdatePermuteNodeStarted(
-        params.permutation.clone(),
-        PermuteNodeName::MetallicDelay,
-        PermuteNodeEvent::NodeProcessStarted,
-    ))?;
+    start_event!(PermuteNodeName::MetallicDelay, params);
     let mut rng = thread_rng();
 
     let sec_10 = (params.sample_rate as f64 * 0.1) as usize;
@@ -90,21 +88,32 @@ pub fn random_metallic_delay(params: &ProcessorParams) -> Result<ProcessorParams
     };
 
     let new_params = delay_line(&params.clone(), &delay_params)?;
-    update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
-        params.permutation.clone(),
-        PermuteNodeName::MetallicDelay,
-        PermuteNodeEvent::NodeProcessComplete,
-    ))?;
+    complete_event!(PermuteNodeName::MetallicDelay, new_params);
+    Ok(new_params)
+}
+
+pub fn random_fuzz(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
+    start_event!(PermuteNodeName::Fuzz, params);
+    let mut rng = thread_rng();
+
+    let factors = [0.6, 0.75, 0.8, 0.95, 1.25];
+    let factor = factors[rng.gen_range(0..factors.len())];
+
+    let new_params = distort(&params.clone(), factor)?;
+    complete_event!(PermuteNodeName::Fuzz, new_params);
+    Ok(new_params)
+}
+
+pub fn random_saturate(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
+    start_event!(PermuteNodeName::Saturate, params);
+
+    let new_params = saturate(&params.clone())?;
+    complete_event!(PermuteNodeName::Saturate, new_params);
     Ok(new_params)
 }
 
 pub fn random_pitch(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
-    let update_sender = params.update_sender.to_owned();
-    update_sender.send(PermuteUpdate::UpdatePermuteNodeStarted(
-        params.permutation.clone(),
-        PermuteNodeName::RandomPitch,
-        PermuteNodeEvent::NodeProcessStarted,
-    ))?;
+    start_event!(PermuteNodeName::RandomPitch, params);
     let mut rng = thread_rng();
 
     let speeds: [f64; 10] =
@@ -113,22 +122,42 @@ pub fn random_pitch(params: &ProcessorParams) -> Result<ProcessorParams, Permute
     let speed = speeds[rng.gen_range(0..speeds.len())];
 
     let new_params = change_speed(params.clone(), speed);
-    update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
-        params.permutation.clone(),
-        PermuteNodeName::RandomPitch,
-        PermuteNodeEvent::NodeProcessComplete,
-    ))?;
+    complete_event!(PermuteNodeName::RandomPitch, new_params);
+
+    Ok(new_params)
+}
+
+pub fn random_granular_time_stretch(
+    params: &ProcessorParams,
+) -> Result<ProcessorParams, PermuteError> {
+    start_event!(PermuteNodeName::GranularTimeStretch, params);
+
+    let mut rng = thread_rng();
+    let grain = [
+        200, 400, 600, 1000, 1600, 2000, 2200, 2400, 2600, 2800, 3000, 4000, 10000, 20000,
+    ];
+    // let grain = [2000];
+    let stretch = [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 4];
+    let blend = [
+        20, 40, 80, 100, 140, 160, 180, 200, 220, 240, 300, 340, 400, 500, 1200, 2000, 4000,
+    ];
+    // let blend = [80];
+
+    let new_params = time_stretch_cross(
+        &params,
+        TimeStretchParams {
+            grain_samples: grain[rng.gen_range(0..grain.len())],
+            stretch_factor: stretch[rng.gen_range(0..stretch.len())],
+            blend_samples: blend[rng.gen_range(0..blend.len())],
+        },
+    )?;
+    complete_event!(PermuteNodeName::GranularTimeStretch, new_params);
     Ok(new_params)
 }
 
 pub fn random_rhythmic_delay(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
-    let update_sender = params.update_sender.to_owned();
-    let permutation = params.permutation.clone();
-    update_sender.send(PermuteUpdate::UpdatePermuteNodeStarted(
-        params.permutation.clone(),
-        PermuteNodeName::RhythmicDelay,
-        PermuteNodeEvent::NodeProcessStarted,
-    ))?;
+    start_event!(PermuteNodeName::RhythmicDelay, params);
+
     let mut rng = thread_rng();
 
     let sec_10 = (params.sample_rate as f64 * 0.1) as usize;
@@ -141,111 +170,63 @@ pub fn random_rhythmic_delay(params: &ProcessorParams) -> Result<ProcessorParams
     };
 
     let new_params = delay_line(&params, &delay_params)?;
-    update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
-        permutation,
-        PermuteNodeName::RhythmicDelay,
-        PermuteNodeEvent::NodeProcessComplete,
-    ))?;
+    complete_event!(PermuteNodeName::RhythmicDelay, new_params);
+
     Ok(new_params)
 }
 
 pub fn half_speed(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
-    let update_sender = params.update_sender.to_owned();
-    let permutation = params.permutation.clone();
-    update_sender.send(PermuteUpdate::UpdatePermuteNodeStarted(
-        params.permutation.clone(),
-        PermuteNodeName::HalfSpeed,
-        PermuteNodeEvent::NodeProcessStarted,
-    ))?;
-    let new_samples = change_speed(params.to_owned(), 0.5_f64);
-    update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
-        permutation,
-        PermuteNodeName::HalfSpeed,
-        PermuteNodeEvent::NodeProcessComplete,
-    ))?;
-    Ok(new_samples)
+    start_event!(PermuteNodeName::HalfSpeed, params);
+    let new_params = change_speed(params.to_owned(), 0.5_f64);
+    complete_event!(PermuteNodeName::HalfSpeed, new_params);
+    Ok(new_params)
 }
 pub fn double_speed(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
-    let update_sender = params.update_sender.to_owned();
-    let permutation = params.permutation.clone();
-    update_sender.send(PermuteUpdate::UpdatePermuteNodeStarted(
-        params.permutation.clone(),
-        PermuteNodeName::DoubleSpeed,
-        PermuteNodeEvent::NodeProcessStarted,
-    ))?;
-    let new_samples = change_speed(params.to_owned(), 2_f64);
-    update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
-        permutation,
-        PermuteNodeName::DoubleSpeed,
-        PermuteNodeEvent::NodeProcessComplete,
-    ))?;
-    Ok(new_samples)
+    start_event!(PermuteNodeName::DoubleSpeed, params);
+    let new_params = change_speed(params.to_owned(), 2_f64);
+    complete_event!(PermuteNodeName::DoubleSpeed, new_params);
+    Ok(new_params)
 }
 
 pub fn random_wow(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
-    let update_sender = params.update_sender.to_owned();
-    let permutation = params.permutation.clone();
-    update_sender.send(PermuteUpdate::UpdatePermuteNodeStarted(
-        params.permutation.clone(),
-        PermuteNodeName::Wow,
-        PermuteNodeEvent::NodeProcessStarted,
-    ))?;
+    start_event!(PermuteNodeName::Wow, params);
     let mut rng = thread_rng();
 
-    let new_samples = vibrato(
+    let new_params = vibrato(
         params.to_owned(),
         VibratoParams {
             speed_hz: rng.gen_range(0.2_f64..1.6_f64),
             depth: rng.gen_range(0.3_f64..0.7_f64),
         },
     )?;
-    update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
-        permutation,
-        PermuteNodeName::Wow,
-        PermuteNodeEvent::NodeProcessComplete,
-    ))?;
-    Ok(new_samples)
+    complete_event!(PermuteNodeName::Wow, new_params);
+    Ok(new_params)
 }
 pub fn random_flutter(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
-    let update_sender = params.update_sender.to_owned();
-    let permutation = params.permutation.clone();
-    update_sender.send(PermuteUpdate::UpdatePermuteNodeStarted(
-        params.permutation.clone(),
-        PermuteNodeName::Flutter,
-        PermuteNodeEvent::NodeProcessStarted,
-    ))?;
+    start_event!(PermuteNodeName::Flutter, params);
     let mut rng = thread_rng();
 
     let depth = rng.gen_range(0.1_f64..0.27_f64).powf(2.0); // try and push values towards lower values
-    let new_samples = vibrato(
+    let new_params = vibrato(
         params.to_owned(),
         VibratoParams {
             speed_hz: rng.gen_range(5_f64..20_f64),
             depth,
         },
     )?;
-    update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
-        permutation,
-        PermuteNodeName::Flutter,
-        PermuteNodeEvent::NodeProcessComplete,
-    ))?;
-    Ok(new_samples)
+    complete_event!(PermuteNodeName::Flutter, new_params);
+    Ok(new_params)
 }
 
 pub fn random_chorus(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
-    let update_sender = params.update_sender.to_owned();
-    let permutation = params.permutation.clone();
-    update_sender.send(PermuteUpdate::UpdatePermuteNodeStarted(
-        params.permutation.clone(),
-        PermuteNodeName::Chorus,
-        PermuteNodeEvent::NodeProcessStarted,
-    ))?;
+    start_event!(PermuteNodeName::Chorus, params);
+
     let mut rng = thread_rng();
 
-    let millis_low = (params.sample_rate as f64 / 1000_f64 * 4_f64) as usize;
+    let millis_low = (params.sample_rate as f64 / 1000_f64 * 7_f64) as usize;
     let millis_high = (params.sample_rate as f64 / 1000_f64 * 20_f64) as usize;
     let delay_params = DelayLineParams {
-        feedback_factor: rng.gen_range(0_f64..0.8_f64),
+        feedback_factor: rng.gen_range(0_f64..0.6_f64),
         delay_sample_length: rng.gen_range(millis_low..millis_high),
         dry_gain_factor: 1_f64,
         wet_gain_factor: rng.gen_range(0.7..1_f64),
@@ -253,35 +234,24 @@ pub fn random_chorus(params: &ProcessorParams) -> Result<ProcessorParams, Permut
 
     let vibrato_params = VibratoParams {
         speed_hz: rng.gen_range(0.5_f64..5_f64),
-        depth: rng.gen_range(0.2_f64..0.4_f64),
+        depth: rng.gen_range(0.1_f64..0.2_f64),
     };
 
-    let new_samples = chorus(
+    let new_params = chorus(
         params.to_owned(),
         ChorusParams {
             delay_params,
             vibrato_params,
         },
     )?;
-    update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
-        permutation,
-        PermuteNodeName::Chorus,
-        PermuteNodeEvent::NodeProcessComplete,
-    ))?;
-    Ok(new_samples)
+    complete_event!(PermuteNodeName::Chorus, new_params);
+    Ok(new_params)
 }
 
 pub fn random_phaser(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
-    let update_sender = params.update_sender.to_owned();
-    let permutation = params.permutation.clone();
-    update_sender.send(PermuteUpdate::UpdatePermuteNodeStarted(
-        params.permutation.clone(),
-        PermuteNodeName::Phaser,
-        PermuteNodeEvent::NodeProcessStarted,
-    ))?;
+    start_event!(PermuteNodeName::Phaser, params);
 
     let mut rng = thread_rng();
-
     let stages = PhaserStages::iter().choose(&mut rng).unwrap();
 
     let phaser_params = PhaserParams {
@@ -295,24 +265,13 @@ pub fn random_phaser(params: &ProcessorParams) -> Result<ProcessorParams, Permut
         wet_mix: 1.0,
     };
 
-    let new_samples = phaser(&params.to_owned(), &phaser_params)?;
-
-    update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
-        permutation,
-        PermuteNodeName::Phaser,
-        PermuteNodeEvent::NodeProcessComplete,
-    ))?;
-    Ok(new_samples)
+    let new_params = phaser(&params.to_owned(), &phaser_params)?;
+    complete_event!(PermuteNodeName::Phaser, new_params);
+    Ok(new_params)
 }
 
 pub fn random_zero_flange(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
-    let update_sender = params.update_sender.to_owned();
-    let permutation = params.permutation.clone();
-    update_sender.send(PermuteUpdate::UpdatePermuteNodeStarted(
-        params.permutation.clone(),
-        PermuteNodeName::Flange,
-        PermuteNodeEvent::NodeProcessStarted,
-    ))?;
+    start_event!(PermuteNodeName::Flange, params);
     let mut rng = thread_rng();
 
     let speed_hz = rng.gen_range(0.01_f64..1.1_f64);
@@ -353,27 +312,39 @@ pub fn random_zero_flange(params: &ProcessorParams) -> Result<ProcessorParams, P
         ..delayed_vib
     };
 
-    update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
-        permutation,
-        PermuteNodeName::Flange,
-        PermuteNodeEvent::NodeProcessComplete,
-    ))?;
+    complete_event!(PermuteNodeName::Flange, flanged);
     Ok(flanged)
 }
 
 pub fn normalise(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
-    let update_sender = params.update_sender.to_owned();
-    let permutation = params.permutation.clone();
-    update_sender.send(PermuteUpdate::UpdatePermuteNodeStarted(
-        permutation.clone(),
-        PermuteNodeName::Normalise,
-        PermuteNodeEvent::NodeProcessStarted,
-    ))?;
-    let new_samples = ceiling(params.to_owned(), 1_f64);
-    update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
-        permutation,
-        PermuteNodeName::Normalise,
-        PermuteNodeEvent::NodeProcessComplete,
-    ))?;
-    Ok(new_samples)
+    start_event!(PermuteNodeName::Normalise, params);
+
+    let new_params = ceiling(params.to_owned(), 1_f64);
+    complete_event!(PermuteNodeName::Normalise, new_params);
+    Ok(new_params)
 }
+
+macro_rules! start_event {
+    ($name:expr, $params:expr) => {{
+        $params
+            .update_sender
+            .send(PermuteUpdate::UpdatePermuteNodeStarted(
+                $params.permutation.clone(),
+                $name,
+                PermuteNodeEvent::NodeProcessStarted,
+            ))?;
+    }};
+}
+pub(crate) use start_event;
+macro_rules! complete_event {
+    ($name:expr, $params:expr) => {{
+        $params
+            .update_sender
+            .send(PermuteUpdate::UpdatePermuteNodeCompleted(
+                $params.permutation.clone(),
+                $name,
+                PermuteNodeEvent::NodeProcessComplete,
+            ))?;
+    }};
+}
+pub(crate) use complete_event;

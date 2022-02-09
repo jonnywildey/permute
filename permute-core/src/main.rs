@@ -40,8 +40,11 @@ struct PermuteArgs {
     #[structopt(long = "highSampleRate")]
     high_sample_rate: bool,
     /// How many processes to pick from per depth. If not included a random value from 2-5 will be used
-    #[structopt(long = "processor", default_value = "0")]
+    #[structopt(long = "processorCount", default_value = "0")]
     processor_count: i32,
+    /// Run audio through a specific process
+    #[structopt(long = "processor", default_value = "")]
+    processor: String,
 }
 
 fn main() {
@@ -51,19 +54,23 @@ fn main() {
         args.file, args.output, args.permutations
     );
 
-    let processor_pool: Vec<PermuteNodeName> = vec![
-        // PermuteNodeName::Reverse,
-        // PermuteNodeName::MetallicDelay,
-        // PermuteNodeName::RhythmicDelay,
-        // PermuteNodeName::HalfSpeed,
-        // PermuteNodeName::DoubleSpeed,
-        PermuteNodeName::RandomPitch,
-        // PermuteNodeName::Wow,
-        // PermuteNodeName::Flutter,
-        // PermuteNodeName::Chorus,
-        // PermuteNodeName::Phaser,
-        // PermuteNodeName::Flange,
-    ];
+    let processor_pool: Vec<PermuteNodeName> = match args.processor.as_str() {
+        "" => vec![
+            PermuteNodeName::GranularTimeStretch,
+            PermuteNodeName::Reverse,
+            PermuteNodeName::MetallicDelay,
+            PermuteNodeName::RhythmicDelay,
+            PermuteNodeName::HalfSpeed,
+            PermuteNodeName::DoubleSpeed,
+            PermuteNodeName::RandomPitch,
+            PermuteNodeName::Wow,
+            PermuteNodeName::Flutter,
+            PermuteNodeName::Chorus,
+            PermuteNodeName::Phaser,
+            PermuteNodeName::Flange,
+        ],
+        str => vec![get_processor_from_display_name(str).expect("Processor not found")],
+    };
 
     let processor_count: Option<i32> = match args.processor_count {
         0 => None,
