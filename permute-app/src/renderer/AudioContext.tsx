@@ -86,8 +86,10 @@ export const CreateAudioContext: React.FC = ({ children }) => {
     audio.pause();
     setState({ ...state, isPlaying: false });
   };
+
   const stop = () => {
     const audio = audioEl.current!;
+    audio.src = "456";
     audio.pause();
     audio.currentTime = 0;
     if (state.onPlayUpdate) {

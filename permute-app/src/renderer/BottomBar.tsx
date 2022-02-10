@@ -27,6 +27,7 @@ export interface IBottomBarProps {
   outputTrail: number;
   output: string;
   files: IPermutationInput[];
+  processorPool: string[];
   setDepth: (depth: number) => void;
   setPermutations: (permutations: number) => void;
   setNormalised: (normaliseAtEnd: boolean) => void;
@@ -53,6 +54,7 @@ export const BottomBar: React.FC<IBottomBarProps> = ({
   output,
   normaliseAtEnd,
   outputTrail,
+  processorPool,
   permutations,
 }) => {
   return (
@@ -86,6 +88,8 @@ export const BottomBar: React.FC<IBottomBarProps> = ({
           output={output}
           processing={processing}
           permutationOutputs={permutationOutputs}
+          permutations={permutations}
+          processorPool={processorPool}
           runProcessor={runProcessor}
         />
         {OutputTrail(outputTrail, setOutputTrail)}
@@ -357,6 +361,8 @@ export interface IRunProps {
   permutationOutputs: IPermutationOutput[];
   output: string;
   files: IPermutationInput[];
+  processorPool: string[];
+  permutations: number;
 }
 
 const Run: React.FC<IRunProps> = ({
@@ -365,16 +371,18 @@ const Run: React.FC<IRunProps> = ({
   processing,
   runProcessor,
   permutationOutputs,
+  processorPool,
+  permutations,
 }) => {
   const progress =
     permutationOutputs.reduce((acc, permutationOutput) => {
       return acc + permutationOutput.progress;
-    }, 0) / permutationOutputs.length;
+    }, 0) / (files.length * permutations);
   return (
     <GridItem rowSpan={2} colSpan={3} display="flex" pl={6} pr={6}>
       <Button
         onClick={runProcessor}
-        disabled={processing || !output || !files.length}
+        disabled={processing || !output || !files.length || !processorPool.length}
         width="100%"
         bg={buttonBg}
         color="gray.50"

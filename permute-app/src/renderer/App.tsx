@@ -185,6 +185,7 @@ const Content = () => {
         setNormalised={setNormalised}
         setInputTrail={setInputTrail}
         setOutputTrail={setOutputTrail}
+        processorPool={processorPool}
         files={files}
         output={output}
       />

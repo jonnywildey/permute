@@ -17,6 +17,7 @@ export const Processor: React.FC<IProcessorProps> = ({
   <Button
     key={name}
     bg={enabled ? bg : bdDisabled}
+    className={enabled ? "processor-enabled" : "processor"}
     color="gray.700"
     onClick={onClick}
     width="100%"

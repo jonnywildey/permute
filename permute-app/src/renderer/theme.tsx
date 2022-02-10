@@ -20,6 +20,7 @@ export const theme = extendTheme(
         500: '#CBA7DA',
         600: '#3EE8C5',
         650: '#3ee9c44d',
+        675: '#3ee9c4b0',
         700: '#3ee8c5d9',
       },
     },
