@@ -5,7 +5,7 @@ use std::{
     f64::consts::{E, PI},
     sync::mpsc,
 };
-use strum::{EnumIter, IntoEnumIterator};
+use strum::EnumIter;
 
 use crate::{permute_error::PermuteError, permute_files::PermuteUpdate};
 
@@ -49,6 +49,7 @@ pub enum PermuteNodeName {
     MetallicDelay,
 
     GranularTimeStretch,
+    Reverb,
 
     Fuzz,
     Saturate,
@@ -67,9 +68,11 @@ pub enum PermuteNodeName {
     SampleRateConversionOriginal,
 }
 
-pub const ALL_PROCESSORS: [PermuteNodeName; 14] = [
+#[allow(dead_code)]
+pub const ALL_PROCESSORS: [PermuteNodeName; 15] = [
     PermuteNodeName::Reverse,
     PermuteNodeName::GranularTimeStretch,
+    PermuteNodeName::Reverb,
     PermuteNodeName::Saturate,
     PermuteNodeName::Fuzz,
     PermuteNodeName::MetallicDelay,
@@ -348,6 +351,7 @@ pub fn ceiling(
     };
 }
 
+#[derive(Debug, Clone)]
 pub struct SampleLine {
     pub samples: Vec<f64>,
     pub gain_factor: f64,
@@ -919,8 +923,234 @@ pub fn time_stretch_cross(
     })
 }
 
-pub fn lfo_sin(sample: usize, sample_rate: usize, lfo_rate: f64) -> f64 {
-    (sample as f64 / sample_rate as f64 * 2.0 * PI * lfo_rate).sin()
+pub struct ReverbParams {
+    pub predelay_ms: f64,
+    pub wet_mix: f64,
+    pub len_factor: f64,
+    pub decay_factor: f64, // be careful
+}
+
+pub fn reverb(
+    params: &ProcessorParams,
+    ReverbParams {
+        predelay_ms,
+        wet_mix,
+        len_factor,
+        decay_factor,
+    }: ReverbParams,
+) -> Result<ProcessorParams, PermuteError> {
+    let comb_delays_ms: Vec<(f64, f64, f64, f64)> = vec![
+        (
+            (11.73 * len_factor) + predelay_ms,
+            decay_factor - 0.1313,
+            0.0,
+            5.0 * len_factor,
+        ),
+        (
+            (19.31 * len_factor) + predelay_ms,
+            decay_factor - 0.2743,
+            1.0,
+            10.0 * len_factor,
+        ),
+        (
+            (7.97 * len_factor) + predelay_ms,
+            decay_factor - 0.31,
+            PI * 0.5,
+            2.2 * len_factor,
+        ),
+    ];
+
+    let comb_delays_gain = 1_f64 / comb_delays_ms.len() as f64;
+
+    let comb_filters = comb_delays_ms
+        .clone()
+        .into_iter()
+        .map(|(ms, df, phase, lfo_rate)| {
+            let comb_samples = modulated_comb_filter(
+                params.samples.clone(),
+                params.sample_rate,
+                ms,
+                lfo_rate,
+                phase,
+                df,
+            );
+            SampleLine {
+                gain_factor: comb_delays_gain,
+                samples: comb_samples,
+            }
+        })
+        .collect();
+
+    let summed = sum(comb_filters);
+
+    let all_pass_params_1 = vec![
+        (
+            decay_factor,
+            89.27 * len_factor,
+            7.89 * len_factor,
+            1.2,
+            5000.0 * len_factor,
+        ),
+        (
+            decay_factor * 0.5,
+            58.5 * len_factor,
+            12.3 * len_factor,
+            0.5,
+            2500.0 * len_factor,
+        ),
+    ];
+    let multi_pass_1 = verb_block(all_pass_params_1, summed.clone(), params)?;
+
+    let all_pass_params_2 = vec![
+        (
+            decay_factor,
+            109.27 * len_factor,
+            4.3 * len_factor,
+            0.7,
+            4000.0 * len_factor,
+        ),
+        (
+            decay_factor * 0.5,
+            135.5 * len_factor,
+            16.5 * len_factor,
+            3.2,
+            1750.0 * len_factor,
+        ),
+    ];
+    let multi_pass_2 = verb_block(all_pass_params_2, summed.clone(), params)?;
+
+    let all_pass_params_3 = vec![
+        (
+            decay_factor,
+            59.27 * len_factor,
+            1.5 * len_factor,
+            1.8,
+            3000.0 * len_factor,
+        ),
+        (
+            decay_factor * 0.5,
+            155.5 * len_factor,
+            9.5 * len_factor,
+            3.7,
+            1400.0 * len_factor,
+        ),
+    ];
+    let multi_pass_3 = verb_block(all_pass_params_3, summed, params)?;
+
+    let summed = sum(vec![
+        SampleLine {
+            gain_factor: 0.5,
+            samples: multi_pass_1,
+        },
+        SampleLine {
+            gain_factor: 0.35,
+            samples: multi_pass_2,
+        },
+        SampleLine {
+            gain_factor: 0.5,
+            samples: multi_pass_3,
+        },
+    ]);
+
+    let mixed = sum(vec![
+        SampleLine {
+            samples: params.samples.clone(),
+            gain_factor: 1.0,
+        },
+        SampleLine {
+            gain_factor: wet_mix,
+            samples: summed,
+        },
+    ]);
+    Ok(ProcessorParams {
+        samples: mixed,
+        ..params.clone()
+    })
+}
+
+fn verb_block(
+    all_pass_params: Vec<(f64, f64, f64, f64, f64)>,
+    summed: Vec<f64>,
+    params: &ProcessorParams,
+) -> Result<Vec<f64>, PermuteError> {
+    let mut all_passed = vec![];
+    let all_pass_gain = 1_f64 / all_pass_params.len() as f64;
+    all_pass_params
+        .into_iter()
+        .fold(summed, |acc, (df, ds, comb_ms, lfo_rate, freq)| {
+            let low_pass_coeffs = Coefficients::<f64>::from_params(
+                FilterType::LowPass,
+                (params.sample_rate as u32).hz(),
+                freq.hz(),
+                Q_BUTTERWORTH_F64,
+            )
+            .unwrap();
+            let ap_1 = all_pass(&acc, ds, df, params.sample_rate);
+            let ap_2 = all_pass(&ap_1, ds, df, params.sample_rate);
+            let combed =
+                modulated_comb_filter(ap_2, params.sample_rate, comb_ms, lfo_rate, 0.0, 0.5);
+            let mut filt = DirectForm1::<f64>::new(low_pass_coeffs);
+            let lowpassed: Vec<f64> = combed.into_iter().map(|x| filt.run(x)).collect();
+            all_passed.push(lowpassed.clone());
+            lowpassed
+        });
+    let all_pass_lines: Vec<SampleLine> = all_passed
+        .into_iter()
+        .map(|ap| SampleLine {
+            gain_factor: all_pass_gain,
+            samples: ap,
+        })
+        .collect();
+    let multi_pass = sum(all_pass_lines);
+    Ok(multi_pass)
+}
+
+fn modulated_comb_filter(
+    samples: Vec<f64>,
+    sample_rate: usize,
+    delay_ms: f64,
+    lfo_rate: f64,
+    phase: f64,
+    decay_factor: f64,
+) -> Vec<f64> {
+    let sample_len = samples.len();
+    let delay_s = ((sample_rate as f64) / (1000.0 / delay_ms)) as usize;
+    let mut comb_samples = vec![0_f64; sample_len];
+    for i in 0..sample_len - delay_s {
+        let amplitude = lfo_sin(i, sample_rate, lfo_rate, phase);
+        let speed = 1_f64 + amplitude * 10.0;
+
+        let offset_f = (i as f64 - 1_f64) + speed;
+        let offset = offset_f.floor() as usize;
+        let frac = offset_f - offset as f64;
+
+        let ptr1 = offset;
+        let ptr2 = ptr1 + 1;
+
+        if ptr1 >= samples.len() - 1 {
+            break;
+        }
+
+        let v = samples[ptr1] + (samples[ptr2] - samples[ptr1]) * frac;
+
+        comb_samples[i + delay_s] = v + (v * decay_factor);
+    }
+    comb_samples
+}
+
+fn all_pass(samples: &Vec<f64>, delay_ms: f64, decay_factor: f64, sample_rate: usize) -> Vec<f64> {
+    let delay_samples = ((sample_rate as f64) / (1000.0 / delay_ms)) as usize;
+    let mut all_passed = vec![0_f64; samples.len()];
+    for i in delay_samples..samples.len() {
+        all_passed[i] += samples[i - delay_samples];
+        all_passed[i] += -decay_factor * all_passed[i - delay_samples];
+        all_passed[i] += decay_factor * all_passed[i];
+    }
+    all_passed
+}
+
+pub fn lfo_sin(sample: usize, sample_rate: usize, lfo_rate: f64, phase: f64) -> f64 {
+    ((sample as f64 / sample_rate as f64 * 2.0 * PI * lfo_rate) + (phase)).sin()
 }
 
 pub fn lfo_cos(sample: usize, sample_rate: usize, lfo_rate: f64) -> f64 {
