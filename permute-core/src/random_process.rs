@@ -255,7 +255,7 @@ pub fn random_chorus(params: &ProcessorParams) -> Result<ProcessorParams, Permut
 
     let vibrato_params = VibratoParams {
         speed_hz: rng.gen_range(0.5_f64..5_f64),
-        depth: rng.gen_range(0.1_f64..0.2_f64),
+        depth: rng.gen_range(0.03_f64..0.2_f64),
     };
 
     let new_params = chorus(
