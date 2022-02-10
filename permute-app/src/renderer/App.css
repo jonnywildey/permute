@@ -10,6 +10,13 @@ body {
    font-family: Dongle, sans-serif;
 }
 
+.processor:hover {
+  background-color: var(--chakra-colors-brand-150) !important;
+}
+.processor-enabled:hover {
+  background-color: var(--chakra-colors-brand-675) !important;
+}
+
 @keyframes background-move {
   0% {
     background-position: 0%;

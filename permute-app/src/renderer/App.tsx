@@ -11,7 +11,7 @@ import {
   Center,
 } from '@chakra-ui/react';
 import type { IPermuteState } from 'permute-node';
-import { useEffect, useState } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import { Files } from './Files';
 import { TopBar } from './TopBar';
 import { Output } from './Output';
@@ -19,7 +19,7 @@ import { BottomBar } from './BottomBar';
 import { theme } from './theme';
 import { Processors } from './Processors';
 import { Welcome } from './Welcome';
-import { CreateAudioContext } from './AudioContext';
+import { AudioContext, CreateAudioContext } from './AudioContext';
 
 export interface IAppState {
   permuteState: IPermuteState;
@@ -78,8 +78,9 @@ const Content = () => {
           isClosable: true,
         });
       } else {
-        const description = `${pState.files.length * pState.permutations
-          } files permuted!`;
+        const description = `${
+          pState.files.length * pState.permutations
+        } files permuted!`;
         toast({
           description,
           status: 'success',
@@ -185,6 +186,7 @@ const Content = () => {
         setNormalised={setNormalised}
         setInputTrail={setInputTrail}
         setOutputTrail={setOutputTrail}
+        processorPool={processorPool}
         files={files}
         output={output}
       />

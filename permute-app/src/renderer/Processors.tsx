@@ -25,6 +25,7 @@ export const Processors: React.FC<IProcessorsProps> = ({
       maxHeight="100%"
       padding="4"
       overflow="hidden"
+      overflowY="scroll"
     >
       <Heading textAlign="center" size="lg" color="gray.600">
         Processors

@@ -14,7 +14,8 @@ export const AudioPlayer: React.FC = () => {
     setOnPlayUpdate((s) => setSecs(s));
   }, []);
 
-  const progress = (secs / file.durationSec) * 100;
+  let progress = (secs / file.durationSec) * 100;
+  progress = progress > 100 ? 100 : progress;
 
   if (!file.name) {
     return (
@@ -23,7 +24,6 @@ export const AudioPlayer: React.FC = () => {
   }
 
   const onClick: React.DragEventHandler<HTMLDivElement> = (ev) => {
-    debugger;
     const x = ev.nativeEvent.offsetX;
     const width = document.getElementById('audio-image')!.offsetWidth;
     const progress = x / width;

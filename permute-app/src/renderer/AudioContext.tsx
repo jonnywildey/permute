@@ -10,6 +10,7 @@ export interface IAudioContext {
   setPosition: (secs: number) => void;
   isPlaying: boolean;
   file: IPermutationInput;
+  reset: () => void;
 }
 
 export interface IAudioState {
@@ -17,6 +18,7 @@ export interface IAudioState {
   isPlaying: boolean;
   timeChecker?: NodeJS.Timer;
   onPlayUpdate?: (secs: number) => void;
+  audio: HTMLAudioElement;
 }
 
 const defaultFile: IPermutationInput = {
@@ -34,26 +36,27 @@ export const CreateAudioContext: React.FC = ({ children }) => {
   const [state, setState] = useState<IAudioState>({
     file: defaultFile,
     isPlaying: false,
+    audio: new Audio(),
   });
-  const audioEl = React.createRef<HTMLAudioElement>();
 
   const playFile = (file: IPermutationInput) => {
     clearInterval(state.timeChecker!);
     const { path } = file;
-    const audio = audioEl.current!;
-    audio.src = `audio:///${path}`;
+    state.audio.autoplay = true;
+    // Add date to string to avoid caching
+    state.audio.src = `audio:///${new Date().toISOString()}/${path}`;
     const newState = { ...state, isPlaying: true, file };
 
     let startedPlaying = false;
     const timeChecker = setInterval(() => {
-      if (audio.paused && startedPlaying) {
+      if (state.audio.paused && startedPlaying) {
         setState({ ...newState, isPlaying: false, timeChecker: undefined });
         clearInterval(timeChecker);
       }
-      startedPlaying = audio.currentTime != 0 && startedPlaying === false;
+      startedPlaying = state.audio.currentTime != 0 && startedPlaying === false;
 
       if (state.onPlayUpdate) {
-        state.onPlayUpdate(audio.currentTime);
+        state.onPlayUpdate(state.audio.currentTime);
       }
     }, UPDATE_LATENCY);
     setState({ ...newState, timeChecker });
@@ -64,36 +67,51 @@ export const CreateAudioContext: React.FC = ({ children }) => {
       return;
     }
     clearInterval(state.timeChecker!);
-    const audio = audioEl.current!;
-    audio.play();
+    state.audio.play();
 
     let startedPlaying = false;
     const timeChecker = setInterval(() => {
-      if (audio.paused && startedPlaying) {
+      if (state.audio.paused && startedPlaying) {
         setState({ ...state, isPlaying: false, timeChecker: undefined });
         clearInterval(timeChecker);
       }
-      startedPlaying = audio.currentTime != 0 && startedPlaying === false;
+      startedPlaying = state.audio.currentTime != 0 && startedPlaying === false;
       if (state.onPlayUpdate) {
-        state.onPlayUpdate(audio.currentTime);
+        state.onPlayUpdate(state.audio.currentTime);
       }
     }, UPDATE_LATENCY);
     setState({ ...state, isPlaying: true, timeChecker });
   };
 
   const pause = () => {
-    const audio = audioEl.current!;
-    audio.pause();
+    // const audio = audioEl.current!;
+    state.audio.pause();
     setState({ ...state, isPlaying: false });
   };
+
   const stop = () => {
-    const audio = audioEl.current!;
-    audio.pause();
-    audio.currentTime = 0;
+    // const audio = audioEl.current!;
+    state.audio.pause();
+    state.audio.currentTime = 0;
     if (state.onPlayUpdate) {
       state.onPlayUpdate(0);
     }
     setState({ ...state, isPlaying: false });
+  };
+
+  const reset = () => {
+    clearInterval(state.timeChecker!);
+    state.audio.pause();
+    state.audio.currentTime = 0;
+    if (state.onPlayUpdate) {
+      state.onPlayUpdate(0);
+    }
+    setState({
+      ...state,
+      file: defaultFile,
+      isPlaying: false,
+      audio: new Audio(),
+    });
   };
 
   const setOnPlayUpdate = (cb: (secs: number) => void) => {
@@ -101,8 +119,7 @@ export const CreateAudioContext: React.FC = ({ children }) => {
   };
 
   const setPosition = (secs: number) => {
-    const audio = audioEl.current!;
-    audio.currentTime = secs;
+    state.audio.currentTime = secs;
     if (state.onPlayUpdate) {
       state.onPlayUpdate(secs);
     }
@@ -116,13 +133,11 @@ export const CreateAudioContext: React.FC = ({ children }) => {
     resume,
     pause,
     stop,
+    reset,
     file: state.file,
   };
 
   return (
-    <AudioContext.Provider value={value}>
-      <audio autoPlay ref={audioEl} />
-      {children}
-    </AudioContext.Provider>
+    <AudioContext.Provider value={value}>{children}</AudioContext.Provider>
   );
 };

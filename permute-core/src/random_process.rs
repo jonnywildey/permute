@@ -66,6 +66,7 @@ pub fn get_processor_function(name: PermuteNodeName) -> ProcessorFn {
         PermuteNodeName::HalfSpeed => half_speed,
         PermuteNodeName::MetallicDelay => random_metallic_delay,
         PermuteNodeName::RhythmicDelay => random_rhythmic_delay,
+        PermuteNodeName::Reverb => random_reverb,
         PermuteNodeName::Wow => random_wow,
         PermuteNodeName::Normalise => normalise,
         PermuteNodeName::SampleRateConversionHigh => change_sample_rate_high,
@@ -188,6 +189,26 @@ pub fn double_speed(params: &ProcessorParams) -> Result<ProcessorParams, Permute
     Ok(new_params)
 }
 
+pub fn random_reverb(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
+    start_event!(PermuteNodeName::Reverb, params);
+
+    let mut rng = thread_rng();
+
+    let len_factors = [0.1, 0.3, 0.6, 1.0, 1.2, 1.4];
+    let decay_factors = [0.2, 0.3, 0.325, 0.35, 0.4];
+
+    let reverb_params = ReverbParams {
+        predelay_ms: rng.gen_range(0.0..90.0),
+        wet_mix: rng.gen_range(0.1_f64..0.4),
+        len_factor: len_factors[rng.gen_range(0..len_factors.len())],
+        decay_factor: decay_factors[rng.gen_range(0..decay_factors.len())],
+    };
+
+    let new_params = reverb(&params, reverb_params)?;
+    complete_event!(PermuteNodeName::Reverb, new_params);
+    Ok(new_params)
+}
+
 pub fn random_wow(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
     start_event!(PermuteNodeName::Wow, params);
     let mut rng = thread_rng();
@@ -234,7 +255,7 @@ pub fn random_chorus(params: &ProcessorParams) -> Result<ProcessorParams, Permut
 
     let vibrato_params = VibratoParams {
         speed_hz: rng.gen_range(0.5_f64..5_f64),
-        depth: rng.gen_range(0.1_f64..0.2_f64),
+        depth: rng.gen_range(0.03_f64..0.2_f64),
     };
 
     let new_params = chorus(

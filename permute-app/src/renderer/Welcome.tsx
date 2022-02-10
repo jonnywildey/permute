@@ -48,13 +48,12 @@ export const Welcome: React.FC<WelcomeProps> = ({ isOpen, onClose }) => {
           </Text>
           <Heading size="md">To start</Heading>
           <Text fontSize="lg" mb={4}>
-            Drag an audio file (AIF or WAV) file (or more) into the{' '}
+            Drag an audio file (AIF or WAV) file (or multiple files) into the{' '}
             <b>Select Files area</b>. Select an <b>output directory</b>. Click{' '}
             <b>run</b>. Have fun!
           </Text>
           <Heading size="md">Coming soon</Heading>
           <List>
-            <ListItem>Time stretching</ListItem>
             <ListItem>Filter FX</ListItem>
           </List>
         </ModalBody>
