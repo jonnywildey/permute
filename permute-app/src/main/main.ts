@@ -127,7 +127,6 @@ app
     protocol.registerFileProtocol('audio', (request, callback) => {
       // Remove audio/// and ISO Date
       const url = request.url.substring(34);
-      console.log("url", request.url, url);
       callback(decodeURI(path.normalize(url)));
     });
 
