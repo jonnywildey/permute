@@ -42,5 +42,5 @@ export const theme = extendTheme(
     lg: '1200em',
     xl: '1200em',
     '2xl': '1200em',
-  }),
+  })
 );

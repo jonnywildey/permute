@@ -78,8 +78,9 @@ const Content = () => {
           isClosable: true,
         });
       } else {
-        const description = `${pState.files.length * pState.permutations
-          } files permuted!`;
+        const description = `${
+          pState.files.length * pState.permutations
+        } files permuted!`;
         toast({
           description,
           status: 'success',

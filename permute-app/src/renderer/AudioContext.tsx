@@ -36,7 +36,7 @@ export const CreateAudioContext: React.FC = ({ children }) => {
   const [state, setState] = useState<IAudioState>({
     file: defaultFile,
     isPlaying: false,
-    audio: new Audio()
+    audio: new Audio(),
   });
 
   const playFile = (file: IPermutationInput) => {
@@ -106,8 +106,13 @@ export const CreateAudioContext: React.FC = ({ children }) => {
     if (state.onPlayUpdate) {
       state.onPlayUpdate(0);
     }
-    setState({ ...state, file: defaultFile, isPlaying: false, audio: new Audio() });
-  }
+    setState({
+      ...state,
+      file: defaultFile,
+      isPlaying: false,
+      audio: new Audio(),
+    });
+  };
 
   const setOnPlayUpdate = (cb: (secs: number) => void) => {
     setState({ ...state, onPlayUpdate: cb });
@@ -133,8 +138,6 @@ export const CreateAudioContext: React.FC = ({ children }) => {
   };
 
   return (
-    <AudioContext.Provider value={value}>
-      {children}
-    </AudioContext.Provider>
+    <AudioContext.Provider value={value}>{children}</AudioContext.Provider>
   );
 };

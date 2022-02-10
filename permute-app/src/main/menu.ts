@@ -1,9 +1,4 @@
-import {
-  app,
-  Menu,
-  BrowserWindow,
-  MenuItemConstructorOptions,
-} from 'electron';
+import { app, Menu, BrowserWindow, MenuItemConstructorOptions } from 'electron';
 
 interface DarwinMenuItemConstructorOptions extends MenuItemConstructorOptions {
   selector?: string;
@@ -18,7 +13,6 @@ export default class MenuBuilder {
   }
 
   buildMenu(): Menu {
-
     const template =
       process.platform === 'darwin'
         ? this.buildDarwinTemplate()
@@ -75,7 +69,7 @@ export default class MenuBuilder {
         },
       ],
     };
-   
+
     const subMenuView = subMenuViewProd;
     return [subMenuAbout, subMenuView];
   }
@@ -100,18 +94,15 @@ export default class MenuBuilder {
       },
       {
         label: '&View',
-        submenu:
-          [
-                {
-                  label: 'Toggle &Full Screen',
-                  accelerator: 'F11',
-                  click: () => {
-                    this.mainWindow.setFullScreen(
-                      !this.mainWindow.isFullScreen()
-                    );
-                  },
-                },
-              ],
+        submenu: [
+          {
+            label: 'Toggle &Full Screen',
+            accelerator: 'F11',
+            click: () => {
+              this.mainWindow.setFullScreen(!this.mainWindow.isFullScreen());
+            },
+          },
+        ],
       },
     ];
 

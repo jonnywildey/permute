@@ -175,7 +175,8 @@ function Depth(depth: number, setDepth: (depth: number) => void) {
         label={
           <Text fontSize="lg">
             Controls how many processors the audio is run through. <br />
-            High depth values can run up to 32 processors and can be noisy / very long. <br />
+            High depth values can run up to 32 processors and can be noisy /
+            very long. <br />
             Setting depth to 0 will always run the audio through 1 processor
           </Text>
         }
@@ -377,12 +378,15 @@ const Run: React.FC<IRunProps> = ({
   const progress =
     permutationOutputs.reduce((acc, permutationOutput) => {
       return acc + permutationOutput.progress;
-    }, 0) / (files.length * permutations);
+    }, 0) /
+    (files.length * permutations);
   return (
     <GridItem rowSpan={2} colSpan={3} display="flex" pl={6} pr={6}>
       <Button
         onClick={runProcessor}
-        disabled={processing || !output || !files.length || !processorPool.length}
+        disabled={
+          processing || !output || !files.length || !processorPool.length
+        }
         width="100%"
         bg={buttonBg}
         color="gray.50"
