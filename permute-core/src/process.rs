@@ -64,10 +64,12 @@ pub enum PermuteNodeName {
     Chorus,
     Phaser,
     Normalise,
+    Trim,
     SampleRateConversionHigh,
     SampleRateConversionOriginal,
 }
 
+// Only processors we want to be visible to users
 #[allow(dead_code)]
 pub const ALL_PROCESSORS: [PermuteNodeName; 15] = [
     PermuteNodeName::Reverse,
@@ -827,6 +829,36 @@ pub fn saturate(params: &ProcessorParams) -> Result<ProcessorParams, PermuteErro
         .collect();
     Ok(ProcessorParams {
         samples: new_samples,
+        ..params.clone()
+    })
+}
+
+pub fn trim(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
+    let threshold = 0.001;
+
+    let mut start: usize = 0;
+    let mut end: usize = params.sample_length;
+
+    for i in 0..params.sample_length {
+        if params.samples[i].abs() > threshold {
+            start = i - (i % params.channels);
+            break;
+        }
+    }
+
+    for i in (start..params.sample_length).rev() {
+        if params.samples[i].abs() > threshold {
+            end = i - (i % params.channels);
+            break;
+        }
+    }
+
+    let new_samples = params.samples[start..end].to_vec();
+    let len = new_samples.len();
+
+    Ok(ProcessorParams {
+        samples: new_samples,
+        sample_length: len,
         ..params.clone()
     })
 }

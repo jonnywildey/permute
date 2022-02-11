@@ -69,6 +69,7 @@ pub fn get_processor_function(name: PermuteNodeName) -> ProcessorFn {
         PermuteNodeName::Reverb => random_reverb,
         PermuteNodeName::Wow => random_wow,
         PermuteNodeName::Normalise => normalise,
+        PermuteNodeName::Trim => trim,
         PermuteNodeName::SampleRateConversionHigh => change_sample_rate_high,
         PermuteNodeName::SampleRateConversionOriginal => change_sample_rate_original,
     }
