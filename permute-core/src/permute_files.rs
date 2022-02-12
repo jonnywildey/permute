@@ -4,6 +4,7 @@ use crate::random_process::*;
 use sndfile::*;
 use std::path::Path;
 use std::sync::mpsc;
+use std::sync::mpsc::Sender;
 use std::thread;
 use std::thread::JoinHandle;
 
@@ -146,6 +147,57 @@ fn permute_file(
 
         snd.write_from_iter(output_params.samples.clone().into_iter())?;
     }
+    Ok(())
+}
+
+pub fn process_file(
+    file: String,
+    process: PermuteNodeName,
+    update_sender: Sender<PermuteUpdate>,
+) -> Result<(), PermuteError> {
+    let mut snd = sndfile::OpenOptions::ReadOnly(ReadOptions::Auto).from_path(file.clone())?;
+    let sample_rate = snd.get_samplerate();
+    let channels = snd.get_channels();
+    let samples: Vec<f64> = snd.read_all_to_vec()?;
+    let endian = snd.get_endian();
+    let sample_length = samples.len();
+    let file_format = snd.get_subtype_format();
+
+    let process_fn = get_processor_function(process);
+
+    let new_params = process_fn(&ProcessorParams {
+        channels,
+        endian,
+        file_format,
+        sample_length,
+        samples,
+        sample_rate,
+        update_sender: update_sender.clone(),
+        permutation: Permutation {
+            file: file.clone(),
+            node_index: 0,
+            original_sample_rate: sample_rate,
+            output: file.clone(),
+            permutation_index: 0,
+            processor_pool: vec![process],
+            processors: vec![process],
+        },
+    })?;
+
+    update_sender
+        .send(PermuteUpdate::ProcessComplete)
+        .expect("Error sending message");
+
+    let mut snd = sndfile::OpenOptions::WriteOnly(WriteOptions::new(
+        snd.get_major_format(),
+        file_format,
+        endian,
+        sample_rate,
+        channels,
+    ))
+    .from_path(file)?;
+
+    snd.write_from_iter(new_params.samples.clone().into_iter())?;
     Ok(())
 }
 

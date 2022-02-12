@@ -20,6 +20,7 @@ enum ProcessorMessage {
     Run,
     AddFile(String),
     RemoveFile(String),
+    ReverseFile(String),
     AddProcessor(String),
     RemoveProcessor(String),
     SetOutput(String),
@@ -74,6 +75,9 @@ impl Processor {
                     }
                     ProcessorMessage::RemoveFile(file) => {
                         state.remove_file(file);
+                    }
+                    ProcessorMessage::ReverseFile(file) => {
+                        state.reverse_file(file);
                     }
                     ProcessorMessage::AddProcessor(name) => {
                         state.add_processor(name);
@@ -271,6 +275,12 @@ impl Processor {
         Ok(cx.undefined())
     }
 
+    fn js_reverse_file(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+        let file = cx.argument::<JsString>(0)?.value(&mut cx);
+        js_hook!(file, ProcessorMessage::ReverseFile, cx);
+        Ok(cx.undefined())
+    }
+
     fn js_add_file(mut cx: FunctionContext) -> JsResult<JsUndefined> {
         let file = cx.argument::<JsString>(0)?.value(&mut cx);
         js_hook!(file, ProcessorMessage::AddFile, cx);
@@ -360,6 +370,7 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
     cx.export_function("setOutputTrail", Processor::js_set_output_trail)?;
     cx.export_function("setPermutations", Processor::js_set_permutations)?;
     cx.export_function("setNormalised", Processor::js_set_normalised)?;
+    cx.export_function("reverseFile", Processor::js_reverse_file)?;
     cx.export_function("saveSettings", Processor::js_save_settings)?;
     cx.export_function("loadSettings", Processor::js_load_settings)?;
 

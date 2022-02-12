@@ -17,6 +17,17 @@ contextBridge.exposeInMainWorld('Electron', {
       });
       ipcRenderer.send('run-processor');
     },
+    reverseFile(updateFn, completeFn, file) {
+      const listener = (event, ...args) => {
+        updateFn(...args);
+      };
+      ipcRenderer.on('reverse-file-update', listener);
+      ipcRenderer.once('reverse-file-ended', (event, ...args) => {
+        ipcRenderer.removeListener('reverse-file-update', listener);
+        completeFn(...args);
+      });
+      ipcRenderer.send('reverse-file', file);
+    },
     addFile(file) {
       ipcRenderer.send('add-file', file);
     },
