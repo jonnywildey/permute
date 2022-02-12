@@ -14,9 +14,11 @@ import {
 import { MoonIcon, ViewIcon } from '@chakra-ui/icons';
 import type { IPermutationOutput } from 'permute-node';
 import { useContext } from 'react';
-import { PlayIcon } from './PlayIcon';
+import { PlayIcon } from './icons/PlayIcon';
 import { AudioContext } from './AudioContext';
 import { displayTime } from './displayTime';
+import { ReverseIcon } from './icons/ReverseIcon';
+import { TrimIcon } from './icons/TrimIcon';
 
 export interface IOutputProps {
   output: string;
@@ -113,7 +115,7 @@ export const Output: React.FC<IOutputProps> = ({
               variant="ghost"
               alignSelf="center"
               size="xs"
-              icon={<MoonIcon />}
+              icon={<ReverseIcon />}
               onClick={() => reverseFile(file.path)}
             />
             <IconButton
@@ -121,7 +123,7 @@ export const Output: React.FC<IOutputProps> = ({
               variant="ghost"
               alignSelf="center"
               size="xs"
-              icon={<MoonIcon />}
+              icon={<TrimIcon />}
               onClick={() => trimFile(file.path)} 
             />
             <Text

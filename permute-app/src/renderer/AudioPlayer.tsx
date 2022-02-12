@@ -1,9 +1,9 @@
 import { Box, GridItem, Heading, IconButton, Text } from '@chakra-ui/react';
 import React, { useContext, useEffect, useState } from 'react';
 import { AudioContext } from './AudioContext';
-import { LargePlayIcon } from './PlayIcon';
-import { LargePauseIcon } from './PauseIcon';
-import { LargeStopIcon } from './StopIcon';
+import { LargePlayIcon } from './icons/PlayIcon';
+import { LargePauseIcon } from './icons/PauseIcon';
+import { LargeStopIcon } from './icons/StopIcon';
 
 export const AudioPlayer: React.FC = () => {
   const { resume, pause, stop, file, setOnPlayUpdate, isPlaying, setPosition } =
