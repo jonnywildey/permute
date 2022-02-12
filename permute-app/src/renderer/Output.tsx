@@ -6,7 +6,6 @@ import {
   Center,
   IconButton,
   PropsOf,
-  Image,
   Text,
   List,
   ListItem,
@@ -25,6 +24,7 @@ export interface IOutputProps {
   permutationOutputs: IPermutationOutput[];
   showFile: (file: string) => void;
   reverseFile: (file: string) => void;
+  trimFile: (file: string) => void;
 }
 
 const buttonBg = 'brand.500';
@@ -36,6 +36,7 @@ export const Output: React.FC<IOutputProps> = ({
   showFile,
   reverseFile,
   setOutput,
+  trimFile,
   permutationOutputs,
 }) => {
   const { playFile } = useContext(AudioContext);
@@ -114,6 +115,14 @@ export const Output: React.FC<IOutputProps> = ({
               size="xs"
               icon={<MoonIcon />}
               onClick={() => reverseFile(file.path)}
+            />
+            <IconButton
+              aria-label="show"
+              variant="ghost"
+              alignSelf="center"
+              size="xs"
+              icon={<MoonIcon />}
+              onClick={() => trimFile(file.path)} 
             />
             <Text
               pr={2}

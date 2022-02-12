@@ -33,6 +33,17 @@ ipcMain.on('reverse-file', async (event, file) => {
     }
   );
 });
+ipcMain.on('trim-file', async (event, file) => {
+  processor.trimFile(
+    file,
+    (state: IPermuteState) => {
+      event.reply('trim-file-update', state);
+    },
+    (state: IPermuteState) => {
+      event.reply('trim-file-ended', state);
+    }
+  );
+});
 
 ipcMain.on('add-file', async (_, file) => {
   processor.addFile(file);

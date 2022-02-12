@@ -189,6 +189,24 @@ impl SharedState {
         Ok(())
     }
 
+    pub fn trim_file(&mut self, file: String) -> Result<(), PermuteError> {
+        self.processing = true;
+        let search_file = file.clone();
+        let update_sender = self.update_sender.clone();
+        process_file(file, PermuteNodeName::Trim, update_sender)?;
+        self.processing = false;
+        let permutation_output = self
+            .permutation_outputs
+            .iter_mut()
+            .find(|po| po.output == search_file);
+        permutation_output
+            .unwrap()
+            .audio_info
+            .update_file(search_file)
+            .unwrap();
+        Ok(())
+    }
+
     pub fn run_process(&mut self) -> JoinHandle<()> {
         self.permutation_outputs = vec![];
         self.processing = true;

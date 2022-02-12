@@ -99,6 +99,13 @@ const Content = () => {
     };
     window.Electron.ipcRenderer.reverseFile(refreshState, onFinished, file);
   };
+  const trimFile = async (file: string) => {
+    setState({ permuteState: { ...state.permuteState, processing: true } });
+    const onFinished = (pState: IPermuteState) => {
+      setState({ ...state, permuteState: pState });
+    };
+    window.Electron.ipcRenderer.trimFile(refreshState, onFinished, file);
+  };
   const setDepth = async (depth: number) => {
     window.Electron.ipcRenderer.setDepth(depth);
     refreshState();
@@ -179,6 +186,7 @@ const Content = () => {
         showFile={showFile}
         permutationOutputs={permutationOutputs}
         reverseFile={reverseFile}
+        trimFile={trimFile}
       />
       <BottomBar
         permutationOutputs={permutationOutputs}

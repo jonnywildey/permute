@@ -28,6 +28,17 @@ contextBridge.exposeInMainWorld('Electron', {
       });
       ipcRenderer.send('reverse-file', file);
     },
+    trimFile(updateFn, completeFn, file) {
+      const listener = (event, ...args) => {
+        updateFn(...args);
+      };
+      ipcRenderer.on('trim-file-update', listener);
+      ipcRenderer.once('trim-file-ended', (event, ...args) => {
+        ipcRenderer.removeListener('trim-file-update', listener);
+        completeFn(...args);
+      });
+      ipcRenderer.send('trim-file', file);
+    },
     addFile(file) {
       ipcRenderer.send('add-file', file);
     },
