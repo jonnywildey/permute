@@ -6,25 +6,27 @@ import {
   Center,
   IconButton,
   PropsOf,
-  Image,
   Text,
   List,
   ListItem,
   Tooltip,
-  background,
 } from '@chakra-ui/react';
-import { ViewIcon } from '@chakra-ui/icons';
+import { MoonIcon, ViewIcon } from '@chakra-ui/icons';
 import type { IPermutationOutput } from 'permute-node';
 import { useContext } from 'react';
-import { PlayIcon } from './PlayIcon';
+import { PlayIcon } from './icons/PlayIcon';
 import { AudioContext } from './AudioContext';
 import { displayTime } from './displayTime';
+import { ReverseIcon } from './icons/ReverseIcon';
+import { TrimIcon } from './icons/TrimIcon';
 
 export interface IOutputProps {
   output: string;
   setOutput: () => void;
   permutationOutputs: IPermutationOutput[];
   showFile: (file: string) => void;
+  reverseFile: (file: string) => void;
+  trimFile: (file: string) => void;
 }
 
 const buttonBg = 'brand.500';
@@ -34,7 +36,9 @@ const fileBorderColour = 'brand.150';
 export const Output: React.FC<IOutputProps> = ({
   output,
   showFile,
+  reverseFile,
   setOutput,
+  trimFile,
   permutationOutputs,
 }) => {
   const { playFile } = useContext(AudioContext);
@@ -105,6 +109,22 @@ export const Output: React.FC<IOutputProps> = ({
               size="xs"
               icon={<ViewIcon />}
               onClick={() => showFile(file.path)}
+            />
+            <IconButton
+              aria-label="show"
+              variant="ghost"
+              alignSelf="center"
+              size="xs"
+              icon={<ReverseIcon />}
+              onClick={() => reverseFile(file.path)}
+            />
+            <IconButton
+              aria-label="show"
+              variant="ghost"
+              alignSelf="center"
+              size="xs"
+              icon={<TrimIcon />}
+              onClick={() => trimFile(file.path)} 
             />
             <Text
               pr={2}

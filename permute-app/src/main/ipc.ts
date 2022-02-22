@@ -21,6 +21,30 @@ ipcMain.on('run-processor', async (event) => {
     }
   );
 });
+
+ipcMain.on('reverse-file', async (event, file) => {
+  processor.reverseFile(
+    file,
+    (state: IPermuteState) => {
+      event.reply('reverse-file-update', state);
+    },
+    (state: IPermuteState) => {
+      event.reply('reverse-file-ended', state);
+    }
+  );
+});
+ipcMain.on('trim-file', async (event, file) => {
+  processor.trimFile(
+    file,
+    (state: IPermuteState) => {
+      event.reply('trim-file-update', state);
+    },
+    (state: IPermuteState) => {
+      event.reply('trim-file-ended', state);
+    }
+  );
+});
+
 ipcMain.on('add-file', async (_, file) => {
   processor.addFile(file);
 });

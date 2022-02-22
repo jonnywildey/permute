@@ -11,7 +11,7 @@ import {
   Center,
 } from '@chakra-ui/react';
 import type { IPermuteState } from 'permute-node';
-import { useContext, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Files } from './Files';
 import { TopBar } from './TopBar';
 import { Output } from './Output';
@@ -19,7 +19,7 @@ import { BottomBar } from './BottomBar';
 import { theme } from './theme';
 import { Processors } from './Processors';
 import { Welcome } from './Welcome';
-import { AudioContext, CreateAudioContext } from './AudioContext';
+import { CreateAudioContext } from './AudioContext';
 
 export interface IAppState {
   permuteState: IPermuteState;
@@ -91,6 +91,20 @@ const Content = () => {
       setState({ ...state, permuteState: pState });
     };
     window.Electron.ipcRenderer.runProcessor(refreshState, onFinished);
+  };
+  const reverseFile = async (file: string) => {
+    setState({ permuteState: { ...state.permuteState, processing: true } });
+    const onFinished = (pState: IPermuteState) => {
+      setState({ ...state, permuteState: pState });
+    };
+    window.Electron.ipcRenderer.reverseFile(refreshState, onFinished, file);
+  };
+  const trimFile = async (file: string) => {
+    setState({ permuteState: { ...state.permuteState, processing: true } });
+    const onFinished = (pState: IPermuteState) => {
+      setState({ ...state, permuteState: pState });
+    };
+    window.Electron.ipcRenderer.trimFile(refreshState, onFinished, file);
   };
   const setDepth = async (depth: number) => {
     window.Electron.ipcRenderer.setDepth(depth);
@@ -171,6 +185,8 @@ const Content = () => {
         setOutput={setOutput}
         showFile={showFile}
         permutationOutputs={permutationOutputs}
+        reverseFile={reverseFile}
+        trimFile={trimFile}
       />
       <BottomBar
         permutationOutputs={permutationOutputs}

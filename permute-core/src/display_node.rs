@@ -18,6 +18,7 @@ pub fn get_processor_display_name(name: PermuteNodeName) -> String {
         PermuteNodeName::RhythmicDelay => String::from("Rhythmic delay"),
         PermuteNodeName::Wow => String::from("Wow"),
         PermuteNodeName::Normalise => String::from("Normalise"),
+        PermuteNodeName::Trim => String::from("Trim"),
         PermuteNodeName::SampleRateConversionHigh => String::from("Sample rate conversion high"),
         PermuteNodeName::SampleRateConversionOriginal => String::from("Sample rate conversion low"),
     }
@@ -41,6 +42,7 @@ pub fn get_processor_from_display_name(name: &str) -> Result<PermuteNodeName, St
         "Saturate" => Ok(PermuteNodeName::Saturate),
         "Wow" => Ok(PermuteNodeName::Wow),
         "Normalise" => Ok(PermuteNodeName::Normalise),
+        "Trim" => Ok(PermuteNodeName::Trim),
         "Sample rate conversion high" => Ok(PermuteNodeName::SampleRateConversionHigh),
         "Sample rate conversion low" => Ok(PermuteNodeName::SampleRateConversionOriginal),
         _ => Err(format!("{} not found", name)),
