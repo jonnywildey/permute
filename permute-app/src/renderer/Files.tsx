@@ -8,8 +8,8 @@ import {
   PropsOf,
   Button,
   Center,
-  Image,
   Text,
+  Tooltip,
 } from '@chakra-ui/react';
 import { ViewIcon } from '@chakra-ui/icons';
 import { useContext, useState } from 'react';
@@ -98,21 +98,31 @@ export const Files: React.FC<IFilesProps> = ({
           dangerouslySetInnerHTML={{ __html: file.image }}
         />
         <Box display="flex" alignItems="baseline" width="100%" pos="relative">
-          <IconButton
-            aria-label="show"
-            variant="ghost"
-            size="xs"
-            icon={<PlayIcon />}
-            onClick={() => playFile(file)}
-          />
-          <IconButton
-            aria-label="show"
-            variant="ghost"
-            size="xs"
-            alignSelf="center"
-            icon={<ViewIcon />}
-            onClick={() => showFile(file.path)}
-          />
+          <Tooltip
+            openDelay={200}
+            label="Preview"
+            >
+            <IconButton
+              aria-label="play"
+              variant="ghost"
+              size="xs"
+              icon={<PlayIcon />}
+              onClick={() => playFile(file)}
+            />
+          </Tooltip>
+          <Tooltip
+            openDelay={200}
+            label="Open directory"
+            >
+            <IconButton
+              aria-label="show"
+              variant="ghost"
+              size="xs"
+              alignSelf="center"
+              icon={<ViewIcon />}
+              onClick={() => showFile(file.path)}
+            />
+          </Tooltip>
           <Text
             pr={2}
             width="100%"

@@ -1,4 +1,4 @@
-import { Box, GridItem, Heading, IconButton, Text } from '@chakra-ui/react';
+import { Box, GridItem, Heading, IconButton } from '@chakra-ui/react';
 import React, { useContext, useEffect, useState } from 'react';
 import { AudioContext } from './AudioContext';
 import { LargePlayIcon } from './icons/PlayIcon';
