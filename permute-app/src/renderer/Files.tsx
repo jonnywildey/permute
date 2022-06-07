@@ -17,6 +17,7 @@ import type { IPermutationInput } from 'permute-node';
 import { AudioContext } from './AudioContext';
 import { PlayIcon } from './icons/PlayIcon';
 import { displayTime } from './displayTime';
+import {useDropzone} from 'react-dropzone'
 
 export interface IFilesProps {
   files: IPermutationInput[];
@@ -35,16 +36,12 @@ export const Files: React.FC<IFilesProps> = ({
   removeFile,
   showFile,
 }) => {
-  const [isDrag, setDrag] = useState(false);
   const { playFile } = useContext(AudioContext);
-
-  const onDrop: React.DragEventHandler<HTMLInputElement> = (e) => {
-    const files: string[] = [];
-    for (const f of (e.dataTransfer as any).files) {
-      files.push(f.path);
-    }
-    addFiles(files);
-    setDrag(false);
+  
+  const onDrop = (files: any[]) => {
+    const filenames: string[] = files.map(f => f.path)
+    debugger;
+    addFiles(filenames);
   };
   const onChange: React.ChangeEventHandler<HTMLInputElement> = (e) => {
     const files: string[] = [];
@@ -53,7 +50,8 @@ export const Files: React.FC<IFilesProps> = ({
     }
     addFiles(files);
   };
-
+  const {getRootProps, getInputProps, isDragActive: isDrag } = useDropzone({ onDrop })
+  
   const fileBoxes = files.map((file, i) => {
     const props: PropsOf<typeof Box> = {
       key: file.path,
@@ -151,6 +149,8 @@ export const Files: React.FC<IFilesProps> = ({
       overflowY="scroll"
       height="100%"
       shadow="base"
+      className={isDrag ? "drag-files" : ""}
+      {...getRootProps()}
     >
       <Heading textAlign="center" size="lg" color="gray.600">
         Files
@@ -177,15 +177,13 @@ export const Files: React.FC<IFilesProps> = ({
               cursor="pointer"
               type="file"
               multiple
-              onDrop={onDrop}
               onChange={onChange}
-              onDragEnter={() => setDrag(true)}
-              onDragLeave={() => setDrag(false)}
+              {...getInputProps()}
             />
           </Button>
         </Center>
       </Box>
-      <Box height="100%" overflowY="scroll">
+      <Box height="100%" overflowY="scroll" onClick={e => {e.stopPropagation(); }}>
         {fileBoxes}
       </Box>
     </GridItem>
