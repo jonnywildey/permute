@@ -31,6 +31,12 @@ export const Welcome: React.FC<WelcomeProps> = ({ isOpen, onClose }) => {
             dramatically alter audio to something alien, abstract, and possibly{' '}
             <b>useful</b>.
           </Text>
+          <Heading size="md">To start</Heading>
+          <Text fontSize="lg" mb={4}>
+            Drag an audio file (AIF or WAV) file (or multiple files) into the{' '}
+            <b>Select Files area</b>. Select an <b>output directory</b>. Click{' '}
+            <b>run</b>. Have fun!
+          </Text>
           <Text fontSize="lg" mb={2}>
             Audio source files are run through random chains of processors with
             randomised parameters into an output directory. As every run is
@@ -46,16 +52,10 @@ export const Welcome: React.FC<WelcomeProps> = ({ isOpen, onClose }) => {
             It is recommended you keep the <b>normalise</b> feature enabled,
             processors can easily cause digital clipping
           </Text>
-          <Heading size="md">To start</Heading>
-          <Text fontSize="lg" mb={4}>
-            Drag an audio file (AIF or WAV) file (or multiple files) into the{' '}
-            <b>Select Files area</b>. Select an <b>output directory</b>. Click{' '}
-            <b>run</b>. Have fun!
-          </Text>
-          <Heading size="md">Coming soon</Heading>
+          {/* <Heading size="md">Coming soon</Heading>
           <List>
             <ListItem>Filter FX</ListItem>
-          </List>
+          </List> */}
         </ModalBody>
       </ModalContent>
     </Modal>
