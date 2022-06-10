@@ -75,7 +75,7 @@ pub enum PermuteNodeName {
 
 // Only processors we want to be visible to users
 #[allow(dead_code)]
-pub const ALL_PROCESSORS: [PermuteNodeName; 15] = [
+pub const ALL_PROCESSORS: [PermuteNodeName; 18] = [
     PermuteNodeName::Reverse,
     PermuteNodeName::GranularTimeStretch,
     PermuteNodeName::Reverb,
@@ -91,6 +91,9 @@ pub const ALL_PROCESSORS: [PermuteNodeName; 15] = [
     PermuteNodeName::Chorus,
     PermuteNodeName::Flange,
     PermuteNodeName::Phaser,
+    PermuteNodeName::Filter,
+    PermuteNodeName::LineFilter,
+    PermuteNodeName::OscillatingFilter,
 ];
 
 pub fn reverse(

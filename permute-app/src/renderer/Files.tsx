@@ -17,7 +17,7 @@ import type { IPermutationInput } from 'permute-node';
 import { AudioContext } from './AudioContext';
 import { PlayIcon } from './icons/PlayIcon';
 import { displayTime } from './displayTime';
-import {useDropzone} from 'react-dropzone'
+import { useDropzone } from 'react-dropzone'
 
 export interface IFilesProps {
   files: IPermutationInput[];
@@ -37,10 +37,9 @@ export const Files: React.FC<IFilesProps> = ({
   showFile,
 }) => {
   const { playFile } = useContext(AudioContext);
-  
+
   const onDrop = (files: any[]) => {
     const filenames: string[] = files.map(f => f.path)
-    debugger;
     addFiles(filenames);
   };
   const onChange: React.ChangeEventHandler<HTMLInputElement> = (e) => {
@@ -50,8 +49,8 @@ export const Files: React.FC<IFilesProps> = ({
     }
     addFiles(files);
   };
-  const {getRootProps, getInputProps, isDragActive: isDrag } = useDropzone({ onDrop })
-  
+  const { getRootProps, getInputProps, isDragActive: isDrag } = useDropzone({ onDrop })
+
   const fileBoxes = files.map((file, i) => {
     const props: PropsOf<typeof Box> = {
       key: file.path,
@@ -99,7 +98,7 @@ export const Files: React.FC<IFilesProps> = ({
           <Tooltip
             openDelay={200}
             label="Preview"
-            >
+          >
             <IconButton
               aria-label="play"
               variant="ghost"
@@ -111,7 +110,7 @@ export const Files: React.FC<IFilesProps> = ({
           <Tooltip
             openDelay={200}
             label="Open directory"
-            >
+          >
             <IconButton
               aria-label="show"
               variant="ghost"
@@ -149,8 +148,6 @@ export const Files: React.FC<IFilesProps> = ({
       overflowY="scroll"
       height="100%"
       shadow="base"
-      className={isDrag ? "drag-files" : ""}
-      {...getRootProps()}
     >
       <Heading textAlign="center" size="lg" color="gray.600">
         Files
@@ -178,15 +175,25 @@ export const Files: React.FC<IFilesProps> = ({
               type="file"
               multiple
               onChange={onChange}
+            />
+            <Input
+              accept=".wav,.aif"
+              hidden
+              type="file"
+              width="0"
+              height="0"
+              multiple
               {...getInputProps()}
             />
           </Button>
         </Center>
       </Box>
-      <Box 
-      height="100%" 
-      overflowY="scroll" 
-      onClick={e => {e.stopPropagation()}}
+      <Box
+        height="100%"
+        overflowY="scroll"
+        className={isDrag ? "drag-files" : ""}
+        {...getRootProps()}
+        onClick={e => { e.stopPropagation() }}
       >
         {fileBoxes}
       </Box>
