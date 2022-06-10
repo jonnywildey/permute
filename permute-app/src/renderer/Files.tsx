@@ -183,7 +183,11 @@ export const Files: React.FC<IFilesProps> = ({
           </Button>
         </Center>
       </Box>
-      <Box height="100%" overflowY="scroll" onClick={e => {e.stopPropagation(); }}>
+      <Box 
+      height="100%" 
+      overflowY="scroll" 
+      onClick={e => {e.stopPropagation()}}
+      >
         {fileBoxes}
       </Box>
     </GridItem>

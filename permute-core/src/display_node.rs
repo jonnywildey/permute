@@ -21,6 +21,9 @@ pub fn get_processor_display_name(name: PermuteNodeName) -> String {
         PermuteNodeName::Trim => String::from("Trim"),
         PermuteNodeName::SampleRateConversionHigh => String::from("Sample rate conversion high"),
         PermuteNodeName::SampleRateConversionOriginal => String::from("Sample rate conversion low"),
+        PermuteNodeName::Filter => String::from("Filter"),
+        PermuteNodeName::OscillatingFilter => String::from("LFO Filter"),
+        PermuteNodeName::LineFilter => String::from("Line Filter"),
     }
 }
 
@@ -45,6 +48,9 @@ pub fn get_processor_from_display_name(name: &str) -> Result<PermuteNodeName, St
         "Trim" => Ok(PermuteNodeName::Trim),
         "Sample rate conversion high" => Ok(PermuteNodeName::SampleRateConversionHigh),
         "Sample rate conversion low" => Ok(PermuteNodeName::SampleRateConversionOriginal),
+        "Filter" => Ok(PermuteNodeName::Filter),
+        "LFO Filter" => Ok(PermuteNodeName::OscillatingFilter),
+        "Line Filter" => Ok(PermuteNodeName::LineFilter),
         _ => Err(format!("{} not found", name)),
     }
 }
