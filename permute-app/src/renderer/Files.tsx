@@ -59,6 +59,8 @@ export const Files: React.FC<IFilesProps> = ({
       pos: 'relative',
       color: 'gray.700',
     };
+    const ext = file.path.split(".").pop()?.toLowerCase();
+    const isAiff = ext === "aif" || ext === "aiff"
     return (
       <Box {...props}>
         <Box
@@ -103,6 +105,7 @@ export const Files: React.FC<IFilesProps> = ({
               aria-label="play"
               variant="ghost"
               size="xs"
+              disabled={isAiff}
               icon={<PlayIcon />}
               onClick={() => playFile(file)}
             />
