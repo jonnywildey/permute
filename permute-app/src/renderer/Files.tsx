@@ -12,7 +12,7 @@ import {
   Tooltip,
 } from '@chakra-ui/react';
 import { ViewIcon } from '@chakra-ui/icons';
-import { useContext, useState } from 'react';
+import { useContext } from 'react';
 import type { IPermutationInput } from 'permute-node';
 import { AudioContext } from './AudioContext';
 import { PlayIcon } from './icons/PlayIcon';

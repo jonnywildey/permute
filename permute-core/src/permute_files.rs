@@ -75,7 +75,8 @@ fn permute_file(
     let mut snd = sndfile::OpenOptions::ReadOnly(ReadOptions::Auto).from_path(file.clone())?;
     let sample_rate = snd.get_samplerate();
     let channels = snd.get_channels();
-    let file_format = snd.get_subtype_format();
+    let sub_format = snd.get_subtype_format();
+    let file_format = snd.get_major_format();
     let samples_64: Vec<f64> = snd.read_all_to_vec()?;
     let endian = snd.get_endian();
 
@@ -120,6 +121,7 @@ fn permute_file(
             channels,
             sample_rate,
             file_format,
+            sub_format,
             endian,
             update_sender: update_sender.to_owned(),
         };
@@ -138,7 +140,7 @@ fn permute_file(
         })?;
         let mut snd = sndfile::OpenOptions::WriteOnly(WriteOptions::new(
             MajorFormat::WAV,
-            output_params.file_format,
+            output_params.sub_format,
             output_params.endian,
             output_params.sample_rate,
             output_params.channels,
@@ -161,7 +163,8 @@ pub fn process_file(
     let samples: Vec<f64> = snd.read_all_to_vec()?;
     let endian = snd.get_endian();
     let sample_length = samples.len();
-    let file_format = snd.get_subtype_format();
+    let file_format = snd.get_major_format();
+    let sub_format = snd.get_subtype_format();
 
     let process_fn = get_processor_function(process);
 
@@ -169,6 +172,7 @@ pub fn process_file(
         channels,
         endian,
         file_format,
+        sub_format,
         sample_length,
         samples,
         sample_rate,
@@ -189,8 +193,8 @@ pub fn process_file(
         .expect("Error sending message");
 
     let mut snd = sndfile::OpenOptions::WriteOnly(WriteOptions::new(
-        snd.get_major_format(),
         file_format,
+        sub_format,
         endian,
         sample_rate,
         channels,
