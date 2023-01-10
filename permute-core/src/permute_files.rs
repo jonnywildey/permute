@@ -139,7 +139,7 @@ fn permute_file(
             processors: processor_fns.to_vec(),
         })?;
         let mut snd = sndfile::OpenOptions::WriteOnly(WriteOptions::new(
-            MajorFormat::WAV,
+            output_params.file_format,
             output_params.sub_format,
             output_params.endian,
             output_params.sample_rate,
