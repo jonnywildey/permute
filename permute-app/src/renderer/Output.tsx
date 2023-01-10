@@ -52,6 +52,8 @@ export const Output: React.FC<IOutputProps> = ({
         borderBottomColor: fileBorderColour,
         color: 'gray.700',
       };
+      const ext = file.path.split(".").pop()?.toLowerCase();
+      const isAiff = ext === "aif" || ext === "aiff"
       return (
         <Box {...props}>
           <Box
@@ -96,20 +98,21 @@ export const Output: React.FC<IOutputProps> = ({
           </Tooltip>
           <Box display="flex" alignItems="baseline" width="100%" pos="relative">
             <Tooltip
-            openDelay={200}
-            label="Preview"
+              openDelay={200}
+              label="Preview"
             >
               <IconButton
                 aria-label="show"
                 variant="ghost"
                 size="xs"
+                disabled={isAiff}
                 icon={<PlayIcon />}
                 onClick={() => playFile(file)}
               />
             </Tooltip>
             <Tooltip
-            openDelay={200}
-            label="Open directory"
+              openDelay={200}
+              label="Open directory"
             >
               <IconButton
                 aria-label="show"
@@ -121,8 +124,8 @@ export const Output: React.FC<IOutputProps> = ({
               />
             </Tooltip>
             <Tooltip
-            openDelay={200}
-            label="Reverse"
+              openDelay={200}
+              label="Reverse"
             >
               <IconButton
                 aria-label="show"
@@ -134,17 +137,17 @@ export const Output: React.FC<IOutputProps> = ({
               />
             </Tooltip>
             <Tooltip
-            openDelay={200}
-            label="Auto-trim"
+              openDelay={200}
+              label="Auto-trim"
             >
-            <IconButton
-              aria-label="show"
-              variant="ghost"
-              alignSelf="center"
-              size="xs"
-              icon={<TrimIcon />}
-              onClick={() => trimFile(file.path)} 
-            />
+              <IconButton
+                aria-label="show"
+                variant="ghost"
+                alignSelf="center"
+                size="xs"
+                icon={<TrimIcon />}
+                onClick={() => trimFile(file.path)}
+              />
             </Tooltip>
             <Text
               pr={2}
