@@ -1,3 +1,22 @@
+# Permute
+
+Permute is a library and UI for quickly generating large numbers of variations of audio files.
+
+There is a small library of signal processors, terminal tools and UIs for randomly chaining processors together.
+
+![short demo of permute UI](docs/permute.gif "Permute")
+
+
+# How to Install
+
+## UI
+
+Only works on MacOS. Download package
+
+## Terminal
+
+Clone the repo, build in Rust. You may need to install `libsndfile`
+
 # libsndfile
 
 - Install libsndfile binaries https://github.com/bastibe/libsndfile-binaries
@@ -5,10 +24,10 @@
 - mv the newly created libsndfile/src/.libs to ./libsndfile-src
 
 
-# steps to run electron app with updated core
+# Steps to run electron app with updated core
 
 - run cargo build in core
 - run package.json build-update in node
-- run release/app/package.json postinstall
+- run release/app/package.json install  postinstall
 - Potentially update the release/app to  "permute-node": "../../../permute-node/permute-node-0.1.0.tgz"
 
