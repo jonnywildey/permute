@@ -7,13 +7,11 @@ There is a small library of signal processors, terminal tools and UIs for random
 ![short demo of permute UI](docs/permute.gif "Permute")
 
 
-# How to Install
+## How to install UI
 
-## UI
+Only works on MacOS. [Download package](https://github.com/jonnywildey/permute/releases)
 
-Only works on MacOS. Download package
-
-## Terminal
+## How to install terminal
 
 Clone the repo, build in Rust. You may need to install `libsndfile`
 
@@ -23,7 +21,6 @@ Clone the repo, build in Rust. You may need to install `libsndfile`
 - Run autogen.sh
 - mv the newly created libsndfile/src/.libs to ./libsndfile-src
 
-
 # Steps to run electron app with updated core
 
 - run cargo build in core
@@ -31,3 +28,7 @@ Clone the repo, build in Rust. You may need to install `libsndfile`
 - run release/app/package.json install  postinstall
 - Potentially update the release/app to  "permute-node": "../../../permute-node/permute-node-0.1.0.tgz"
 
+## Quirks
+
+- Multiple instances of granualar stretching and pitch shifting can create very large audio files
+- Chaining processes can quickly dramatically affect volume levels. We recommend enabling normalise
