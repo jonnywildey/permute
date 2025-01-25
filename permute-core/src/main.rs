@@ -68,6 +68,9 @@ fn main() {
             PermuteNodeName::Chorus,
             PermuteNodeName::Phaser,
             PermuteNodeName::Flange,
+            PermuteNodeName::Filter,
+            PermuteNodeName::LineFilter,
+            PermuteNodeName::OscillatingFilter,
         ],
         str => vec![get_processor_from_display_name(str).expect("Processor not found")],
     };

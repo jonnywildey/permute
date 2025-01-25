@@ -72,6 +72,9 @@ pub fn get_processor_function(name: PermuteNodeName) -> ProcessorFn {
         PermuteNodeName::Trim => trim,
         PermuteNodeName::SampleRateConversionHigh => change_sample_rate_high,
         PermuteNodeName::SampleRateConversionOriginal => change_sample_rate_original,
+        PermuteNodeName::Filter => random_filter,
+        PermuteNodeName::LineFilter => random_line_filter,
+        PermuteNodeName::OscillatingFilter => random_oscillating_filter,
     }
 }
 
@@ -336,6 +339,103 @@ pub fn random_zero_flange(params: &ProcessorParams) -> Result<ProcessorParams, P
 
     complete_event!(PermuteNodeName::Flange, flanged);
     Ok(flanged)
+}
+
+pub fn random_filter(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
+    start_event!(PermuteNodeName::Filter, params);
+
+    let mut rng = thread_rng();
+
+    let freqs = [
+        200.0, 250.0, 300.0, 400.0, 500.0, 600.0, 800.0, 1000.0, 1200.0, 1600.0, 2000.0, 2400.0,
+        3200.0, 4000.0, 4800.0, 6400.0,
+    ];
+    let types = [
+        biquad::Type::HighPass,
+        biquad::Type::LowPass,
+        biquad::Type::BandPass,
+    ];
+
+    let filter_params = FilterParams {
+        filter_type: types[rng.gen_range(0..types.len())],
+        form: FilterForm::Form2,
+        frequency: freqs[rng.gen_range(0..freqs.len())],
+        q: Some(rng.gen_range(0.15_f64..1.2_f64)),
+    };
+
+    let new_params = multi_channel_filter(&params.to_owned(), &filter_params)?;
+
+    complete_event!(PermuteNodeName::Filter, new_params);
+    Ok(new_params)
+}
+
+pub fn random_oscillating_filter(
+    params: &ProcessorParams,
+) -> Result<ProcessorParams, PermuteError> {
+    start_event!(PermuteNodeName::Filter, params);
+
+    let mut rng = thread_rng();
+
+    let freqs = [
+        200.0, 250.0, 300.0, 400.0, 500.0, 600.0, 800.0, 1000.0, 1200.0, 1600.0, 2000.0, 2400.0,
+        3200.0, 4000.0, 4800.0, 6400.0,
+    ];
+    let lfo_rates = [
+        0.2, 0.3, 0.4, 0.5, 0.75, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 3.0, 4.0, 6.0, 8.0, 10.0, 15.0,
+        25.0, 45.0, 80.0,
+    ];
+    let lfo_factors = [0.5, 0.6, 0.7, 0.8, 0.9, 0.95];
+    let types = [
+        biquad::Type::HighPass,
+        biquad::Type::LowPass,
+        biquad::Type::BandPass,
+    ];
+
+    let filter_params = OscillatingFilterParams {
+        filter_type: types[rng.gen_range(0..types.len())],
+        form: FilterForm::Form2,
+        frequency: freqs[rng.gen_range(0..freqs.len())],
+        lfo_rate: lfo_rates[rng.gen_range(0..lfo_rates.len())],
+        lfo_factor: lfo_factors[rng.gen_range(0..lfo_factors.len())],
+        q: Some(rng.gen_range(0.5_f64..1.3_f64)),
+    };
+
+    let new_params = multi_oscillating_filter(&params.to_owned(), &filter_params)?;
+
+    complete_event!(PermuteNodeName::Filter, new_params);
+    Ok(new_params)
+}
+
+pub fn random_line_filter(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
+    start_event!(PermuteNodeName::Filter, params);
+
+    let mut rng = thread_rng();
+
+    let freqs = [
+        100.0, 150.0, 160.0, 175.0, 200.0, 220.0, 250.0, 300.0, 350.0, 400.0, 450.0, 500.0, 550.0,
+        600.0, 650.0, 800.0, 850.0, 1000.0, 1050.0, 1200.0, 1250.0, 1600.0, 2000.0, 2400.0, 3200.0,
+        3500.0, 4000.0, 4800.0, 5200.0, 6400.0, 8000.0, 8500.0, 10000.0, 12000.0, 13000.0, 14000.0,
+        15000.0,
+    ];
+    let types = [
+        biquad::Type::HighPass,
+        biquad::Type::LowPass,
+        biquad::Type::LowPass, // make low pass most likely
+        biquad::Type::BandPass,
+    ];
+
+    let filter_params = LineFilterParams {
+        filter_type: types[rng.gen_range(0..types.len())],
+        form: FilterForm::Form2,
+        hz_from: freqs[rng.gen_range(0..freqs.len())],
+        hz_to: freqs[rng.gen_range(0..freqs.len())],
+        q: Some(rng.gen_range(0.5_f64..1.35_f64)),
+    };
+
+    let new_params = multi_line_filter(&params.to_owned(), &filter_params)?;
+
+    complete_event!(PermuteNodeName::Filter, new_params);
+    Ok(new_params)
 }
 
 pub fn normalise(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {

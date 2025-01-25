@@ -67,6 +67,11 @@ body {
   top: 0px
 }
 
+.drag-files {
+  outline: 2px dashed var(--chakra-colors-brand-100);
+  outline-offset: -2px;
+}
+
 .audio-svg {
     fill: var(--chakra-colors-brand-100);
     stroke: #000404;

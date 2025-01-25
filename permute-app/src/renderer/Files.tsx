@@ -8,15 +8,16 @@ import {
   PropsOf,
   Button,
   Center,
-  Image,
   Text,
+  Tooltip,
 } from '@chakra-ui/react';
 import { ViewIcon } from '@chakra-ui/icons';
-import { useContext, useState } from 'react';
+import { useContext } from 'react';
 import type { IPermutationInput } from 'permute-node';
 import { AudioContext } from './AudioContext';
 import { PlayIcon } from './icons/PlayIcon';
 import { displayTime } from './displayTime';
+import { useDropzone } from 'react-dropzone'
 
 export interface IFilesProps {
   files: IPermutationInput[];
@@ -35,16 +36,11 @@ export const Files: React.FC<IFilesProps> = ({
   removeFile,
   showFile,
 }) => {
-  const [isDrag, setDrag] = useState(false);
   const { playFile } = useContext(AudioContext);
 
-  const onDrop: React.DragEventHandler<HTMLInputElement> = (e) => {
-    const files: string[] = [];
-    for (const f of (e.dataTransfer as any).files) {
-      files.push(f.path);
-    }
-    addFiles(files);
-    setDrag(false);
+  const onDrop = (files: any[]) => {
+    const filenames: string[] = files.map(f => f.path)
+    addFiles(filenames);
   };
   const onChange: React.ChangeEventHandler<HTMLInputElement> = (e) => {
     const files: string[] = [];
@@ -53,6 +49,7 @@ export const Files: React.FC<IFilesProps> = ({
     }
     addFiles(files);
   };
+  const { getRootProps, getInputProps, isDragActive: isDrag } = useDropzone({ onDrop })
 
   const fileBoxes = files.map((file, i) => {
     const props: PropsOf<typeof Box> = {
@@ -62,6 +59,8 @@ export const Files: React.FC<IFilesProps> = ({
       pos: 'relative',
       color: 'gray.700',
     };
+    const ext = file.path.split(".").pop()?.toLowerCase();
+    const isAiff = ext === "aif" || ext === "aiff"
     return (
       <Box {...props}>
         <Box
@@ -98,21 +97,32 @@ export const Files: React.FC<IFilesProps> = ({
           dangerouslySetInnerHTML={{ __html: file.image }}
         />
         <Box display="flex" alignItems="baseline" width="100%" pos="relative">
-          <IconButton
-            aria-label="show"
-            variant="ghost"
-            size="xs"
-            icon={<PlayIcon />}
-            onClick={() => playFile(file)}
-          />
-          <IconButton
-            aria-label="show"
-            variant="ghost"
-            size="xs"
-            alignSelf="center"
-            icon={<ViewIcon />}
-            onClick={() => showFile(file.path)}
-          />
+          <Tooltip
+            openDelay={200}
+            label="Preview"
+          >
+            <IconButton
+              aria-label="play"
+              variant="ghost"
+              size="xs"
+              disabled={isAiff}
+              icon={<PlayIcon />}
+              onClick={() => playFile(file)}
+            />
+          </Tooltip>
+          <Tooltip
+            openDelay={200}
+            label="Open directory"
+          >
+            <IconButton
+              aria-label="show"
+              variant="ghost"
+              size="xs"
+              alignSelf="center"
+              icon={<ViewIcon />}
+              onClick={() => showFile(file.path)}
+            />
+          </Tooltip>
           <Text
             pr={2}
             width="100%"
@@ -167,15 +177,27 @@ export const Files: React.FC<IFilesProps> = ({
               cursor="pointer"
               type="file"
               multiple
-              onDrop={onDrop}
               onChange={onChange}
-              onDragEnter={() => setDrag(true)}
-              onDragLeave={() => setDrag(false)}
+            />
+            <Input
+              accept=".wav,.aif"
+              hidden
+              type="file"
+              width="0"
+              height="0"
+              multiple
+              {...getInputProps()}
             />
           </Button>
         </Center>
       </Box>
-      <Box height="100%" overflowY="scroll">
+      <Box
+        height="100%"
+        overflowY="scroll"
+        className={isDrag ? "drag-files" : ""}
+        {...getRootProps()}
+        onClick={e => { e.stopPropagation() }}
+      >
         {fileBoxes}
       </Box>
     </GridItem>
