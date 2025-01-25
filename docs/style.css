@@ -16,7 +16,6 @@ body {
   text-align: center;
   font-weight: 400;
   margin-bottom: 24px;
-
 }
 
 .page {
@@ -33,7 +32,7 @@ body {
 }
 
 .content {
-  font-size: 18px;
+  font-size: 24px;
 }
 
 .demo-image {
