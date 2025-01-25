@@ -1,0 +1,116 @@
+:root {
+  --chakra-fonts-body: Dongle;
+  --chakra-fonts-heading: Dongle;
+}
+
+body {
+  background-image: url("./img/bg2.png") !important;
+  animation: background-move 100s ease-in-out 2s 4 alternate;
+  background-size: cover;
+  font-family: Dongle, sans-serif;
+  padding: 16px
+}
+
+.title {
+  font-size: 48px;
+  text-align: center;
+  font-weight: 400;
+  margin-bottom: 24px;
+
+}
+
+.page {
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  color: #343b46;
+}
+
+.demo {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto 36px;
+}
+
+.content {
+  font-size: 18px;
+}
+
+.demo-image {
+  width: 100%;
+}
+
+.download-box {
+  background-color: #cba7db;
+  margin: 0 auto;
+  padding: 18px;
+  text-align: center;
+  cursor: pointer;
+  border-radius: 8px;
+  box-shadow: rgba(100, 100, 111, 0.2) 0px 7px 29px 0px;
+  color: #faf9fe;
+  width: 200px;
+}
+
+.download-box a {
+  color: #faf9fe;
+  text-decoration: none;
+  font-size: 28px;
+}
+
+.download-box:hover a {
+  color: #343b46;
+}
+
+.download-box:hover {
+  background-color: #e4e1f9;
+}
+
+.code-box {
+  margin: 64px 0;
+  text-align: center;
+}
+
+.code-box a {
+  font-size: 36px;
+  color: #3fe8c4;
+}
+
+.code-box a:hover {
+  color: #343b46;
+}
+
+@keyframes background-move {
+  0% {
+    background-position: 0%;
+    background-position-y: 0%;
+  }
+
+  20% {
+    background-position: 8%;
+    background-position-y: 4%;
+  }
+
+  40% {
+    background-position: 3%;
+    background-position-y: 7%;
+  }
+
+  60% {
+    background-position: 7%;
+    background-position-y: 2%;
+  }
+
+  100% {
+    background-position: 10%;
+    background-position-y: 10%;
+  }
+}
+
+.output-heading {
+  direction: rtl;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
