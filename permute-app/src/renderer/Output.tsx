@@ -52,8 +52,9 @@ export const Output: React.FC<IOutputProps> = ({
         borderBottomColor: fileBorderColour,
         color: 'gray.700',
       };
-      const ext = file.path.split(".").pop()?.toLowerCase();
-      const isAiff = ext === "aif" || ext === "aiff"
+      // const ext = file.path.split(".").pop()?.toLowerCase();
+      // const isAiff = ext === "aif" || ext === "aiff"
+      const isAiff = false;
       return (
         <Box {...props}>
           <Box
