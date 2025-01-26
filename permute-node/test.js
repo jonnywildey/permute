@@ -2,8 +2,8 @@ const { createPermuteProcessor } = require(".");
 
 const run = () => {
   const processor = createPermuteProcessor();
-  // processor.addFile("/Users/jonnywildey/rustcode/permute/permute-core/examples/vibebeep24.wav");
-  processor.reverseFile("/Users/jonnywildey/rustcode/permute/permute-core/examples/vibebeep24.wav",
+  processor.addFile("/Users/jonnywildey/rustcode/permute/permute-core/examples/amen.wav");
+  processor.reverseFile("/Users/jonnywildey/rustcode/permute/permute-core/examples/amen.wav",
     (state) => {
       console.log("update", state)
     }, (state) => {
