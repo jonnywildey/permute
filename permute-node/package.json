@@ -9,11 +9,12 @@
   ],
   "scripts": {
     "build": "npm run build-release && npm run build-ts",
-    "build-update": "npm run build && cd ../permute-app/release/app && npm i",
+    "build-update": "npm run build && npm run update-deps",
     "build-release": "cargo-cp-artifact -nc permute-library/index.node -- cargo build --message-format=json-render-diagnostics --release",
     "build-debug": "cargo-cp-artifact -nc permute-library/index.node -- cargo build --message-format=json-render-diagnostics",
     "build-ts": "tsc --build --clean && tsc && npm pack",
     "test": "cargo test",
+    "update-deps": "cd ../permute-app/release/app && rm -rf node_modules && rm package-lock.json && npm i",
     "process": "npm run build-release && node index.js"
   },
   "author": "",

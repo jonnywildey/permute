@@ -61,6 +61,8 @@ impl Processor {
 
         // process thread
         let js_state = Arc::clone(&state);
+        let process_state = Arc::clone(&state);
+
         thread::spawn(move || {
             while let Ok(message) = rx.recv() {
                 let mut state = js_state.lock().unwrap();
@@ -118,12 +120,11 @@ impl Processor {
             }
         });
 
-        let process_state = Arc::clone(&state);
-
         // // processor/shared state updates thread.
         thread::spawn(move || {
             while let Ok(message) = permute_rx.recv() {
                 let mut state = process_state.lock().unwrap();
+
                 match message {
                     PermuteUpdate::UpdatePermuteNodeCompleted(permutation, _, _) => {
                         state.update_output_progress(permutation);

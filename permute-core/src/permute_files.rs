@@ -28,6 +28,7 @@ pub struct PermuteFilesParams {
     pub normalise_at_end: bool,
     pub high_sample_rate: bool,
     pub processor_count: Option<i32>,
+    pub output_file_as_wav: bool,
 
     pub update_sender: mpsc::Sender<PermuteUpdate>,
 }
@@ -69,6 +70,7 @@ fn permute_file(
         normalise_at_end,
         update_sender,
         processor_count,
+        output_file_as_wav,
     }: PermuteFilesParams,
     file: String,
 ) -> Result<(), PermuteError> {
@@ -76,7 +78,10 @@ fn permute_file(
     let sample_rate = snd.get_samplerate();
     let channels = snd.get_channels();
     let sub_format = snd.get_subtype_format();
-    let file_format = snd.get_major_format();
+    let file_format = match output_file_as_wav {
+        true => MajorFormat::WAV,
+        false => snd.get_major_format(),
+    };
     let samples_64: Vec<f64> = snd.read_all_to_vec()?;
     let endian = snd.get_endian();
 
@@ -91,7 +96,7 @@ fn permute_file(
     let mut generated_processors: Vec<(Vec<ProcessorFn>, ProcessorParams)> = vec![];
 
     for i in 1..=permutations {
-        let output_i = generate_file_name(file.clone(), output.clone(), i);
+        let output_i = generate_file_name(file.clone(), output.clone(), i, output_file_as_wav);
         let processors = generate_processor_sequence(GetProcessorNodeParams {
             depth: permutation_depth,
             normalise_at_end,
@@ -138,6 +143,19 @@ fn permute_file(
             processor_params: processor_params.clone(),
             processors: processor_fns.to_vec(),
         })?;
+        // let output_format = match output_file_as_wav {
+        //     true => MajorFormat::WAV,
+        //     false => output_params.file_format,
+        // };
+        // let output_path = match output_file_as_wav {
+        //     true => {
+        //         let mut path = PathBuf::from(output_params.permutation.output.clone());
+        //         path.set_extension("wav");
+        //         path.into_os_string().into_string().unwrap()
+        //     }
+        //     false => output_params.permutation.output.clone(),
+        // };
+
         let mut snd = sndfile::OpenOptions::WriteOnly(WriteOptions::new(
             output_params.file_format,
             output_params.sub_format,
@@ -205,7 +223,12 @@ pub fn process_file(
     Ok(())
 }
 
-fn generate_file_name(file: String, output: String, permutation_count: usize) -> String {
+fn generate_file_name(
+    file: String,
+    output: String,
+    permutation_count: usize,
+    output_file_as_wav: bool,
+) -> String {
     let mut dir_path = Path::new(&output).canonicalize().unwrap();
     let file_path = Path::new(&file);
     let file_stem = file_path
@@ -213,11 +236,14 @@ fn generate_file_name(file: String, output: String, permutation_count: usize) ->
         .unwrap_or_default()
         .to_str()
         .unwrap_or("");
-    let extension = file_path
-        .extension()
-        .unwrap_or_default()
-        .to_str()
-        .unwrap_or("");
+    let extension = match output_file_as_wav {
+        true => "wav",
+        false => file_path
+            .extension()
+            .unwrap_or_default()
+            .to_str()
+            .unwrap_or(""),
+    };
     let new_filename = [file_stem, &permutation_count.to_string(), ".", extension].concat();
 
     dir_path.push(new_filename);

@@ -42,7 +42,6 @@ export const Output: React.FC<IOutputProps> = ({
   permutationOutputs,
 }) => {
   const { playFile } = useContext(AudioContext);
-
   const outputBoxes = permutationOutputs
     .filter((f) => f.progress === 100 && f.image)
     .map((file) => {
@@ -52,9 +51,8 @@ export const Output: React.FC<IOutputProps> = ({
         borderBottomColor: fileBorderColour,
         color: 'gray.700',
       };
-      // const ext = file.path.split(".").pop()?.toLowerCase();
-      // const isAiff = ext === "aif" || ext === "aiff"
-      const isAiff = false;
+      const ext = file.path.split(".").pop()?.toLowerCase();
+      const isAiff = ext === "aif" || ext === "aiff"
       return (
         <Box {...props}>
           <Box

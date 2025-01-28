@@ -27,6 +27,8 @@ struct PermuteArgs {
     /// Trail to add at beginning of file in seconds
     #[structopt(long = "outputTrail", default_value = "0")]
     output_trail: f64,
+    #[structopt(long = "outputAsWav")]
+    output_file_as_wav: bool,
     /// Number of times to randomly process file
     #[structopt(long, short)]
     permutations: usize,
@@ -93,6 +95,7 @@ fn main() {
             processor_pool: processor_pool,
             high_sample_rate: args.high_sample_rate,
             normalise_at_end: args.normalise,
+            output_file_as_wav: args.output_file_as_wav,
             update_sender: tx,
             processor_count,
         });

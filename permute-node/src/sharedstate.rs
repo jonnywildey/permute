@@ -70,6 +70,7 @@ impl SharedState {
                 _ => None,
             },
             processor_pool: self.processor_pool.clone(),
+            output_file_as_wav: true,
             update_sender: self.update_sender.to_owned(),
         }
     }
@@ -124,6 +125,7 @@ impl SharedState {
     }
 
     pub fn update_output_progress(&mut self, permutation: Permutation) {
+        print!("cake");
         let percentage_progress: f64 =
             ((permutation.node_index as f64 + 1.0) / permutation.processors.len() as f64) * 100.0;
 
@@ -176,16 +178,19 @@ impl SharedState {
         let search_file = file.clone();
         let update_sender = self.update_sender.clone();
         process_file(file, PermuteNodeName::Reverse, update_sender)?;
+
         self.processing = false;
         let permutation_output = self
             .permutation_outputs
             .iter_mut()
             .find(|po| po.output == search_file);
-        permutation_output
-            .unwrap()
-            .audio_info
-            .update_file(search_file)
-            .unwrap();
+        match permutation_output {
+            Some(po) => {
+                let mut ai = po.audio_info.clone();
+                ai.update_file(search_file).unwrap();
+            }
+            None => {}
+        }
         Ok(())
     }
 
@@ -199,11 +204,13 @@ impl SharedState {
             .permutation_outputs
             .iter_mut()
             .find(|po| po.output == search_file);
-        permutation_output
-            .unwrap()
-            .audio_info
-            .update_file(search_file)
-            .unwrap();
+        match permutation_output {
+            Some(po) => {
+                let mut ai = po.audio_info.clone();
+                ai.update_file(search_file).unwrap();
+            }
+            None => {}
+        }
         Ok(())
     }
 
