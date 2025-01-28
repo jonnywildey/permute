@@ -42,7 +42,6 @@ export const Output: React.FC<IOutputProps> = ({
   permutationOutputs,
 }) => {
   const { playFile } = useContext(AudioContext);
-
   const outputBoxes = permutationOutputs
     .filter((f) => f.progress === 100 && f.image)
     .map((file) => {
