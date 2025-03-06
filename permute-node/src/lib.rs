@@ -70,6 +70,7 @@ impl Processor {
                     ProcessorMessage::GetStateCallback(f) => {
                         f(&channel, state.clone());
                     }
+                    // update state functions to handle and print errors AI!
                     ProcessorMessage::Run => {
                         state.run_process();
                     }
