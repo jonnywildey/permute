@@ -3,3 +3,4 @@
 /sndfile.rs
 /sndfile-sys
 /releases
+.aider*

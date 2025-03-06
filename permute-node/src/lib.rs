@@ -70,22 +70,33 @@ impl Processor {
                     ProcessorMessage::GetStateCallback(f) => {
                         f(&channel, state.clone());
                     }
-                    // update state functions to handle and print errors AI!
                     ProcessorMessage::Run => {
                         state.run_process();
                     }
-                    ProcessorMessage::AddFile(file) => {
-                        state.add_file(file);
-                    }
+                    ProcessorMessage::AddFile(file) => match state.add_file(file) {
+                        Ok(()) => {}
+                        Err(err) => {
+                            println!("Error adding file: {:?}", err.to_string());
+                            state.set_error(err.to_string());
+                        }
+                    },
                     ProcessorMessage::RemoveFile(file) => {
                         state.remove_file(file);
                     }
-                    ProcessorMessage::ReverseFile(file) => {
-                        state.reverse_file(file);
-                    }
-                    ProcessorMessage::TrimFile(file) => {
-                        state.trim_file(file);
-                    }
+                    ProcessorMessage::ReverseFile(file) => match state.reverse_file(file) {
+                        Ok(()) => {}
+                        Err(err) => {
+                            println!("Error reversing file: {}", err.to_string());
+                            state.set_error(err.to_string());
+                        }
+                    },
+                    ProcessorMessage::TrimFile(file) => match state.trim_file(file) {
+                        Ok(()) => {}
+                        Err(err) => {
+                            println!("Error trimming file: {}", err.to_string());
+                            state.set_error(err.to_string());
+                        }
+                    },
                     ProcessorMessage::AddProcessor(name) => {
                         state.add_processor(name);
                     }
