@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::{ffi::OsStr, path::Path};
+use std::{ffi::OsStr, fmt, path::Path};
 
 use sndfile::*;
 
@@ -109,6 +109,16 @@ pub enum AudioFileError {
     Unknown(()),
 }
 
+impl fmt::Display for AudioFileError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            AudioFileError::Snd(e) => write!(f, "Snd error: {:?}", e),
+            AudioFileError::Unknown(_) => write!(f, "Unknown error"),
+        }
+    }
+}
+
+// implement Display for AudioFileError AI!
 impl From<SndFileError> for AudioFileError {
     fn from(error: SndFileError) -> Self {
         AudioFileError::Snd(error)
