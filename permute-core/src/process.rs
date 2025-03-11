@@ -61,6 +61,7 @@ pub enum PermuteNodeName {
 
     Filter,
     LineFilter,
+    Tremolo,
     OscillatingFilter,
 
     Wow,
@@ -76,7 +77,7 @@ pub enum PermuteNodeName {
 
 // Only processors we want to be visible to users
 #[allow(dead_code)]
-pub const ALL_PROCESSORS: [PermuteNodeName; 18] = [
+pub const ALL_PROCESSORS: [PermuteNodeName; 19] = [
     PermuteNodeName::Reverse,
     PermuteNodeName::GranularTimeStretch,
     PermuteNodeName::Reverb,
@@ -94,6 +95,7 @@ pub const ALL_PROCESSORS: [PermuteNodeName; 18] = [
     PermuteNodeName::Phaser,
     PermuteNodeName::Filter,
     PermuteNodeName::LineFilter,
+    PermuteNodeName::Tremolo,
     PermuteNodeName::OscillatingFilter,
 ];
 
@@ -415,7 +417,7 @@ pub fn change_speed(
     for c in 0..channel_samples.len() {
         let cs = &channel_samples[c];
         let new_sample_length: usize = ((cs.len() as f64) / speed).ceil() as usize;
-        let mut ns = vec![0_f64; new_sample_length];
+        let mut ns: Vec<f64> = vec![0_f64; new_sample_length];
 
         let mut v1: f64;
         let mut v2: f64;
@@ -594,6 +596,53 @@ pub fn chorus(
         sample_rate: vibratod.sample_rate,
         permutation: params.permutation,
     });
+}
+
+#[derive(Clone)]
+pub struct TremoloParams {
+    pub speed_hz: f64,
+    pub depth: f64,
+}
+
+pub fn tremolo(
+    ProcessorParams {
+        samples,
+        sample_length: _,
+        channels,
+        endian,
+        file_format,
+        sub_format,
+        sample_rate,
+        update_sender,
+        permutation,
+    }: ProcessorParams,
+    TremoloParams { speed_hz, depth }: TremoloParams,
+) -> Result<ProcessorParams, PermuteError> {
+    let channel_samples = split_channels(samples, channels);
+    let mut new_channel_samples: Vec<Result<Vec<f64>, PermuteError>> = vec![];
+
+    for c in 0..channel_samples.len() {
+        let cs = &channel_samples[c];
+        let mut ns: Vec<f64> = vec![0_f64; cs.len()];
+        for i in 0..cs.len() {
+            let amplitude = lfo_sin(i, sample_rate, speed_hz, 0.0);
+            ns[i] = cs[i] - (cs[i] * amplitude * depth)
+        }
+        new_channel_samples.push(Ok(ns));
+    }
+    let interleaved_samples = interleave_channels(new_channel_samples.into_iter().collect())?;
+
+    Ok(ProcessorParams {
+        permutation: permutation,
+        sample_length: interleaved_samples.len(),
+        samples: interleaved_samples,
+        channels: channels,
+        endian: endian,
+        file_format: file_format,
+        sub_format: sub_format,
+        sample_rate: sample_rate,
+        update_sender: update_sender,
+    })
 }
 
 pub type FilterType<T> = Type<T>;

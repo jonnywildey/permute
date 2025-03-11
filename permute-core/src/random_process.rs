@@ -68,6 +68,7 @@ pub fn get_processor_function(name: PermuteNodeName) -> ProcessorFn {
         PermuteNodeName::RhythmicDelay => random_rhythmic_delay,
         PermuteNodeName::Reverb => random_reverb,
         PermuteNodeName::Wow => random_wow,
+        PermuteNodeName::Tremolo => random_tremolo,
         PermuteNodeName::Normalise => normalise,
         PermuteNodeName::Trim => trim,
         PermuteNodeName::SampleRateConversionHigh => change_sample_rate_high,
@@ -227,6 +228,30 @@ pub fn random_wow(params: &ProcessorParams) -> Result<ProcessorParams, PermuteEr
     complete_event!(PermuteNodeName::Wow, new_params);
     Ok(new_params)
 }
+
+pub fn random_tremolo(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
+    start_event!(PermuteNodeName::Wow, params);
+    let mut rng = thread_rng();
+
+    let factors = [
+        rng.gen_range(0.2_f64..1_f64),
+        rng.gen_range(0.5_f64..2_f64),
+        rng.gen_range(0.8_f64..3_f64),
+        rng.gen_range(1_f64..10_f64),
+        rng.gen_range(8_f64..300_f64),
+    ];
+
+    let new_params = tremolo(
+        params.to_owned(),
+        TremoloParams {
+            speed_hz: factors[rng.gen_range(0..factors.len())],
+            depth: rng.gen_range(0.3_f64..0.99_f64),
+        },
+    )?;
+    complete_event!(PermuteNodeName::Tremolo, new_params);
+    Ok(new_params)
+}
+
 pub fn random_flutter(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
     start_event!(PermuteNodeName::Flutter, params);
     let mut rng = thread_rng();
