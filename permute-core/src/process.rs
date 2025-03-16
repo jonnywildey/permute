@@ -702,7 +702,15 @@ pub fn tremolo_input_mod(
             if i % frame_count == 0 {
                 old_speed = new_speed;
                 // average
-                val = sumframes.iter().fold(0.0, |acc, v| acc + v) / frame_count_f;
+                // val = sumframes.iter().fold(0.0, |acc, v| acc + v) / frame_count_f;
+                // max
+                val = sumframes.iter().fold(0.0, |acc, v| {
+                    if *v > acc {
+                        return *v;
+                    } else {
+                        return acc;
+                    }
+                });
                 new_speed = min_speed_hz + (val * speed_diff);
                 ramp = 0;
             }

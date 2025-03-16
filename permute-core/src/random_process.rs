@@ -291,8 +291,7 @@ pub fn random_lazer(params: &ProcessorParams) -> Result<ProcessorParams, Permute
         TremoloInputModParams {
             min_speed_hz: hz.0,
             max_speed_hz: hz.1,
-            // depth: rng.gen_range(0.3_f64..0.99_f64),
-            depth: 0.8_f64,
+            depth: rng.gen_range(0.5_f64..0.99_f64),
             frame_ms: 10,
         },
     )?;

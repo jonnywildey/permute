@@ -21,4 +21,7 @@ export const processorDescriptions: Record<string, React.ReactNode> = {
     'A thickening chorus effect. Depth, speed and mix levels are randomised',
   Flange: `A "zero-through" flange effect. Speed and depth are randomised`,
   Phaser: 'A basic phaser effect. Speed and depth are randomised',
+  Tremolo: `Low-ish frequency amplitude modulation`,
+  Lazer: `Amplitude modulation where the frequency is determined by strength of signal. 
+  Good for robot sounds`
 };
