@@ -60,6 +60,9 @@ contextBridge.exposeInMainWorld('Electron', {
     setNormalised(normalised) {
       ipcRenderer.send('set-normalised', normalised);
     },
+    setTrimAll(trimAll) {
+      ipcRenderer.send('set-trim-all', trimAll);
+    },
     setPermutations(permutations) {
       ipcRenderer.send('set-permutations', permutations);
     },

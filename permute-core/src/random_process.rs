@@ -4,6 +4,7 @@ use strum::IntoEnumIterator;
 
 pub struct GetProcessorNodeParams {
     pub normalise_at_end: bool,
+    pub trim_at_end: bool,
     pub high_sample_rate: bool,
     pub depth: usize,
     pub processor_pool: Vec<PermuteNodeName>,
@@ -13,6 +14,7 @@ pub struct GetProcessorNodeParams {
 pub fn generate_processor_sequence(
     GetProcessorNodeParams {
         normalise_at_end,
+        trim_at_end,
         high_sample_rate,
         depth,
         processor_pool,
@@ -32,6 +34,7 @@ pub fn generate_processor_sequence(
             generate_processor_sequence(GetProcessorNodeParams {
                 depth: depth - 1,
                 normalise_at_end: false,
+                trim_at_end: false,
                 processor_pool,
                 high_sample_rate: false,
                 processor_count: Some(processor_count),
@@ -46,6 +49,9 @@ pub fn generate_processor_sequence(
     }
     if normalise_at_end {
         processors.push(PermuteNodeName::Normalise);
+    }
+    if trim_at_end {
+        processors.push(PermuteNodeName::Trim);
     }
 
     processors

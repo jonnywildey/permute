@@ -635,6 +635,11 @@ pub fn tremolo(
     }
     let interleaved_samples = interleave_channels(new_channel_samples.into_iter().collect())?;
 
+    update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
+        permutation.clone(),
+        PermuteNodeName::Tremolo,
+        PermuteNodeEvent::NodeProcessComplete,
+    ))?;
     Ok(ProcessorParams {
         permutation: permutation,
         sample_length: interleaved_samples.len(),
@@ -730,6 +735,11 @@ pub fn tremolo_input_mod(
     }
     let interleaved_samples = interleave_channels(new_channel_samples.into_iter().collect())?;
 
+    update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
+        permutation.clone(),
+        PermuteNodeName::Lazer,
+        PermuteNodeEvent::NodeProcessComplete,
+    ))?;
     Ok(ProcessorParams {
         permutation: permutation,
         sample_length: interleaved_samples.len(),
@@ -1275,6 +1285,13 @@ pub fn trim(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
     let new_samples = params.samples[start..end].to_vec();
     let len = new_samples.len();
 
+    params
+        .update_sender
+        .send(PermuteUpdate::UpdatePermuteNodeCompleted(
+            params.permutation.clone(),
+            PermuteNodeName::Trim,
+            PermuteNodeEvent::NodeProcessComplete,
+        ))?;
     Ok(ProcessorParams {
         samples: new_samples,
         sample_length: len,

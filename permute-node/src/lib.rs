@@ -27,6 +27,7 @@ enum ProcessorMessage {
     SetOutput(String),
     GetStateCallback(ProcessorCallback),
     SetNormalised(bool),
+    SetTrimAll(bool),
     SetPermutationDepth(usize),
     SetPermutations(usize),
     SetInputTrail(f64),
@@ -115,6 +116,9 @@ impl Processor {
                     }
                     ProcessorMessage::SetNormalised(normalised) => {
                         state.set_normalised(normalised);
+                    }
+                    ProcessorMessage::SetTrimAll(trim_all) => {
+                        state.set_trim_all(trim_all);
                     }
                     ProcessorMessage::SetPermutations(permutations) => {
                         state.set_permutations(permutations);
@@ -206,7 +210,9 @@ impl Processor {
                     let permutations = cx.number(state.permutations as u32);
                     let permutation_depth = cx.number(state.permutation_depth as u32);
                     let processor_count = cx.number(state.processor_count.unwrap_or(0) as u32);
-                    let normalise_at_end = cx.boolean(state.normalise_at_end);
+                    let normalise_at_end: Handle<'_, JsBoolean> =
+                        cx.boolean(state.normalise_at_end);
+                    let trim_all: Handle<'_, JsBoolean> = cx.boolean(state.trim_all);
 
                     let files = cx.empty_array();
                     for i in 0..state.files.len() {
@@ -273,6 +279,7 @@ impl Processor {
                     obj.set(&mut cx, "processorPool", processor_pool)?;
                     obj.set(&mut cx, "allProcessors", all_processors)?;
                     obj.set(&mut cx, "normaliseAtEnd", normalise_at_end)?;
+                    obj.set(&mut cx, "trimAll", trim_all)?;
                     obj.set(&mut cx, "permutationOutputs", permutation_outputs)?;
 
                     let args = vec![obj];
@@ -335,6 +342,12 @@ impl Processor {
         Ok(cx.undefined())
     }
 
+    fn js_set_trim_all(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+        let trim_all = cx.argument::<JsBoolean>(0)?.value(&mut cx);
+        js_hook!(trim_all, ProcessorMessage::SetTrimAll, cx);
+        Ok(cx.undefined())
+    }
+
     fn js_set_input_trail(mut cx: FunctionContext) -> JsResult<JsUndefined> {
         let input_trail = cx.argument::<JsNumber>(0)?.value(&mut cx);
         js_hook!(input_trail, ProcessorMessage::SetInputTrail, cx);
@@ -394,6 +407,7 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
     cx.export_function("setOutputTrail", Processor::js_set_output_trail)?;
     cx.export_function("setPermutations", Processor::js_set_permutations)?;
     cx.export_function("setNormalised", Processor::js_set_normalised)?;
+    cx.export_function("setTrimAll", Processor::js_set_trim_all)?;
     cx.export_function("reverseFile", Processor::js_reverse_file)?;
     cx.export_function("trimFile", Processor::js_trim_file)?;
     cx.export_function("saveSettings", Processor::js_save_settings)?;

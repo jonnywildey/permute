@@ -47,6 +47,7 @@ const Content = () => {
     output,
     permutations,
     normaliseAtEnd,
+    trimAll,
     inputTrail,
     outputTrail,
     processorPool,
@@ -117,6 +118,10 @@ const Content = () => {
     window.Electron.ipcRenderer.setNormalised(normaliseAtEnd);
     refreshState();
   };
+  const setTrimAll = async (trimAll: boolean) => {
+    window.Electron.ipcRenderer.setTrimAll(trimAll);
+    refreshState();
+  };
   const setInputTrail = async (inputTrail: number) => {
     window.Electron.ipcRenderer.setInputTrail(inputTrail);
     refreshState();
@@ -157,6 +162,8 @@ const Content = () => {
     refreshState();
   };
 
+  console.log(permutationOutputs);
+
   return (
     <Grid
       templateRows="repeat(24, 1fr)"
@@ -194,11 +201,13 @@ const Content = () => {
         depth={permutationDepth}
         permutations={permutations}
         normaliseAtEnd={normaliseAtEnd}
+        trimAll={trimAll}
         inputTrail={inputTrail}
         outputTrail={outputTrail}
         setDepth={setDepth}
         setPermutations={setPermutations}
         setNormalised={setNormalised}
+        setTrimAll={setTrimAll}
         setInputTrail={setInputTrail}
         setOutputTrail={setOutputTrail}
         processorPool={processorPool}

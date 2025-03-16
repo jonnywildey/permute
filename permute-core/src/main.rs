@@ -39,6 +39,9 @@ struct PermuteArgs {
     /// Whether to normalise at end
     #[structopt(long)]
     normalise: bool,
+    /// Whether to trim at end
+    #[structopt(long = "trimAll")]
+    trim_all: bool,
     /// Whether to run fx at a high sample rate
     #[structopt(long = "highSampleRate")]
     high_sample_rate: bool,
@@ -97,6 +100,7 @@ fn main() {
             processor_pool: processor_pool,
             high_sample_rate: args.high_sample_rate,
             normalise_at_end: args.normalise,
+            trim_all: args.trim_all,
             output_file_as_wav: args.output_file_as_wav,
             update_sender: tx,
             processor_count,

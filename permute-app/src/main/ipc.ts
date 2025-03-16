@@ -66,6 +66,9 @@ ipcMain.on('set-permutations', async (_, param) => {
 ipcMain.on('set-normalised', async (_, param) => {
   processor.setNormalised(param);
 });
+ipcMain.on('set-trim-all', async (_, param) => {
+  processor.setTrimAll(param);
+});
 ipcMain.on('set-input-trail', async (_, param) => {
   processor.setInputTrail(param);
 });

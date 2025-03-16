@@ -1,11 +1,11 @@
 const {
   init, cancel, runProcess, addFile, addProcessor, removeProcessor,
   getStateCallback, setOutput, setDepth, setInputTrail,
-  setOutputTrail, setPermutations, setNormalised, removeFile, reverseFile,
+  setOutputTrail, setPermutations, setNormalised, setTrimAll, removeFile, reverseFile,
   saveSettings, loadSettings, trimFile
 } = require("../permute-library");
 
-const PERMUTE_POLL_LATENCY = 100;
+const PERMUTE_POLL_LATENCY = 500;
 
 export interface IPermuteState {
   output: string,
@@ -21,6 +21,7 @@ export interface IPermuteState {
   processorPool: string[],
   allProcessors: string[],
   normaliseAtEnd: boolean,
+  trimAll: boolean,
   permutationOutputs: IPermutationOutput[];
 };
 
@@ -117,6 +118,9 @@ export function createPermuteProcessor() {
     },
     setNormalised(output: string) {
       return setNormalised.call(permuteLibrary, output);
+    },
+    setTrimAll(output: string) {
+      return setTrimAll.call(permuteLibrary, output);
     },
     setInputTrail(output: string) {
       return setInputTrail.call(permuteLibrary, output);

@@ -23,6 +23,7 @@ export interface IBottomBarProps {
   depth: number;
   permutations: number;
   normaliseAtEnd: boolean;
+  trimAll: boolean;
   inputTrail: number;
   outputTrail: number;
   output: string;
@@ -31,6 +32,7 @@ export interface IBottomBarProps {
   setDepth: (depth: number) => void;
   setPermutations: (permutations: number) => void;
   setNormalised: (normaliseAtEnd: boolean) => void;
+  setTrimAll: (trimAll: boolean) => void;
   setInputTrail: (trail: number) => void;
   setOutputTrail: (trail: number) => void;
 }
@@ -46,6 +48,7 @@ export const BottomBar: React.FC<IBottomBarProps> = ({
   setDepth,
   setInputTrail,
   setNormalised,
+  setTrimAll,
   setOutputTrail,
   setPermutations,
   depth,
@@ -53,6 +56,7 @@ export const BottomBar: React.FC<IBottomBarProps> = ({
   files,
   output,
   normaliseAtEnd,
+  trimAll,
   outputTrail,
   processorPool,
   permutations,
@@ -91,9 +95,10 @@ export const BottomBar: React.FC<IBottomBarProps> = ({
           permutations={permutations}
           processorPool={processorPool}
           runProcessor={runProcessor}
-        />
+          />
         {OutputTrail(outputTrail, setOutputTrail)}
         {Permutations(permutations, setPermutations)}
+        {TrimAll(trimAll, setTrimAll)}
         <GridItem rowSpan={1} colSpan={2} />
       </Grid>
     </GridItem>
@@ -424,6 +429,32 @@ function Normalise(
         colorScheme="brand"
         isChecked={normaliseAtEnd}
         onChange={(e) => setNormalised(e.target.checked)}
+        ml={2}
+      />
+    </GridItem>
+  );
+}
+
+function TrimAll(
+  trimAll: boolean,
+  setTrimAll: (trimAll: boolean) => void
+) {
+  return (
+    <GridItem rowSpan={1} colSpan={2} pt={3} pl="33%">
+      <Tooltip
+        openDelay={200}
+        label={
+          <Text fontSize="lg">
+            If enabled, trims all permuted audio, removing silence{' '}
+          </Text>
+        }
+      >
+        <Heading size="sm">Trim All</Heading>
+      </Tooltip>
+      <Switch
+        colorScheme="brand"
+        isChecked={trimAll}
+        onChange={(e) => setTrimAll(e.target.checked)}
         ml={2}
       />
     </GridItem>
