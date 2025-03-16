@@ -49,6 +49,7 @@
         "--permutations=4",
         "--depth=1",
         "--normalise",
+        "--trimAll",
         "--processorCount=1",
         "--processor=Lazer"
       ],
