@@ -26,6 +26,7 @@ pub struct PermuteFilesParams {
     pub permutation_depth: usize,
     pub processor_pool: Vec<PermuteNodeName>,
     pub normalise_at_end: bool,
+    pub trim_all: bool,
     pub high_sample_rate: bool,
     pub processor_count: Option<i32>,
     pub output_file_as_wav: bool,
@@ -68,6 +69,7 @@ fn permute_file(
         processor_pool,
         high_sample_rate,
         normalise_at_end,
+        trim_all,
         update_sender,
         processor_count,
         output_file_as_wav,
@@ -100,6 +102,7 @@ fn permute_file(
         let processors = generate_processor_sequence(GetProcessorNodeParams {
             depth: permutation_depth,
             normalise_at_end,
+            trim_at_end: trim_all,
             high_sample_rate,
             processor_pool: processor_pool.clone(),
             processor_count,

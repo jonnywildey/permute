@@ -1,7 +1,4 @@
-import './App.css';
-import '@fontsource/dongle/400.css';
-import '@fontsource/dongle/300.css';
-import '@fontsource/dongle/700.css';
+
 import {
   ChakraProvider,
   Grid,
@@ -9,6 +6,8 @@ import {
   useToast,
   Spinner,
   Center,
+  Text,
+  Heading
 } from '@chakra-ui/react';
 import type { IPermuteState } from 'permute-node';
 import { useEffect, useState } from 'react';
@@ -48,6 +47,7 @@ const Content = () => {
     output,
     permutations,
     normaliseAtEnd,
+    trimAll,
     inputTrail,
     outputTrail,
     processorPool,
@@ -118,6 +118,10 @@ const Content = () => {
     window.Electron.ipcRenderer.setNormalised(normaliseAtEnd);
     refreshState();
   };
+  const setTrimAll = async (trimAll: boolean) => {
+    window.Electron.ipcRenderer.setTrimAll(trimAll);
+    refreshState();
+  };
   const setInputTrail = async (inputTrail: number) => {
     window.Electron.ipcRenderer.setInputTrail(inputTrail);
     refreshState();
@@ -158,6 +162,8 @@ const Content = () => {
     refreshState();
   };
 
+  console.log(permutationOutputs);
+
   return (
     <Grid
       templateRows="repeat(24, 1fr)"
@@ -195,11 +201,13 @@ const Content = () => {
         depth={permutationDepth}
         permutations={permutations}
         normaliseAtEnd={normaliseAtEnd}
+        trimAll={trimAll}
         inputTrail={inputTrail}
         outputTrail={outputTrail}
         setDepth={setDepth}
         setPermutations={setPermutations}
         setNormalised={setNormalised}
+        setTrimAll={setTrimAll}
         setInputTrail={setInputTrail}
         setOutputTrail={setOutputTrail}
         processorPool={processorPool}
@@ -213,15 +221,21 @@ const Content = () => {
 export default function App() {
   const [loading, setLoading] = useState(true);
   useEffect(() => {
-    setTimeout(() => setLoading(false), 1000);
+    setTimeout(() => setLoading(false), 2000);
   }, []);
   return (
     <ChakraProvider theme={theme}>
       <CreateAudioContext>
         {loading ? (
+          <>
+            <div className="font_preload" style={{"opacity": 0}}>
+              <Text>ABC</Text>
+              <Heading>ABCDEFG</Heading>
+            </div>
           <Center width="100vw" height="100vh">
             <Spinner ml={2} size="xl" color="brand.600" />
           </Center>
+          </>
         ) : (
           <Content />
         )}
