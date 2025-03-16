@@ -1,4 +1,5 @@
 mod display_node;
+mod osc;
 mod permute_error;
 mod permute_files;
 mod process;
@@ -33,7 +34,7 @@ struct PermuteArgs {
     #[structopt(long, short)]
     permutations: usize,
     /// How much the file is permuted. Numbers larger than 5 will take a long time to process
-    #[structopt(long = "depth", short, default_value = "1")]
+    #[structopt(long = "depth", short = "d", default_value = "1")]
     permutation_depth: usize,
     /// Whether to normalise at end
     #[structopt(long)]
@@ -71,6 +72,7 @@ fn main() {
             PermuteNodeName::Phaser,
             PermuteNodeName::Flange,
             PermuteNodeName::Filter,
+            PermuteNodeName::Lazer,
             PermuteNodeName::LineFilter,
             PermuteNodeName::OscillatingFilter,
         ],
