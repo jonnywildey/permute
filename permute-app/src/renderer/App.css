@@ -4,15 +4,17 @@
 }
 
 body {
-   background-image: url("../img/bg2.png") !important;
-   animation: background-move 100s ease-in-out 2s 4 alternate;
-   background-size: cover;
-   font-family: Dongle, sans-serif;
+  background-image: url("../img/bg2.png") !important;
+  animation: background-move 100s ease-in-out 2s 4 alternate;
+  background-size: cover;
+  font-family: Dongle, sans-serif;
+  font-display: swap;
 }
 
 .processor:hover {
   background-color: var(--chakra-colors-brand-150) !important;
 }
+
 .processor-enabled:hover {
   background-color: var(--chakra-colors-brand-675) !important;
 }
@@ -22,18 +24,22 @@ body {
     background-position: 0%;
     background-position-y: 0%;
   }
+
   20% {
     background-position: 8%;
     background-position-y: 4%;
   }
+
   40% {
     background-position: 3%;
     background-position-y: 7%;
   }
+
   60% {
     background-position: 7%;
     background-position-y: 2%;
   }
+
   100% {
     background-position: 10%;
     background-position-y: 10%;
@@ -73,19 +79,20 @@ body {
 }
 
 .audio-svg {
-    fill: var(--chakra-colors-brand-100);
-    stroke: #000404;
-    height: 28px;
-    width: 100%;
+  fill: var(--chakra-colors-brand-100);
+  stroke: #000404;
+  height: 28px;
+  width: 100%;
 }
+
 .output-image .audio-svg {
-    fill: var(--chakra-colors-brand-125);
+  fill: var(--chakra-colors-brand-125);
 }
 
 .play-image .audio-svg {
-    fill: var(--chakra-colors-brand-125);
-    height: 70px;
-    width: 100%;
+  fill: var(--chakra-colors-brand-125);
+  height: 70px;
+  width: 100%;
 }
 
 .modal {

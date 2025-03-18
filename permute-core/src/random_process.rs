@@ -4,6 +4,7 @@ use strum::IntoEnumIterator;
 
 pub struct GetProcessorNodeParams {
     pub normalise_at_end: bool,
+    pub trim_at_end: bool,
     pub high_sample_rate: bool,
     pub depth: usize,
     pub processor_pool: Vec<PermuteNodeName>,
@@ -13,6 +14,7 @@ pub struct GetProcessorNodeParams {
 pub fn generate_processor_sequence(
     GetProcessorNodeParams {
         normalise_at_end,
+        trim_at_end,
         high_sample_rate,
         depth,
         processor_pool,
@@ -32,6 +34,7 @@ pub fn generate_processor_sequence(
             generate_processor_sequence(GetProcessorNodeParams {
                 depth: depth - 1,
                 normalise_at_end: false,
+                trim_at_end: false,
                 processor_pool,
                 high_sample_rate: false,
                 processor_count: Some(processor_count),
@@ -46,6 +49,9 @@ pub fn generate_processor_sequence(
     }
     if normalise_at_end {
         processors.push(PermuteNodeName::Normalise);
+    }
+    if trim_at_end {
+        processors.push(PermuteNodeName::Trim);
     }
 
     processors
@@ -68,6 +74,8 @@ pub fn get_processor_function(name: PermuteNodeName) -> ProcessorFn {
         PermuteNodeName::RhythmicDelay => random_rhythmic_delay,
         PermuteNodeName::Reverb => random_reverb,
         PermuteNodeName::Wow => random_wow,
+        PermuteNodeName::Tremolo => random_tremolo,
+        PermuteNodeName::Lazer => random_lazer,
         PermuteNodeName::Normalise => normalise,
         PermuteNodeName::Trim => trim,
         PermuteNodeName::SampleRateConversionHigh => change_sample_rate_high,
@@ -227,6 +235,76 @@ pub fn random_wow(params: &ProcessorParams) -> Result<ProcessorParams, PermuteEr
     complete_event!(PermuteNodeName::Wow, new_params);
     Ok(new_params)
 }
+
+pub fn random_tremolo(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
+    start_event!(PermuteNodeName::Wow, params);
+    let mut rng = thread_rng();
+
+    let factors = [
+        rng.gen_range(0.2_f64..1_f64),
+        rng.gen_range(0.5_f64..2_f64),
+        rng.gen_range(0.8_f64..3_f64),
+        rng.gen_range(1_f64..10_f64),
+        rng.gen_range(8_f64..300_f64),
+    ];
+
+    let new_params = tremolo(
+        params.to_owned(),
+        TremoloParams {
+            speed_hz: factors[rng.gen_range(0..factors.len())],
+            depth: rng.gen_range(0.3_f64..0.99_f64),
+        },
+    )?;
+    complete_event!(PermuteNodeName::Tremolo, new_params);
+    Ok(new_params)
+}
+
+pub fn random_lazer(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
+    start_event!(PermuteNodeName::Wow, params);
+    let mut rng = thread_rng();
+
+    let hz_options = [
+        (
+            rng.gen_range(0.2_f64..10_f64),
+            rng.gen_range(10_f64..50_f64),
+        ),
+        (
+            rng.gen_range(10_f64..40_f64),
+            rng.gen_range(40_f64..120_f64),
+        ),
+        (
+            rng.gen_range(60_f64..100_f64),
+            rng.gen_range(140_f64..300_f64),
+        ),
+        (
+            rng.gen_range(10_f64..11_f64),
+            rng.gen_range(500_f64..2000_f64),
+        ),
+        (
+            rng.gen_range(200_f64..500_f64),
+            rng.gen_range(1000_f64..5000_f64),
+        ),
+        (
+            rng.gen_range(1_f64..100_f64),
+            rng.gen_range(8000_f64..20000_f64),
+        ),
+    ];
+
+    let hz = hz_options[rng.gen_range(0..hz_options.len())];
+
+    let new_params = tremolo_input_mod(
+        params.to_owned(),
+        TremoloInputModParams {
+            min_speed_hz: hz.0,
+            max_speed_hz: hz.1,
+            depth: rng.gen_range(0.5_f64..0.99_f64),
+            frame_ms: 10,
+        },
+    )?;
+    complete_event!(PermuteNodeName::Tremolo, new_params);
+    Ok(new_params)
+}
+
 pub fn random_flutter(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
     start_event!(PermuteNodeName::Flutter, params);
     let mut rng = thread_rng();

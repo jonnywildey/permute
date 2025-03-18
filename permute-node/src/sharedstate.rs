@@ -24,6 +24,7 @@ pub struct SharedState {
     pub processor_pool: Vec<PermuteNodeName>,
     pub all_processors: Vec<PermuteNodeName>,
     pub normalise_at_end: bool,
+    pub trim_all: bool,
     pub high_sample_rate: bool,
     pub processor_count: Option<i32>,
 
@@ -40,6 +41,7 @@ impl SharedState {
             high_sample_rate: false,
             input_trail: 0.0,
             normalise_at_end: true,
+            trim_all: false,
             error: String::default(),
             output: String::default(),
             output_trail: 2.0,
@@ -61,6 +63,7 @@ impl SharedState {
             high_sample_rate: self.high_sample_rate,
             input_trail: self.input_trail,
             normalise_at_end: self.normalise_at_end,
+            trim_all: self.trim_all,
             output: self.output.clone(),
             output_trail: self.output_trail,
             permutation_depth: self.permutation_depth,
@@ -125,7 +128,6 @@ impl SharedState {
     }
 
     pub fn update_output_progress(&mut self, permutation: Permutation) {
-        print!("cake");
         let percentage_progress: f64 =
             ((permutation.node_index as f64 + 1.0) / permutation.processors.len() as f64) * 100.0;
 
@@ -155,6 +157,10 @@ impl SharedState {
 
     pub fn set_normalised(&mut self, normalised: bool) {
         self.normalise_at_end = normalised;
+    }
+
+    pub fn set_trim_all(&mut self, trim_all: bool) {
+        self.trim_all = trim_all;
     }
 
     pub fn set_input_trail(&mut self, trail: f64) {
@@ -244,6 +250,7 @@ impl SharedState {
             high_sample_rate: self.high_sample_rate,
             input_trail: self.input_trail,
             normalise_at_end: self.normalise_at_end,
+            trim_all: self.trim_all,
             output: self.output.clone(),
             output_trail: self.output_trail,
             permutation_depth: self.permutation_depth,
@@ -266,6 +273,7 @@ impl SharedState {
         self.high_sample_rate = data.high_sample_rate;
         self.input_trail = data.input_trail;
         self.normalise_at_end = data.normalise_at_end;
+        self.trim_all = data.trim_all;
         self.output = data.output;
         self.output_trail = data.output_trail;
         self.permutation_depth = data.permutation_depth;
@@ -287,6 +295,7 @@ pub struct SharedStateSerializable {
     pub permutation_depth: usize,
     pub processor_pool: Vec<PermuteNodeName>,
     pub normalise_at_end: bool,
+    pub trim_all: bool,
     pub high_sample_rate: bool,
     pub processor_count: Option<i32>,
 }

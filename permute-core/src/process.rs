@@ -7,6 +7,7 @@ use std::{
 };
 use strum::EnumIter;
 
+use crate::osc::*;
 use crate::{permute_error::PermuteError, permute_files::PermuteUpdate};
 
 pub type ProcessorFn = fn(&ProcessorParams) -> Result<ProcessorParams, PermuteError>;
@@ -61,6 +62,8 @@ pub enum PermuteNodeName {
 
     Filter,
     LineFilter,
+    Tremolo,
+    Lazer,
     OscillatingFilter,
 
     Wow,
@@ -76,7 +79,7 @@ pub enum PermuteNodeName {
 
 // Only processors we want to be visible to users
 #[allow(dead_code)]
-pub const ALL_PROCESSORS: [PermuteNodeName; 18] = [
+pub const ALL_PROCESSORS: [PermuteNodeName; 20] = [
     PermuteNodeName::Reverse,
     PermuteNodeName::GranularTimeStretch,
     PermuteNodeName::Reverb,
@@ -94,6 +97,8 @@ pub const ALL_PROCESSORS: [PermuteNodeName; 18] = [
     PermuteNodeName::Phaser,
     PermuteNodeName::Filter,
     PermuteNodeName::LineFilter,
+    PermuteNodeName::Tremolo,
+    PermuteNodeName::Lazer,
     PermuteNodeName::OscillatingFilter,
 ];
 
@@ -415,7 +420,7 @@ pub fn change_speed(
     for c in 0..channel_samples.len() {
         let cs = &channel_samples[c];
         let new_sample_length: usize = ((cs.len() as f64) / speed).ceil() as usize;
-        let mut ns = vec![0_f64; new_sample_length];
+        let mut ns: Vec<f64> = vec![0_f64; new_sample_length];
 
         let mut v1: f64;
         let mut v2: f64;
@@ -594,6 +599,158 @@ pub fn chorus(
         sample_rate: vibratod.sample_rate,
         permutation: params.permutation,
     });
+}
+
+#[derive(Clone)]
+pub struct TremoloParams {
+    pub speed_hz: f64,
+    pub depth: f64,
+}
+
+pub fn tremolo(
+    ProcessorParams {
+        samples,
+        sample_length: _,
+        channels,
+        endian,
+        file_format,
+        sub_format,
+        sample_rate,
+        update_sender,
+        permutation,
+    }: ProcessorParams,
+    TremoloParams { speed_hz, depth }: TremoloParams,
+) -> Result<ProcessorParams, PermuteError> {
+    let channel_samples = split_channels(samples, channels);
+    let mut new_channel_samples: Vec<Result<Vec<f64>, PermuteError>> = vec![];
+
+    for c in 0..channel_samples.len() {
+        let cs = &channel_samples[c];
+        let mut ns: Vec<f64> = vec![0_f64; cs.len()];
+        for i in 0..cs.len() {
+            let amplitude = lfo_sin(i, sample_rate, speed_hz, 0.0);
+            ns[i] = cs[i] - (cs[i] * amplitude * depth)
+        }
+        new_channel_samples.push(Ok(ns));
+    }
+    let interleaved_samples = interleave_channels(new_channel_samples.into_iter().collect())?;
+
+    update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
+        permutation.clone(),
+        PermuteNodeName::Tremolo,
+        PermuteNodeEvent::NodeProcessComplete,
+    ))?;
+    Ok(ProcessorParams {
+        permutation: permutation,
+        sample_length: interleaved_samples.len(),
+        samples: interleaved_samples,
+        channels: channels,
+        endian: endian,
+        file_format: file_format,
+        sub_format: sub_format,
+        sample_rate: sample_rate,
+        update_sender: update_sender,
+    })
+}
+
+#[derive(Clone)]
+pub struct TremoloInputModParams {
+    pub min_speed_hz: f64,
+    pub max_speed_hz: f64,
+    pub depth: f64,
+    pub frame_ms: usize,
+}
+
+// Use amplitude of the signal to modulate speed of tremolo
+pub fn tremolo_input_mod(
+    ProcessorParams {
+        samples,
+        sample_length: _,
+        channels,
+        endian,
+        file_format,
+        sub_format,
+        sample_rate,
+        update_sender,
+        permutation,
+    }: ProcessorParams,
+    TremoloInputModParams {
+        min_speed_hz,
+        max_speed_hz,
+        depth,
+        frame_ms,
+    }: TremoloInputModParams,
+) -> Result<ProcessorParams, PermuteError> {
+    let channel_samples = split_channels(samples, channels);
+    let mut new_channel_samples: Vec<Result<Vec<f64>, PermuteError>> = vec![];
+    let frame_count = ((sample_rate as f64) * (frame_ms as f64) * 0.001) as usize;
+    let frame_count_f = frame_count as f64;
+    let speed_diff = max_speed_hz - min_speed_hz;
+    let ramp_count = (frame_count);
+    let ramp_count_64 = ramp_count as f64;
+
+    for c in 0..channel_samples.len() {
+        let cs = &channel_samples[c];
+        let mut ns: Vec<f64> = vec![0_f64; cs.len()];
+
+        let mut sumframes = vec![0_f64; frame_count];
+        let mut val: f64;
+        let mut speed: f64 = min_speed_hz;
+        let mut old_speed: f64 = speed;
+        let mut new_speed: f64 = speed;
+        let mut ramp = ramp_count;
+        let mut osc = new_oscillator(sample_rate as f64);
+        osc.set_frequency(speed);
+
+        for i in 0..cs.len() {
+            sumframes[i % frame_count] = cs[i].abs();
+            if i % frame_count == 0 {
+                old_speed = new_speed;
+                // average
+                // val = sumframes.iter().fold(0.0, |acc, v| acc + v) / frame_count_f;
+                // max
+                val = sumframes.iter().fold(0.0, |acc, v| {
+                    if *v > acc {
+                        return *v;
+                    } else {
+                        return acc;
+                    }
+                });
+                new_speed = min_speed_hz + (val * speed_diff);
+                ramp = 0;
+            }
+            if ramp == ramp_count {
+                speed = new_speed;
+            } else {
+                let diff = new_speed - old_speed;
+                speed = old_speed + (diff * (ramp as f64 / ramp_count_64));
+                ramp += 1;
+            }
+
+            osc.set_frequency(speed);
+            let amp = osc.process();
+            ns[i] = cs[i] - (cs[i] * amp * depth);
+        }
+        new_channel_samples.push(Ok(ns));
+    }
+    let interleaved_samples = interleave_channels(new_channel_samples.into_iter().collect())?;
+
+    update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
+        permutation.clone(),
+        PermuteNodeName::Lazer,
+        PermuteNodeEvent::NodeProcessComplete,
+    ))?;
+    Ok(ProcessorParams {
+        permutation: permutation,
+        sample_length: interleaved_samples.len(),
+        samples: interleaved_samples,
+        channels: channels,
+        endian: endian,
+        file_format: file_format,
+        sub_format: sub_format,
+        sample_rate: sample_rate,
+        update_sender: update_sender,
+    })
 }
 
 pub type FilterType<T> = Type<T>;
@@ -1128,6 +1285,13 @@ pub fn trim(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
     let new_samples = params.samples[start..end].to_vec();
     let len = new_samples.len();
 
+    params
+        .update_sender
+        .send(PermuteUpdate::UpdatePermuteNodeCompleted(
+            params.permutation.clone(),
+            PermuteNodeName::Trim,
+            PermuteNodeEvent::NodeProcessComplete,
+        ))?;
     Ok(ProcessorParams {
         samples: new_samples,
         sample_length: len,
@@ -1451,28 +1615,4 @@ fn all_pass(samples: &Vec<f64>, delay_ms: f64, decay_factor: f64, sample_rate: u
         all_passed[i] += decay_factor * all_passed[i];
     }
     all_passed
-}
-
-pub fn lfo_sin(sample: usize, sample_rate: usize, lfo_rate: f64, phase: f64) -> f64 {
-    ((sample as f64 / sample_rate as f64 * 2.0 * PI * lfo_rate) + (phase)).sin()
-}
-
-pub fn lfo_cos(sample: usize, sample_rate: usize, lfo_rate: f64) -> f64 {
-    (sample as f64 / sample_rate as f64 * 2.0 * PI * lfo_rate).cos()
-}
-
-pub fn lfo_tri(sample: usize, sample_rate: usize, lfo_rate: f64) -> f64 {
-    // according to internet y = (A/P) * (P - abs(x % (2*P) - P) )
-    // P = sample rate / 2
-    // A = 2 (will need to subtract 1 to 0 center)
-    // add p/2 to x to push phase 90 deg
-    let cycle = sample_rate as f64 / lfo_rate as f64;
-    let p = cycle / 2.0;
-    return ((2.0 / p) * (p - ((sample as f64 + p / 2.0) % cycle - p).abs())) - 1.0;
-}
-
-pub fn lfo_tri_exp(sample: usize, sample_rate: usize, lfo_rate: f64, exp: f64) -> f64 {
-    let cycle = sample_rate as f64 / lfo_rate as f64;
-    let p = cycle / 2.0;
-    return ((2.0 / p) * (p - ((sample as f64 + p / 2.0) % cycle - p).abs())).powf(exp) - 1.0;
 }
