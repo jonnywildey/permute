@@ -42,7 +42,6 @@ export const Output: React.FC<IOutputProps> = ({
   permutationOutputs,
 }) => {
   const { playFile } = useContext(AudioContext);
-  debugger;
   const outputBoxes = permutationOutputs
     .filter((f) => f.progress === 100 && f.image)
     .map((file) => {
@@ -211,7 +210,7 @@ export const Output: React.FC<IOutputProps> = ({
           width="75%"
           onClick={setOutput}
           color="gray.50"
-          fontSize="lg"
+          fontSize="2xl"
           cursor="pointer"
           shadow="base"
         >

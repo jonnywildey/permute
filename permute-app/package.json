@@ -56,7 +56,11 @@
       ]
     },
     "pkg": {
-      "scripts": "pkg-scripts"
+      "scripts": "pkg-scripts",
+      "installLocation": "/Applications",
+      "allowAnywhere": true,
+      "allowCurrentUserHome": true,
+      "allowRootDirectory": true
     },
     "win": {
       "target": [
@@ -159,7 +163,7 @@
     "css-minimizer-webpack-plugin": "^3.3.1",
     "detect-port": "^1.3.0",
     "electron": "^16.2.8",
-    "electron-builder": "22.10.5",
+    "electron-builder": "25.1.8",
     "electron-devtools-installer": "^3.2.0",
     "electron-notarize": "^1.1.1",
     "electron-rebuild": "^3.2.5",
