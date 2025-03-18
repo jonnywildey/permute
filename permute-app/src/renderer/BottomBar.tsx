@@ -120,7 +120,7 @@ function InputTrail(
           </Text>
         }
       >
-        <Heading size="sm" textAlign="center">
+        <Heading size="md" textAlign="center">
           Start Trail (sec)
         </Heading>
       </Tooltip>
@@ -186,7 +186,7 @@ function Depth(depth: number, setDepth: (depth: number) => void) {
           </Text>
         }
       >
-        <Heading size="sm" textAlign="center">
+        <Heading size="md" textAlign="center">
           Depth
         </Heading>
       </Tooltip>
@@ -242,7 +242,7 @@ function Permutations(
           </Text>
         }
       >
-        <Heading size="sm" textAlign="center">
+        <Heading size="md" textAlign="center">
           Permutations
         </Heading>
       </Tooltip>
@@ -309,7 +309,7 @@ function OutputTrail(
           </Text>
         }
       >
-        <Heading size="sm" textAlign="center">
+        <Heading size="md" textAlign="center">
           End Trail (sec)
         </Heading>
       </Tooltip>
@@ -423,7 +423,7 @@ function Normalise(
           </Text>
         }
       >
-        <Heading size="sm">Normalise</Heading>
+        <Heading size="md">Normalise</Heading>
       </Tooltip>
       <Switch
         colorScheme="brand"
@@ -449,7 +449,7 @@ function TrimAll(
           </Text>
         }
       >
-        <Heading size="sm">Trim All</Heading>
+        <Heading size="md">Trim All</Heading>
       </Tooltip>
       <Switch
         colorScheme="brand"

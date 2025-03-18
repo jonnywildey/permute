@@ -210,7 +210,7 @@ export const Output: React.FC<IOutputProps> = ({
           width="75%"
           onClick={setOutput}
           color="gray.50"
-          fontSize="lg"
+          fontSize="2xl"
           cursor="pointer"
           shadow="base"
         >
