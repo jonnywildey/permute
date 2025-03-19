@@ -1,4 +1,5 @@
 mod display_node;
+mod files;
 mod osc;
 mod permute_error;
 mod permute_files;
@@ -42,6 +43,9 @@ struct PermuteArgs {
     /// Whether to trim at end
     #[structopt(long = "trimAll")]
     trim_all: bool,
+    /// Store new permutations in a subdirectory. Avoids overwrites
+    #[structopt(long = "createSubdirectories")]
+    create_subdirectories: bool,
     /// Whether to run fx at a high sample rate
     #[structopt(long = "highSampleRate")]
     high_sample_rate: bool,
@@ -55,10 +59,6 @@ struct PermuteArgs {
 
 fn main() {
     let args = PermuteArgs::from_args();
-    println!(
-        "Permuting {} to {}, {} mutations",
-        args.file, args.output, args.permutations
-    );
 
     let processor_pool: Vec<PermuteNodeName> = match args.processor.as_str() {
         "" => vec![
@@ -89,6 +89,11 @@ fn main() {
 
     let (tx, rx) = mpsc::channel::<PermuteUpdate>();
 
+    println!(
+        "Permuting {} to {}, {} mutations",
+        args.file, args.output, args.permutations
+    );
+
     thread::spawn(move || {
         permute_files(PermuteFilesParams {
             files: vec![args.file],
@@ -101,6 +106,7 @@ fn main() {
             high_sample_rate: args.high_sample_rate,
             normalise_at_end: args.normalise,
             trim_all: args.trim_all,
+            create_subdirectories: args.create_subdirectories,
             output_file_as_wav: args.output_file_as_wav,
             update_sender: tx,
             processor_count,

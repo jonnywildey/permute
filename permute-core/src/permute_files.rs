@@ -1,8 +1,5 @@
-use crate::permute_error::PermuteError;
-use crate::process::*;
-use crate::random_process::*;
+use crate::{files::*, permute_error::PermuteError, process::*, random_process::*};
 use sndfile::*;
-use std::path::Path;
 use std::sync::mpsc;
 use std::sync::mpsc::Sender;
 use std::thread;
@@ -30,8 +27,8 @@ pub struct PermuteFilesParams {
     pub high_sample_rate: bool,
     pub processor_count: Option<i32>,
     pub output_file_as_wav: bool,
-
     pub update_sender: mpsc::Sender<PermuteUpdate>,
+    pub create_subdirectories: bool,
 }
 
 pub fn permute_files(params: PermuteFilesParams) -> JoinHandle<()> {
@@ -73,6 +70,7 @@ fn permute_file(
         update_sender,
         processor_count,
         output_file_as_wav,
+        create_subdirectories,
     }: PermuteFilesParams,
     file: String,
 ) -> Result<(), PermuteError> {
@@ -96,6 +94,14 @@ fn permute_file(
     let sample_length = samples_64.len();
 
     let mut generated_processors: Vec<(Vec<ProcessorFn>, ProcessorParams)> = vec![];
+
+    let output = match create_subdirectories {
+        true => {
+            let o = get_output_run(output);
+            o.expect("error creating subdirectory")
+        }
+        false => output,
+    };
 
     for i in 1..=permutations {
         let output_i = generate_file_name(file.clone(), output.clone(), i, output_file_as_wav);
@@ -224,33 +230,6 @@ pub fn process_file(
 
     snd.write_from_iter(new_params.samples.clone().into_iter())?;
     Ok(())
-}
-
-fn generate_file_name(
-    file: String,
-    output: String,
-    permutation_count: usize,
-    output_file_as_wav: bool,
-) -> String {
-    let mut dir_path = Path::new(&output).canonicalize().unwrap();
-    let file_path = Path::new(&file);
-    let file_stem = file_path
-        .file_stem()
-        .unwrap_or_default()
-        .to_str()
-        .unwrap_or("");
-    let extension = match output_file_as_wav {
-        true => "wav",
-        false => file_path
-            .extension()
-            .unwrap_or_default()
-            .to_str()
-            .unwrap_or(""),
-    };
-    let new_filename = [file_stem, &permutation_count.to_string(), ".", extension].concat();
-
-    dir_path.push(new_filename);
-    dir_path.into_os_string().into_string().unwrap()
 }
 
 pub struct RunProcessorsParams {
