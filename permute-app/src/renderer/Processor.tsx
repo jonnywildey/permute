@@ -25,6 +25,7 @@ export const Processor: React.FC<IProcessorProps> = ({
       width="100%"
       shadow="sm"
       borderRadius={20}
+      fontSize="xl"
     >
       {name}
     </Button>
