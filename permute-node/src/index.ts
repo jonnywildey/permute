@@ -110,23 +110,23 @@ export function createPermuteProcessor() {
     setOutput(output: string) {
       return setOutput.call(permuteLibrary, output);
     },
-    setDepth(output: string) {
-      return setDepth.call(permuteLibrary, output);
+    setDepth(depth: string) {
+      return setDepth.call(permuteLibrary, depth);
     },
-    setPermutations(output: string) {
-      return setPermutations.call(permuteLibrary, output);
+    setPermutations(permutations: string) {
+      return setPermutations.call(permuteLibrary, permutations);
     },
-    setNormalised(output: string) {
-      return setNormalised.call(permuteLibrary, output);
+    setNormalised(n: string) {
+      return setNormalised.call(permuteLibrary, n);
     },
-    setTrimAll(output: string) {
-      return setTrimAll.call(permuteLibrary, output);
+    setTrimAll(t: string) {
+      return setTrimAll.call(permuteLibrary, t);
     },
-    setInputTrail(output: string) {
-      return setInputTrail.call(permuteLibrary, output);
+    setInputTrail(it: string) {
+      return setInputTrail.call(permuteLibrary, it);
     },
-    setOutputTrail(output: string) {
-      return setOutputTrail.call(permuteLibrary, output);
+    setOutputTrail(ot: string) {
+      return setOutputTrail.call(permuteLibrary, ot);
     },
     loadSettings(file: string) {
       return loadSettings.call(permuteLibrary, file);
