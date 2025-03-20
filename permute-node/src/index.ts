@@ -2,7 +2,7 @@ const {
   init, cancel, runProcess, addFile, addProcessor, removeProcessor,
   getStateCallback, setOutput, setDepth, setInputTrail,
   setOutputTrail, setPermutations, setNormalised, setTrimAll, removeFile, reverseFile,
-  saveSettings, loadSettings, trimFile
+  saveSettings, loadSettings, trimFile, deleteOutputFile
 } = require("../permute-library");
 
 const PERMUTE_POLL_LATENCY = 500;
@@ -76,6 +76,9 @@ export function createPermuteProcessor() {
     },
     removeFile(file: string) {
       return removeFile.call(permuteLibrary, file);
+    },
+    deleteOutputFile(file: string) {
+      return deleteOutputFile.call(permuteLibrary, file);
     },
     reverseFile(file: string, updateFn: GetStateCallback, onFinished: GetStateCallback) {
       pollHandle = setInterval(() => {

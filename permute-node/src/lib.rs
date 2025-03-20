@@ -20,6 +20,7 @@ enum ProcessorMessage {
     Run,
     AddFile(String),
     RemoveFile(String),
+    DeleteOutputFile(String),
     ReverseFile(String),
     TrimFile(String),
     AddProcessor(String),
@@ -84,6 +85,15 @@ impl Processor {
                     },
                     ProcessorMessage::RemoveFile(file) => {
                         state.remove_file(file);
+                    }
+                    ProcessorMessage::DeleteOutputFile(file) => {
+                        match state.delete_output_file(file) {
+                            Ok(()) => {}
+                            Err(err) => {
+                                println!("Error deleting output file: {}", err.to_string());
+                                state.set_error(err.to_string());
+                            }
+                        }
                     }
                     ProcessorMessage::ReverseFile(file) => match state.reverse_file(file) {
                         Ok(()) => {}
@@ -151,10 +161,22 @@ impl Processor {
                         state.add_output_progress(permutation, processors);
                     }
                     PermuteUpdate::ProcessComplete => {
-                        state.set_finished();
+                        match state.set_finished() {
+                            Ok(()) => {}
+                            Err(err) => {
+                                println!("Error setting finished: {}", err.to_string());
+                                state.set_error(err.to_string());
+                            }
+                        }
                     }
                     PermuteUpdate::Error(err) => {
-                        state.set_finished();
+                        match state.set_finished() {
+                            Ok(()) => {}
+                            Err(err) => {
+                                println!("Error setting finished: {}", err.to_string());
+                                state.set_error(err.to_string());
+                            }
+                        }
                         state.set_error(err);
                     }
                 }
@@ -324,6 +346,12 @@ impl Processor {
         Ok(cx.undefined())
     }
 
+    fn js_delete_output_file(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+        let file = cx.argument::<JsString>(0)?.value(&mut cx);
+        js_hook!(file, ProcessorMessage::DeleteOutputFile, cx);
+        Ok(cx.undefined())
+    }
+
     fn js_set_permutations(mut cx: FunctionContext) -> JsResult<JsUndefined> {
         let permutations = cx.argument::<JsNumber>(0)?.value(&mut cx) as usize;
         js_hook!(permutations, ProcessorMessage::SetPermutations, cx);
@@ -399,6 +427,7 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
     cx.export_function("runProcess", Processor::js_run_process)?;
     cx.export_function("addFile", Processor::js_add_file)?;
     cx.export_function("removeFile", Processor::js_remove_file)?;
+    cx.export_function("deleteOutputFile", Processor::js_delete_output_file)?;
     cx.export_function("addProcessor", Processor::js_add_processor)?;
     cx.export_function("removeProcessor", Processor::js_remove_processor)?;
     cx.export_function("setOutput", Processor::js_set_output)?;

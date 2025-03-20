@@ -11,7 +11,7 @@ import {
   ListItem,
   Tooltip,
 } from '@chakra-ui/react';
-import { ViewIcon } from '@chakra-ui/icons';
+import { ViewIcon, DeleteIcon } from '@chakra-ui/icons';
 import type { IPermutationOutput } from 'permute-node';
 import { useContext } from 'react';
 import { PlayIcon } from './icons/PlayIcon';
@@ -27,6 +27,7 @@ export interface IOutputProps {
   showFile: (file: string) => void;
   reverseFile: (file: string) => void;
   trimFile: (file: string) => void;
+  deleteOutputFile: (file: string) => void;
 }
 
 const buttonBg = 'brand.500';
@@ -40,6 +41,7 @@ export const Output: React.FC<IOutputProps> = ({
   setOutput,
   trimFile,
   permutationOutputs,
+  deleteOutputFile,
 }) => {
   const { playFile } = useContext(AudioContext);
   const outputBoxes = permutationOutputs
@@ -72,6 +74,23 @@ export const Output: React.FC<IOutputProps> = ({
             >
               {file.name}
             </Heading>
+            <Tooltip
+              openDelay={200}
+              label="Delete file"
+            >
+              <IconButton
+                aria-label="delete"
+                variant="ghost"
+                size="xs"
+                icon={<DeleteIcon />}
+                onClick={() => deleteOutputFile(file.path)}
+                color="gray.500"
+                paddingTop={0}
+                _hover={{ color: 'red.400' }}
+                mr={2}
+                mt="-5px"
+              />
+            </Tooltip>
           </Box>
           <Tooltip
             openDelay={200}

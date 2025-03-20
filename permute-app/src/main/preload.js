@@ -87,5 +87,8 @@ contextBridge.exposeInMainWorld('Electron', {
         ipcRenderer.send('get-file-stats', files);
       });
     },
+    deleteOutputFile(file) {
+      ipcRenderer.send('delete-output-file', file);
+    },
   },
 });

@@ -11,6 +11,7 @@ use std::io::BufReader;
 use std::io::Write;
 use std::sync::mpsc;
 use std::thread::JoinHandle;
+use std::fs;
 
 #[derive(Debug, Clone)]
 pub struct SharedState {
@@ -227,6 +228,12 @@ impl SharedState {
         let permute_params = Self::to_permute_params(&self);
 
         permute_files(permute_params)
+    }
+
+    pub fn delete_output_file(&mut self, file: String) -> Result<(), std::io::Error> {
+        fs::remove_file(&file)?;
+        self.permutation_outputs.retain(|po| po.output != file);
+        Ok(())
     }
 }
 

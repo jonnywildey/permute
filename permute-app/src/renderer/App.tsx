@@ -1,4 +1,3 @@
-
 import {
   ChakraProvider,
   Grid,
@@ -78,9 +77,8 @@ const Content = () => {
           isClosable: true,
         });
       } else {
-        const description = `${
-          pState.files.length * pState.permutations
-        } files permuted!`;
+        const description = `${pState.files.length * pState.permutations
+          } files permuted!`;
         toast({
           description,
           status: 'success',
@@ -143,6 +141,11 @@ const Content = () => {
   const showFile = async (file: string) => {
     window.Electron.ipcRenderer.showFile(file);
   };
+  const deleteOutputFile = async (file: string) => {
+    window.Electron.ipcRenderer.deleteOutputFile(file);
+    const permuteState = await window.Electron.ipcRenderer.getState();
+    setState({ permuteState });
+  };
   const setOutput = async () => {
     window.Electron.ipcRenderer.openOutputDialog(([output]: [string]) => {
       window.Electron.ipcRenderer.setOutput(output);
@@ -193,6 +196,7 @@ const Content = () => {
         permutationOutputs={permutationOutputs}
         reverseFile={reverseFile}
         trimFile={trimFile}
+        deleteOutputFile={deleteOutputFile}
       />
       <BottomBar
         permutationOutputs={permutationOutputs}
@@ -228,13 +232,13 @@ export default function App() {
       <CreateAudioContext>
         {loading ? (
           <>
-            <div className="font_preload" style={{"opacity": 0}}>
+            <div className="font_preload" style={{ "opacity": 0 }}>
               <Text>ABC</Text>
               <Heading>ABCDEFG</Heading>
             </div>
-          <Center width="100vw" height="100vh">
-            <Spinner ml={2} size="xl" color="brand.600" />
-          </Center>
+            <Center width="100vw" height="100vh">
+              <Spinner ml={2} size="xl" color="brand.600" />
+            </Center>
           </>
         ) : (
           <Content />

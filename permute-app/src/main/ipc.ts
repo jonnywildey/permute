@@ -86,6 +86,10 @@ ipcMain.on('show-file', async (_, file) => {
   shell.showItemInFolder(file);
 });
 
+ipcMain.on('delete-output-file', async (_, file) => {
+  processor.deleteOutputFile(file);
+});
+
 app.on('before-quit', () => {
   processor.saveSettings(configPath);
 });
