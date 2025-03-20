@@ -165,7 +165,8 @@ export const Files: React.FC<IFilesProps> = ({
             width="75%"
             bgColor={isDrag ? buttonBg : buttonBg}
             color="gray.50"
-            fontSize="2xl"
+            _hover={{ backgroundColor: 'brand.550' }}
+            fontSize="xl"
             cursor="pointer"
             shadow="base"
           >

@@ -30,7 +30,7 @@ export interface IOutputProps {
   deleteOutputFile: (file: string) => void;
 }
 
-const buttonBg = 'brand.500';
+const buttonBg = 'brand.175';
 const bg = 'brand.25';
 const fileBorderColour = 'brand.150';
 
@@ -229,9 +229,10 @@ export const Output: React.FC<IOutputProps> = ({
           width="75%"
           onClick={setOutput}
           color="gray.50"
-          fontSize="2xl"
+          fontSize="xl"
           cursor="pointer"
-          shadow="base"
+          // shadow="base"
+          _hover={{ bg: 'brand.150' }}
         >
           Select Output Directory
         </Button>
