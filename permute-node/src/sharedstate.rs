@@ -28,6 +28,7 @@ pub struct SharedState {
     pub trim_all: bool,
     pub high_sample_rate: bool,
     pub processor_count: Option<i32>,
+    pub constrain_length: bool,
 
     pub update_sender: mpsc::Sender<PermuteUpdate>,
     pub processing: bool,
@@ -57,6 +58,7 @@ impl SharedState {
             permutation_outputs: vec![],
             files: vec![],
             cancel_sender,
+            constrain_length: true,
         }
     }
 
@@ -67,6 +69,7 @@ impl SharedState {
         
         PermuteFilesParams {
             files: self.files.iter().map(|ai| ai.path.clone()).collect(),
+            constrain_length: self.constrain_length,
             high_sample_rate: self.high_sample_rate,
             input_trail: self.input_trail,
             normalise_at_end: self.normalise_at_end,

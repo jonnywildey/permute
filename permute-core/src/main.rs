@@ -54,6 +54,9 @@ struct PermuteArgs {
     /// Run audio through a specific process
     #[structopt(long = "processor", default_value = "")]
     processor: String,
+    /// Whether to constrain the length of audio by limiting length-increasing processors
+    #[structopt(long = "constrainLength", takes_value = false)]
+    constrain_length: bool,
 }
 
 fn main() {
@@ -110,6 +113,7 @@ fn main() {
             output_file_as_wav: args.output_file_as_wav,
             update_sender: tx,
             processor_count,
+            constrain_length: args.constrain_length,
             cancel_receiver,
         });
     });

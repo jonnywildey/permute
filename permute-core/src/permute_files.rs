@@ -32,6 +32,7 @@ pub struct PermuteFilesParams {
     pub update_sender: mpsc::Sender<PermuteUpdate>,
     pub create_subdirectories: bool,
     pub cancel_receiver: mpsc::Receiver<()>,
+    pub constrain_length: bool,
 }
 
 pub fn permute_files(params: PermuteFilesParams) -> JoinHandle<()> {
@@ -106,14 +107,33 @@ fn permute_file(
 
     for i in 1..=params.permutations {
         let output_i = generate_file_name(file.clone(), output.clone(), i, params.output_file_as_wav);
-        let processors = generate_processor_sequence(GetProcessorNodeParams {
+        let mut processors = generate_processor_sequence(GetProcessorNodeParams {
             depth: params.permutation_depth,
             normalise_at_end: params.normalise_at_end,
             trim_at_end: params.trim_all,
             high_sample_rate: params.high_sample_rate,
             processor_pool: params.processor_pool.clone(),
             processor_count: params.processor_count,
+            constrain_length: params.constrain_length,
         });
+        // if we are permuting more than once, we need to generate a new processor sequence for each permutation
+        if params.permutation_depth > 1 {
+            let depth = params.permutation_depth - 1;
+            let processor_count = params.processor_count.unwrap_or(0);
+            processors = [
+                generate_processor_sequence(GetProcessorNodeParams {
+                    depth: depth,
+                    normalise_at_end: false,
+                    trim_at_end: false,
+                    processor_pool: params.processor_pool.clone(),
+                    high_sample_rate: false,
+                    processor_count: Some(processor_count),
+                    constrain_length: params.constrain_length,
+                }),
+                processors.clone(),
+            ]
+            .concat();
+        }
 
         let processor_fns = processors
             .iter()
