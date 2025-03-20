@@ -35,8 +35,17 @@ pub fn permute_files(params: PermuteFilesParams) -> JoinHandle<()> {
     thread::Builder::new()
         .name("PermuteThread".to_string())
         .spawn(|| {
-            let copied_params = params.clone();
+            let mut copied_params = params.clone();
             let files = params.files;
+            let output = match params.create_subdirectories {
+                true => {
+                    let o = get_output_run(params.output.clone());
+                    o.expect("error creating subdirectory")
+                }
+                false => params.output.clone(),
+            };
+            copied_params.output = output;
+            copied_params.create_subdirectories = false;
             for i in 0..files.len() {
                 permute_file(copied_params.clone(), files[i].clone())
                     .map_err(|err| {

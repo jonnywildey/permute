@@ -37,7 +37,6 @@ pub struct SharedState {
 impl SharedState {
     pub fn init(update_sender: mpsc::Sender<PermuteUpdate>) -> Self {
         Self {
-            // files: vec![],
             high_sample_rate: false,
             input_trail: 0.0,
             normalise_at_end: true,
@@ -75,6 +74,7 @@ impl SharedState {
             processor_pool: self.processor_pool.clone(),
             output_file_as_wav: true,
             update_sender: self.update_sender.to_owned(),
+            create_subdirectories: true,
         }
     }
 
