@@ -7,7 +7,6 @@ mod process;
 mod random_process;
 
 use std::{sync::mpsc, thread};
-
 use display_node::*;
 use permute_files::*;
 use structopt::StructOpt;
@@ -59,6 +58,7 @@ struct PermuteArgs {
 
 fn main() {
     let args = PermuteArgs::from_args();
+    let (cancel_sender, cancel_receiver) = mpsc::channel();
 
     let processor_pool: Vec<PermuteNodeName> = match args.processor.as_str() {
         "" => vec![
@@ -110,16 +110,17 @@ fn main() {
             output_file_as_wav: args.output_file_as_wav,
             update_sender: tx,
             processor_count,
+            cancel_receiver,
         });
     });
 
     while let Ok(message) = rx.recv() {
         match message {
             PermuteUpdate::UpdatePermuteNodeCompleted(permutation, _, _) => {
-                let percentage_progress: f64 = ((permutation.node_index as f64 + 1.0)
-                    / permutation.processors.len() as f64)
-                    * 100.0;
-                println!("{}%", percentage_progress.round());
+                    let percentage_progress: f64 = ((permutation.node_index as f64 + 1.0)
+                        / permutation.processors.len() as f64)
+                        * 100.0;
+                    println!("{}%", percentage_progress.round());
             }
             PermuteUpdate::UpdatePermuteNodeStarted(permutation, _, _) => {
                 if permutation.node_index == 0 {
@@ -127,19 +128,21 @@ fn main() {
                 }
             }
             PermuteUpdate::UpdateSetProcessors(permutation, processors) => {
-                let pretty_processors = processors
-                    .iter()
-                    .map(|p| get_processor_display_name(*p))
-                    .collect::<Vec<String>>();
-                println!(
-                    "File {} Processors {:#?}",
-                    permutation.output, pretty_processors
-                );
+                    let pretty_processors = processors
+                        .iter()
+                        .map(|p| get_processor_display_name(*p))
+                        .collect::<Vec<String>>();
+                    println!(
+                        "File {} Processors {:#?}",
+                        permutation.output, pretty_processors
+                    );
             }
             PermuteUpdate::Error(err) => {
-                panic!("{}", err);
+                    panic!("{}", err);
             }
-            PermuteUpdate::ProcessComplete => {}
+            PermuteUpdate::ProcessComplete => {
+                    println!("Processing complete");
+            }
         }
     }
 }

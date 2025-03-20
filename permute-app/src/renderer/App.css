@@ -58,6 +58,38 @@ body {
   }
 }
 
+@keyframes slideIn {
+  from {
+    transform: translateX(40px);
+  }
+
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes colorShift {
+
+  0%,
+  62.5% {
+    background-color: var(--chakra-colors-brand-200);
+    color: var(--chakra-colors-gray-50);
+  }
+
+  100% {
+    background-color: var(--chakra-colors-red-100);
+    color: var(--chakra-colors-red-600);
+  }
+}
+
+.slide-in {
+  animation: slideIn 0.8s ease-out;
+}
+
+.color-shift {
+  animation: colorShift 8s ease-in-out forwards;
+}
+
 .output-heading {
   direction: rtl;
   text-align: left;

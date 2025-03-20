@@ -163,6 +163,11 @@ const Content = () => {
     refreshState();
   };
 
+  const cancelProcessing = async () => {
+    window.Electron.ipcRenderer.cancel();
+    refreshState();
+  };
+
   console.log(permutationOutputs);
 
   return (
@@ -214,6 +219,7 @@ const Content = () => {
         processorPool={processorPool}
         files={files}
         output={output}
+        cancelProcessing={cancelProcessing}
       />
     </Grid>
   );
@@ -233,7 +239,7 @@ export default function App() {
 
     // Wait for both the timeout and image load
     Promise.all([
-      new Promise(resolve => setTimeout(resolve, 2000)),
+      new Promise(resolve => setTimeout(resolve, 1500)),
       new Promise(resolve => {
         if (img.complete) {
           resolve(null);
@@ -246,7 +252,7 @@ export default function App() {
       // Add a small delay before showing the main content
       setTimeout(() => {
         setShowContent(true);
-      }, 1000);
+      }, 500);
     });
   }, []);
 

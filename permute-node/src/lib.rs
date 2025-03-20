@@ -147,7 +147,9 @@ impl Processor {
                             ProcessorMessage::SaveSettingsToJson(file) => {
                                 state.write_to_json(file).unwrap_or(())
                             }
-                            ProcessorMessage::Cancel => break,
+                            ProcessorMessage::Cancel => {
+                                state.cancel();
+                            }
                         }
                     }
                 });

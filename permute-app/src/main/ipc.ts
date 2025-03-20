@@ -22,6 +22,10 @@ ipcMain.on('run-processor', async (event) => {
   );
 });
 
+ipcMain.on('cancel', async () => {
+  processor.cancel();
+});
+
 ipcMain.on('reverse-file', async (event, file) => {
   processor.reverseFile(
     file,

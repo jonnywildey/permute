@@ -4,6 +4,8 @@ use std::sync::mpsc;
 use std::sync::mpsc::Sender;
 use std::thread;
 use std::thread::JoinHandle;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
 pub enum PermuteUpdate {
     Error(String),
@@ -13,7 +15,7 @@ pub enum PermuteUpdate {
     ProcessComplete,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct PermuteFilesParams {
     pub files: Vec<String>,
     pub output: String,
@@ -29,14 +31,14 @@ pub struct PermuteFilesParams {
     pub output_file_as_wav: bool,
     pub update_sender: mpsc::Sender<PermuteUpdate>,
     pub create_subdirectories: bool,
+    pub cancel_receiver: mpsc::Receiver<()>,
 }
 
 pub fn permute_files(params: PermuteFilesParams) -> JoinHandle<()> {
     thread::Builder::new()
         .name("PermuteThread".to_string())
-        .spawn(|| {
-            let mut copied_params = params.clone();
-            let files = params.files;
+        .spawn(move || {
+            let mut params = params;
             let output = match params.create_subdirectories {
                 true => {
                     let o = get_output_run(params.output.clone());
@@ -44,17 +46,22 @@ pub fn permute_files(params: PermuteFilesParams) -> JoinHandle<()> {
                 }
                 false => params.output.clone(),
             };
-            copied_params.output = output;
-            copied_params.create_subdirectories = false;
-            for i in 0..files.len() {
-                permute_file(copied_params.clone(), files[i].clone())
-                    .map_err(|err| {
-                        params
-                            .update_sender
-                            .send(PermuteUpdate::Error(err.to_string()))
-                            .expect("Error sending message");
-                    })
-                    .unwrap();
+            params.output = output;
+            params.create_subdirectories = false;
+            for i in 0..params.files.len() {
+                if params.cancel_receiver.try_recv().is_ok() {
+                    params.update_sender.send(PermuteUpdate::ProcessComplete)
+                        .expect("Error sending message");
+                    return;
+                }
+                let file = params.files[i].clone();
+                let result = permute_file(&params, file);
+                if let Err(err) = result {
+                    params
+                        .update_sender
+                        .send(PermuteUpdate::Error(err.to_string()))
+                        .expect("Error sending message");
+                }
             }
             params
                 .update_sender
@@ -65,29 +72,14 @@ pub fn permute_files(params: PermuteFilesParams) -> JoinHandle<()> {
 }
 
 fn permute_file(
-    PermuteFilesParams {
-        files: _,
-        output,
-        input_trail,
-        output_trail,
-        permutations,
-        permutation_depth,
-        processor_pool,
-        high_sample_rate,
-        normalise_at_end,
-        trim_all,
-        update_sender,
-        processor_count,
-        output_file_as_wav,
-        create_subdirectories,
-    }: PermuteFilesParams,
+    params: &PermuteFilesParams,
     file: String,
 ) -> Result<(), PermuteError> {
     let mut snd = sndfile::OpenOptions::ReadOnly(ReadOptions::Auto).from_path(file.clone())?;
     let sample_rate = snd.get_samplerate();
     let channels = snd.get_channels();
     let sub_format = snd.get_subtype_format();
-    let file_format = match output_file_as_wav {
+    let file_format = match params.output_file_as_wav {
         true => MajorFormat::WAV,
         false => snd.get_major_format(),
     };
@@ -95,32 +87,32 @@ fn permute_file(
     let endian = snd.get_endian();
 
     let input_trail_buffer =
-        vec![0_f64; (sample_rate as f64 * input_trail * channels as f64).ceil() as usize];
+        vec![0_f64; (sample_rate as f64 * params.input_trail * channels as f64).ceil() as usize];
     let output_trail_buffer =
-        vec![0_f64; (sample_rate as f64 * output_trail * channels as f64).ceil() as usize];
+        vec![0_f64; (sample_rate as f64 * params.output_trail * channels as f64).ceil() as usize];
     let samples_64 = [input_trail_buffer, samples_64, output_trail_buffer].concat();
 
     let sample_length = samples_64.len();
 
     let mut generated_processors: Vec<(Vec<ProcessorFn>, ProcessorParams)> = vec![];
 
-    let output = match create_subdirectories {
+    let output = match params.create_subdirectories {
         true => {
-            let o = get_output_run(output);
+            let o = get_output_run(params.output.clone());
             o.expect("error creating subdirectory")
         }
-        false => output,
+        false => params.output.clone(),
     };
 
-    for i in 1..=permutations {
-        let output_i = generate_file_name(file.clone(), output.clone(), i, output_file_as_wav);
+    for i in 1..=params.permutations {
+        let output_i = generate_file_name(file.clone(), output.clone(), i, params.output_file_as_wav);
         let processors = generate_processor_sequence(GetProcessorNodeParams {
-            depth: permutation_depth,
-            normalise_at_end,
-            trim_at_end: trim_all,
-            high_sample_rate,
-            processor_pool: processor_pool.clone(),
-            processor_count,
+            depth: params.permutation_depth,
+            normalise_at_end: params.normalise_at_end,
+            trim_at_end: params.trim_all,
+            high_sample_rate: params.high_sample_rate,
+            processor_pool: params.processor_pool.clone(),
+            processor_count: params.processor_count,
         });
 
         let processor_fns = processors
@@ -132,7 +124,7 @@ fn permute_file(
             file: file.clone(),
             permutation_index: i,
             output: output_i,
-            processor_pool: processor_pool.clone(),
+            processor_pool: params.processor_pool.clone(),
             processors: processors.clone(),
             original_sample_rate: sample_rate,
             node_index: 0,
@@ -146,9 +138,9 @@ fn permute_file(
             file_format,
             sub_format,
             endian,
-            update_sender: update_sender.to_owned(),
+            update_sender: params.update_sender.to_owned(),
         };
-        let _ = update_sender.send(PermuteUpdate::UpdateSetProcessors(
+        let _ = params.update_sender.send(PermuteUpdate::UpdateSetProcessors(
             permutation.clone(),
             processors,
         ));
@@ -161,11 +153,11 @@ fn permute_file(
             processor_params: processor_params.clone(),
             processors: processor_fns.to_vec(),
         })?;
-        // let output_format = match output_file_as_wav {
+        // let output_format = match params.output_file_as_wav {
         //     true => MajorFormat::WAV,
         //     false => output_params.file_format,
         // };
-        // let output_path = match output_file_as_wav {
+        // let output_path = match params.output_file_as_wav {
         //     true => {
         //         let mut path = PathBuf::from(output_params.permutation.output.clone());
         //         path.set_extension("wav");

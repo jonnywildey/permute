@@ -33,10 +33,12 @@ pub struct SharedState {
     pub processing: bool,
     pub permutation_outputs: Vec<OutputProgress>,
     pub files: Vec<AudioInfo>,
+    pub cancel_sender: mpsc::Sender<()>,
 }
 
 impl SharedState {
     pub fn init(update_sender: mpsc::Sender<PermuteUpdate>) -> Self {
+        let (cancel_sender, _) = mpsc::channel();
         Self {
             high_sample_rate: false,
             input_trail: 0.0,
@@ -54,10 +56,15 @@ impl SharedState {
             processing: false,
             permutation_outputs: vec![],
             files: vec![],
+            cancel_sender,
         }
     }
 
-    fn to_permute_params(&self) -> PermuteFilesParams {
+    fn to_permute_params(&mut self) -> PermuteFilesParams {
+        let (cancel_sender, cancel_receiver) = mpsc::channel();
+        // Store the new sender for future cancellation
+        self.cancel_sender = cancel_sender;
+        
         PermuteFilesParams {
             files: self.files.iter().map(|ai| ai.path.clone()).collect(),
             high_sample_rate: self.high_sample_rate,
@@ -76,6 +83,7 @@ impl SharedState {
             output_file_as_wav: true,
             update_sender: self.update_sender.to_owned(),
             create_subdirectories: true,
+            cancel_receiver,
         }
     }
 
@@ -156,6 +164,14 @@ impl SharedState {
         Ok(())
     }
 
+    pub fn cancel(&mut self) {
+        self.processing = false;
+        self.error = "Processing cancelled by user".to_string();
+        self.permutation_outputs.clear();
+        self.processing = false;
+        let _ = self.cancel_sender.send(());
+    }
+
     pub fn set_normalised(&mut self, normalised: bool) {
         self.normalise_at_end = normalised;
     }
@@ -225,7 +241,7 @@ impl SharedState {
         self.permutation_outputs = vec![];
         self.processing = true;
         self.error = String::default();
-        let permute_params = Self::to_permute_params(&self);
+        let permute_params = self.to_permute_params();
 
         permute_files(permute_params)
     }
