@@ -6,7 +6,8 @@ import {
   Spinner,
   Center,
   Text,
-  Heading
+  Heading,
+  Box
 } from '@chakra-ui/react';
 import type { IPermuteState } from 'permute-node';
 import { useEffect, useState } from 'react';
@@ -35,7 +36,7 @@ const defaultAppState: IAppState = {
 const Content = () => {
   const [state, setState] = useState<IAppState>(defaultAppState);
   const toast = useToast();
-  const { isOpen, onOpen, onClose } = useDisclosure({
+  const { onOpen } = useDisclosure({
     defaultIsOpen: !state.permuteState.output,
   });
 
@@ -152,9 +153,6 @@ const Content = () => {
       refreshState();
     });
   };
-  const openWelcome = () => {
-    onOpen();
-  };
 
   const setProcessorEnabled = (name: string, enable: boolean) => {
     if (enable) {
@@ -176,8 +174,7 @@ const Content = () => {
       width="100%"
       height="100vh"
     >
-      <Welcome isOpen={isOpen} onClose={onClose} />
-      <TopBar openWelcome={openWelcome} />
+      <TopBar openWelcome={onOpen} />
       <Files
         files={files}
         addFiles={addFiles}
@@ -224,6 +221,11 @@ const Content = () => {
 
 export default function App() {
   const [loading, setLoading] = useState(true);
+  const [showContent, setShowContent] = useState(false);
+  const { isOpen, onClose } = useDisclosure({
+    defaultIsOpen: true,
+  });
+
   useEffect(() => {
     // Preload the background image
     const img = new Image();
@@ -231,7 +233,7 @@ export default function App() {
 
     // Wait for both the timeout and image load
     Promise.all([
-      new Promise(resolve => setTimeout(resolve, 1000)),
+      new Promise(resolve => setTimeout(resolve, 2000)),
       new Promise(resolve => {
         if (img.complete) {
           resolve(null);
@@ -241,6 +243,10 @@ export default function App() {
       })
     ]).then(() => {
       setLoading(false);
+      // Add a small delay before showing the main content
+      setTimeout(() => {
+        setShowContent(true);
+      }, 1000);
     });
   }, []);
 
@@ -271,7 +277,18 @@ export default function App() {
             </Center>
           </>
         ) : (
-          <Content />
+          <>
+            <Welcome isOpen={isOpen} onClose={onClose} />
+            <Box
+              opacity={showContent ? 1 : 0}
+              transform={showContent ? "translateY(0)" : "translateY(20px)"}
+              transition="all 0.5s ease-out"
+              width="100%"
+              height="100%"
+            >
+              {showContent && <Content />}
+            </Box>
+          </>
         )}
       </CreateAudioContext>
     </ChakraProvider>

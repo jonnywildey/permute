@@ -84,7 +84,8 @@ const OutputFile = memo(({ file, onDelete, onShow, onReverse, onTrim, onPlay }: 
             color="gray.500"
             paddingTop={0}
             _hover={{ color: 'red.400' }}
-            mt="-5px"
+            mt="-4px"
+            marginRight={1}
           />
         </Tooltip>
       </Box>

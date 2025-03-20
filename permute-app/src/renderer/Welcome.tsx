@@ -1,16 +1,13 @@
 import {
-  Box,
   Heading,
-  List,
-  ListItem,
   Modal,
   ModalBody,
   ModalCloseButton,
   ModalContent,
-  ModalHeader,
   ModalOverlay,
   Text,
 } from '@chakra-ui/react';
+import { useEffect, useState } from 'react';
 
 export interface WelcomeProps {
   isOpen: boolean;
@@ -18,12 +15,28 @@ export interface WelcomeProps {
 }
 
 export const Welcome: React.FC<WelcomeProps> = ({ isOpen, onClose }) => {
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  useEffect(() => {
+    // Preload the background image
+    const img = new Image();
+    img.src = require('../img/bg2.png');
+    img.onload = () => setIsLoaded(true);
+  }, []);
+
   return (
     <Modal onClose={onClose} isOpen={isOpen}>
-      <ModalOverlay />
-      <ModalContent className="modal">
+      <ModalOverlay
+        bg="blackAlpha.300"
+        transition="all 0.3s"
+      />
+      <ModalContent
+        className="modal"
+        opacity={isLoaded ? 1 : 0}
+        transform={isLoaded ? "translateY(0)" : "translateY(20px)"}
+        transition="all 0.3s ease-out"
+      >
         <ModalCloseButton />
-
         <ModalBody>
           <Heading size="lg">Welcome to Permute!</Heading>
           <Text fontSize="lg" mb={2}>
