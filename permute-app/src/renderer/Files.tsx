@@ -69,6 +69,7 @@ export const Files: React.FC<IFilesProps> = ({
           alignItems="center"
           width="100%"
           pos="relative"
+          marginBottom={1}
           justifyContent="space-between"
         >
           <Heading
@@ -96,7 +97,7 @@ export const Files: React.FC<IFilesProps> = ({
           pr={2}
           dangerouslySetInnerHTML={{ __html: file.image }}
         />
-        <Box display="flex" alignItems="baseline" width="100%" pos="relative">
+        <Box display="flex" alignItems="baseline" width="100%" pos="relative" marginTop={2}>
           <Tooltip
             openDelay={200}
             label="Preview"

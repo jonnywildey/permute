@@ -63,6 +63,7 @@ export const Output: React.FC<IOutputProps> = ({
             alignItems="center"
             width="100%"
             pos="relative"
+            marginBottom={1}
             justifyContent="space-between"
           >
             <Heading
@@ -87,7 +88,6 @@ export const Output: React.FC<IOutputProps> = ({
                 color="gray.500"
                 paddingTop={0}
                 _hover={{ color: 'red.400' }}
-                mr={2}
                 mt="-5px"
               />
             </Tooltip>
@@ -114,7 +114,7 @@ export const Output: React.FC<IOutputProps> = ({
               dangerouslySetInnerHTML={{ __html: file.image }}
             />
           </Tooltip>
-          <Box display="flex" alignItems="baseline" width="100%" pos="relative">
+          <Box display="flex" alignItems="baseline" width="100%" pos="relative" marginTop={2}>
             <Tooltip
               openDelay={200}
               label="Preview"
@@ -185,7 +185,10 @@ export const Output: React.FC<IOutputProps> = ({
   const directory = output ? (
     <Box
       display="flex"
-      padding={3}
+      paddingTop={3}
+      paddingBottom={3}
+      paddingLeft={0}
+      paddingRight={2}
       mt={5}
       alignItems="center"
       borderTop="1px"
@@ -194,14 +197,19 @@ export const Output: React.FC<IOutputProps> = ({
       borderBottomColor={outputBoxes.length ? 'gray.400' : 'gray.300'}
       color="gray.800"
     >
-      <IconButton
-        aria-label="show"
-        variant="ghost"
-        size="sm"
-        icon={<ViewIcon />}
-        onClick={() => showFile(output)}
-      />
-      <Heading ml={3} className="output-heading" size="sm">
+      <Tooltip
+        openDelay={200}
+        label="Open directory"
+      >
+        <IconButton
+          aria-label="show"
+          variant="ghost"
+          size="sm"
+          icon={<ViewIcon />}
+          onClick={() => showFile(output)}
+        />
+      </Tooltip>
+      <Heading ml={1} className="output-heading" size="sm">
         {output}
       </Heading>
     </Box>
