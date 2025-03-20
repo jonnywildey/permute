@@ -225,8 +225,25 @@ const Content = () => {
 export default function App() {
   const [loading, setLoading] = useState(true);
   useEffect(() => {
-    setTimeout(() => setLoading(false), 2000);
+    // Preload the background image
+    const img = new Image();
+    img.src = require('../img/bg2.png');
+
+    // Wait for both the timeout and image load
+    Promise.all([
+      new Promise(resolve => setTimeout(resolve, 1000)),
+      new Promise(resolve => {
+        if (img.complete) {
+          resolve(null);
+        } else {
+          img.onload = () => resolve(null);
+        }
+      })
+    ]).then(() => {
+      setLoading(false);
+    });
   }, []);
+
   return (
     <ChakraProvider theme={theme}>
       <CreateAudioContext>
@@ -238,6 +255,19 @@ export default function App() {
             </div>
             <Center width="100vw" height="100vh">
               <Spinner ml={2} size="xl" color="brand.600" />
+            </Center>
+            <Center
+              width="100vw"
+              height="100vh"
+              bg="brand.25"
+              transition="opacity 0.3s ease-out"
+            >
+              <Spinner
+                size="xl"
+                color="brand.600"
+                thickness="4px"
+                speed="0.8s"
+              />
             </Center>
           </>
         ) : (

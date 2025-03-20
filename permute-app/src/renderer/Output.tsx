@@ -13,7 +13,7 @@ import {
 } from '@chakra-ui/react';
 import { ViewIcon, DeleteIcon } from '@chakra-ui/icons';
 import type { IPermutationOutput } from 'permute-node';
-import { useContext } from 'react';
+import { useContext, useCallback, memo } from 'react';
 import { PlayIcon } from './icons/PlayIcon';
 import { AudioContext } from './AudioContext';
 import { displayTime } from './displayTime';
@@ -34,7 +34,151 @@ const buttonBg = 'brand.175';
 const bg = 'brand.25';
 const fileBorderColour = 'brand.150';
 
-export const Output: React.FC<IOutputProps> = ({
+const OutputFile = memo(({ file, onDelete, onShow, onReverse, onTrim, onPlay }: {
+  file: IPermutationOutput;
+  onDelete: (path: string) => void;
+  onShow: (path: string) => void;
+  onReverse: (path: string) => void;
+  onTrim: (path: string) => void;
+  onPlay: (file: IPermutationOutput) => void;
+}) => {
+  const props: PropsOf<typeof Box> = {
+    key: file.path,
+    borderBottom: '1px solid',
+    borderBottomColor: fileBorderColour,
+    color: 'gray.700',
+  };
+  const ext = file.path.split(".").pop()?.toLowerCase();
+  const isAiff = ext === "aif" || ext === "aiff"
+
+  return (
+    <Box {...props}>
+      <Box
+        pt={1}
+        display="flex"
+        alignItems="center"
+        width="100%"
+        pos="relative"
+        marginBottom={1}
+        justifyContent="space-between"
+      >
+        <Heading
+          size="sm"
+          width="80%"
+          display="inline"
+          color="gray.600"
+          pl={2}
+        >
+          {file.name}
+        </Heading>
+        <Tooltip
+          openDelay={200}
+          label="Delete file"
+        >
+          <IconButton
+            aria-label="delete"
+            variant="ghost"
+            size="xs"
+            icon={<DeleteIcon />}
+            onClick={() => onDelete(file.path)}
+            color="gray.500"
+            paddingTop={0}
+            _hover={{ color: 'red.400' }}
+            mt="-5px"
+          />
+        </Tooltip>
+      </Box>
+      <Tooltip
+        openDelay={200}
+        label={
+          <List>
+            {file.processors.map((p, i) => (
+              <ListItem key={`${p}${i}`}>
+                {i + 1}: {p}
+              </ListItem>
+            ))}
+          </List>
+        }
+      >
+        <Box
+          width="100%"
+          className="output-image"
+          pl={2}
+          pr={2}
+          mt="-4px"
+          mb="-8px"
+          dangerouslySetInnerHTML={{ __html: file.image }}
+        />
+      </Tooltip>
+      <Box display="flex" alignItems="baseline" width="100%" pos="relative" marginTop={2}>
+        <Tooltip
+          openDelay={200}
+          label="Preview"
+        >
+          <IconButton
+            aria-label="show"
+            variant="ghost"
+            size="xs"
+            disabled={isAiff}
+            icon={<PlayIcon />}
+            onClick={() => onPlay(file)}
+          />
+        </Tooltip>
+        <Tooltip
+          openDelay={200}
+          label="Open directory"
+        >
+          <IconButton
+            aria-label="show"
+            variant="ghost"
+            alignSelf="center"
+            size="xs"
+            icon={<ViewIcon />}
+            onClick={() => onShow(file.path)}
+          />
+        </Tooltip>
+        <Tooltip
+          openDelay={200}
+          label="Reverse"
+        >
+          <IconButton
+            aria-label="show"
+            variant="ghost"
+            alignSelf="center"
+            size="xs"
+            icon={<ReverseIcon />}
+            onClick={() => onReverse(file.path)}
+          />
+        </Tooltip>
+        <Tooltip
+          openDelay={200}
+          label="Auto-trim"
+        >
+          <IconButton
+            aria-label="show"
+            variant="ghost"
+            alignSelf="center"
+            size="xs"
+            icon={<TrimIcon />}
+            onClick={() => onTrim(file.path)}
+          />
+        </Tooltip>
+        <Text
+          pr={2}
+          width="100%"
+          textAlign="right"
+          color="gray.500"
+          fontSize="sm"
+          lineHeight={1}
+        >
+          {displayTime(file.durationSec)}
+        </Text>
+      </Box>
+    </Box>
+  );
+});
+
+export const Output = memo(({
   output,
   showFile,
   reverseFile,
@@ -42,145 +186,42 @@ export const Output: React.FC<IOutputProps> = ({
   trimFile,
   permutationOutputs,
   deleteOutputFile,
-}) => {
+}: IOutputProps) => {
   const { playFile } = useContext(AudioContext);
+
+  const handleDelete = useCallback((path: string) => {
+    deleteOutputFile(path);
+  }, [deleteOutputFile]);
+
+  const handleShow = useCallback((path: string) => {
+    showFile(path);
+  }, [showFile]);
+
+  const handleReverse = useCallback((path: string) => {
+    reverseFile(path);
+  }, [reverseFile]);
+
+  const handleTrim = useCallback((path: string) => {
+    trimFile(path);
+  }, [trimFile]);
+
+  const handlePlay = useCallback((file: IPermutationOutput) => {
+    playFile(file);
+  }, [playFile]);
+
   const outputBoxes = permutationOutputs
     .filter((f) => f.progress === 100 && f.image)
-    .map((file) => {
-      const props: PropsOf<typeof Box> = {
-        key: file.path,
-        borderBottom: '1px solid',
-        borderBottomColor: fileBorderColour,
-        color: 'gray.700',
-      };
-      const ext = file.path.split(".").pop()?.toLowerCase();
-      const isAiff = ext === "aif" || ext === "aiff"
-      return (
-        <Box {...props}>
-          <Box
-            pt={1}
-            display="flex"
-            alignItems="center"
-            width="100%"
-            pos="relative"
-            marginBottom={1}
-            justifyContent="space-between"
-          >
-            <Heading
-              size="sm"
-              width="80%"
-              display="inline"
-              color="gray.600"
-              pl={2}
-            >
-              {file.name}
-            </Heading>
-            <Tooltip
-              openDelay={200}
-              label="Delete file"
-            >
-              <IconButton
-                aria-label="delete"
-                variant="ghost"
-                size="xs"
-                icon={<DeleteIcon />}
-                onClick={() => deleteOutputFile(file.path)}
-                color="gray.500"
-                paddingTop={0}
-                _hover={{ color: 'red.400' }}
-                mt="-5px"
-              />
-            </Tooltip>
-          </Box>
-          <Tooltip
-            openDelay={200}
-            label={
-              <List>
-                {file.processors.map((p, i) => (
-                  <ListItem key={`${p}${i}`}>
-                    {i + 1}: {p}
-                  </ListItem>
-                ))}
-              </List>
-            }
-          >
-            <Box
-              width="100%"
-              className="output-image"
-              pl={2}
-              pr={2}
-              mt="-4px"
-              mb="-8px"
-              dangerouslySetInnerHTML={{ __html: file.image }}
-            />
-          </Tooltip>
-          <Box display="flex" alignItems="baseline" width="100%" pos="relative" marginTop={2}>
-            <Tooltip
-              openDelay={200}
-              label="Preview"
-            >
-              <IconButton
-                aria-label="show"
-                variant="ghost"
-                size="xs"
-                disabled={isAiff}
-                icon={<PlayIcon />}
-                onClick={() => playFile(file)}
-              />
-            </Tooltip>
-            <Tooltip
-              openDelay={200}
-              label="Open directory"
-            >
-              <IconButton
-                aria-label="show"
-                variant="ghost"
-                alignSelf="center"
-                size="xs"
-                icon={<ViewIcon />}
-                onClick={() => showFile(file.path)}
-              />
-            </Tooltip>
-            <Tooltip
-              openDelay={200}
-              label="Reverse"
-            >
-              <IconButton
-                aria-label="show"
-                variant="ghost"
-                alignSelf="center"
-                size="xs"
-                icon={<ReverseIcon />}
-                onClick={() => reverseFile(file.path)}
-              />
-            </Tooltip>
-            <Tooltip
-              openDelay={200}
-              label="Auto-trim"
-            >
-              <IconButton
-                aria-label="show"
-                variant="ghost"
-                alignSelf="center"
-                size="xs"
-                icon={<TrimIcon />}
-                onClick={() => trimFile(file.path)}
-              />
-            </Tooltip>
-            <Text
-              pr={2}
-              width="100%"
-              textAlign="right"
-              color="gray.500"
-              fontSize="sm"
-              lineHeight={1}
-            >
-              {displayTime(file.durationSec)}
-            </Text>
-          </Box>
-        </Box>
-      );
-    });
+    .map((file) => (
+      <OutputFile
+        key={file.path}
+        file={file}
+        onDelete={handleDelete}
+        onShow={handleShow}
+        onReverse={handleReverse}
+        onTrim={handleTrim}
+        onPlay={handlePlay}
+      />
+    ));
 
   const directory = output ? (
     <Box
@@ -251,4 +292,4 @@ export const Output: React.FC<IOutputProps> = ({
       </Box>
     </GridItem>
   );
-};
+});
