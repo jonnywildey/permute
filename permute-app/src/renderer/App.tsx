@@ -37,12 +37,47 @@ const defaultAppState: IAppState = {
 const Content = ({ onOpen }: { onOpen: () => void }) => {
   const [state, setState] = useState<IAppState>(defaultAppState);
   const toast = useToast();
-
   const { colorMode } = useColorMode();
 
   useEffect(() => {
     document.body.setAttribute('data-theme', colorMode);
   }, [colorMode]);
+
+  const refreshState = async () => {
+    try {
+      const permuteState = await window.Electron.ipcRenderer.getState();
+      setState({ ...state, permuteState });
+    } catch (error) {
+      console.error('Failed to refresh state:', error);
+      toast({
+        description: 'Failed to refresh application state',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  };
+
+  useEffect(() => {
+    const setup = async () => {
+      try {
+        const permuteState = await window.Electron.ipcRenderer.getState();
+        if (!permuteState) {
+          throw new Error('Failed to load permute state');
+        }
+        setState({ permuteState });
+      } catch (error) {
+        console.error('Failed to setup initial state:', error);
+        toast({
+          description: 'Failed to load saved settings',
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+        });
+      }
+    };
+    setup();
+  }, [toast]);
 
   const {
     allProcessors,
@@ -58,20 +93,6 @@ const Content = ({ onOpen }: { onOpen: () => void }) => {
     permutationOutputs,
     createSubdirectories,
   } = state.permuteState;
-  const refreshState = async () => {
-    const permuteState = await window.Electron.ipcRenderer.getState();
-    setState({ ...state, permuteState });
-  };
-  useEffect(() => {
-    const setup = async () => {
-      const permuteState: IPermuteState =
-        await window.Electron.ipcRenderer.getState();
-      setState({
-        permuteState,
-      });
-    };
-    setup();
-  }, []);
 
   const runProcessor = async () => {
     const onFinished = (pState: IPermuteState) => {
@@ -176,7 +197,6 @@ const Content = ({ onOpen }: { onOpen: () => void }) => {
   const setCreateSubdirectories = async (createSubfolders: boolean) => {
     window.Electron.ipcRenderer.setCreateSubdirectories(createSubfolders);
     const permuteState = await window.Electron.ipcRenderer.getState();
-    debugger;
     setState({ permuteState });
   };
 

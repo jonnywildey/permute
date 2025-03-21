@@ -314,7 +314,7 @@ impl SharedState {
         self.processor_count = data.processor_count;
         self.processor_pool = data.processor_pool;
         self.create_subdirectories = data.create_subdirectories;
-
+        
         Ok(())
     }
 }

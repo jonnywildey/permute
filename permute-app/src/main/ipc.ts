@@ -5,6 +5,9 @@ import path from 'path';
 const configPath = path.join(app.getPath('userData'), 'config.json');
 export const processor = createPermuteProcessor();
 
+// Load settings immediately when the processor is created
+processor.loadSettings(configPath);
+
 ipcMain.on('open-output-dialog', async (event) => {
   const result = await dialog.showOpenDialog({ properties: ['openDirectory'] });
   console.log(result.filePaths);
@@ -100,7 +103,4 @@ ipcMain.on('set-create-subdirectories', async (_, param) => {
 
 app.on('before-quit', () => {
   processor.saveSettings(configPath);
-});
-app.on('ready', () => {
-  processor.loadSettings(configPath);
 });
