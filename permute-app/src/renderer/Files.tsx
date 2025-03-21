@@ -121,7 +121,7 @@ const FileBox = memo(({ file, onRemove, onShow, onPlay }: {
           pr={2}
           width="100%"
           textAlign="right"
-          color={colorMode === 'dark' ? 'brand.5500' : 'grey.500'}
+          color={colorMode === 'dark' ? 'brand.5600' : 'grey.500'}
           fontSize="sm"
           lineHeight={1}
         >

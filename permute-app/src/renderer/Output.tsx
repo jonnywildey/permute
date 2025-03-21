@@ -185,7 +185,7 @@ const OutputFile = memo(({ file, onDelete, onShow, onReverse, onTrim, onPlay }: 
           textAlign="right"
           fontSize="sm"
           lineHeight={1}
-          color={colorMode === 'dark' ? 'brand.5500' : 'grey.500'}
+          color={colorMode === 'dark' ? 'brand.5600' : 'grey.500'}
         >
           {displayTime(file.durationSec)}
         </Text>
