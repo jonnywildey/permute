@@ -34,13 +34,11 @@ const defaultAppState: IAppState = {
   } as any,
 };
 
-const Content = () => {
+const Content = ({ isOpen, onClose, onOpen }: { isOpen: boolean, onClose: () => void, onOpen: () => void }) => {
   const [state, setState] = useState<IAppState>(defaultAppState);
   const toast = useToast();
-  const { onOpen } = useDisclosure({
-    defaultIsOpen: !state.permuteState.output,
-  });
-  const { toggleColorMode, colorMode } = useColorMode();
+
+  const { colorMode } = useColorMode();
 
   useEffect(() => {
     document.body.setAttribute('data-theme', colorMode);
@@ -234,7 +232,7 @@ const Content = () => {
 export default function App() {
   const [loading, setLoading] = useState(true);
   const [showContent, setShowContent] = useState(false);
-  const { isOpen, onClose } = useDisclosure({
+  const { isOpen, onClose, onOpen } = useDisclosure({
     defaultIsOpen: true,
   });
 
@@ -298,7 +296,7 @@ export default function App() {
               width="100%"
               height="100%"
             >
-              {showContent && <Content />}
+              {showContent && <Content isOpen={isOpen} onClose={onClose} onOpen={onOpen} />}
             </Box>
           </>
         )}
