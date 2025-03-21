@@ -94,6 +94,10 @@ ipcMain.on('delete-output-file', async (_, file) => {
   processor.deleteOutputFile(file);
 });
 
+ipcMain.on('set-create-subdirectories', async (_, param) => {
+  processor.setCreateSubdirectories(param);
+});
+
 app.on('before-quit', () => {
   processor.saveSettings(configPath);
 });

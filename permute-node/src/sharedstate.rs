@@ -29,6 +29,7 @@ pub struct SharedState {
     pub high_sample_rate: bool,
     pub processor_count: Option<i32>,
     pub constrain_length: bool,
+    pub create_subdirectories: bool,
 
     pub update_sender: mpsc::Sender<PermuteUpdate>,
     pub processing: bool,
@@ -59,6 +60,7 @@ impl SharedState {
             files: vec![],
             cancel_sender,
             constrain_length: true,
+            create_subdirectories: true,
         }
     }
 
@@ -85,7 +87,7 @@ impl SharedState {
             processor_pool: self.processor_pool.clone(),
             output_file_as_wav: true,
             update_sender: self.update_sender.to_owned(),
-            create_subdirectories: true,
+            create_subdirectories: self.create_subdirectories,
             cancel_receiver,
         }
     }
@@ -254,6 +256,10 @@ impl SharedState {
         self.permutation_outputs.retain(|po| po.output != file);
         Ok(())
     }
+
+    pub fn set_create_subdirectories(&mut self, create: bool) {
+        self.create_subdirectories = create;
+    }
 }
 
 impl Finalize for SharedState {}
@@ -283,6 +289,7 @@ impl SharedState {
             permutations: self.permutations,
             processor_count: self.processor_count,
             processor_pool: self.processor_pool.clone(),
+            create_subdirectories: self.create_subdirectories,
         };
         let json = serde_json::to_string(&data)?;
         let mut file = File::create(path)?;
@@ -306,6 +313,7 @@ impl SharedState {
         self.permutations = data.permutations;
         self.processor_count = data.processor_count;
         self.processor_pool = data.processor_pool;
+        self.create_subdirectories = data.create_subdirectories;
 
         Ok(())
     }
@@ -324,4 +332,5 @@ pub struct SharedStateSerializable {
     pub trim_all: bool,
     pub high_sample_rate: bool,
     pub processor_count: Option<i32>,
+    pub create_subdirectories: bool,
 }

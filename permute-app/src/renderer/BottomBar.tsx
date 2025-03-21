@@ -408,45 +408,62 @@ const Run: React.FC<IRunProps> = ({
   }, [processing]);
 
   const isLongRunning = timeElapsed >= 5;
-  const isDisabled = !processing ? (!output || !files.length || !processorPool.length) : !isLongRunning;
+  const noFiles = files.length === 0;
+  const noOutput = !output;
+  const noProcessors = processorPool.length === 0;
+
+  // During processing, only enable the button if it's been running long enough to show cancel
+  // When not processing, disable if any required conditions are not met
+  const isDisabled = processing
+    ? !isLongRunning
+    : (noFiles || noOutput || noProcessors);
+
+  const getDisabledReason = () => {
+    if (noFiles) return "Please add some audio files";
+    if (noOutput) return "Please select an output directory";
+    if (noProcessors) return "Please select at least one processor";
+    return "";
+  };
 
   return (
-    <GridItem rowSpan={2} colSpan={3} display="flex" pl={6} pr={6} alignItems="flex-end">
-      <Button
-        onClick={isLongRunning ? cancelProcessing : runProcessor}
-        disabled={isDisabled}
-        width="100%"
-        bg={!processing ? buttonBg : undefined}
-        color={!processing ? "gray.50" : undefined}
-        fontSize="2xl"
-        shadow="sm"
-        _hover={isLongRunning ? { bg: "red.200" } : { bg: "brand.210" }}
-        transition="all 0.3s ease-in-out"
-        display="flex"
-        alignItems="center"
-        justifyContent={isLongRunning ? "flex-start" : "center"}
-        gap={3}
-        px={6}
-        className={processing ? "color-shift" : ""}
-        cursor={isDisabled ? "not-allowed" : "pointer"}
-      >
-        {!processing ? (
-          'Run'
-        ) : (
-          <>
-            <CircularProgress
-              value={progress}
-              color={isLongRunning ? "red.300" : "brand.300"}
-              size={8}
-              transition="all 2.3s cubic-bezier(0.4, 0, 0.2, 1)"
-              className={isLongRunning ? "slide-in" : ""}
-            />
-            <span className={isLongRunning ? "slide-in" : ""}>
-              {isLongRunning ? 'Cancel' : ''}
-            </span>
-          </>
-        )}
-      </Button>
+    <GridItem rowSpan={2} colSpan={3} display="flex" pl={6} pr={6} alignItems="center">
+      <Tooltip label={!processing && isDisabled ? getDisabledReason() : ""} isDisabled={!isDisabled || processing}>
+        <Button
+          onClick={isLongRunning ? cancelProcessing : runProcessor}
+          disabled={isDisabled}
+          width="100%"
+          bg={isDisabled ? "brand.210" : !processing ? buttonBg : undefined}
+          color={!processing ? "gray.50" : undefined}
+          fontSize="2xl"
+          shadow="sm"
+          _hover={isLongRunning ? { bg: "red.200" } : { bg: "brand.210" }}
+          transition="all 0.3s ease-in-out"
+          display="flex"
+          alignItems="center"
+          justifyContent={isLongRunning ? "flex-start" : "center"}
+          gap={3}
+          px={6}
+          className={processing ? "color-shift" : ""}
+          cursor={isDisabled ? "not-allowed" : "pointer"}
+        >
+          {!processing ? (
+            'Run'
+          ) : (
+            <>
+              <CircularProgress
+                value={progress}
+                color={isLongRunning ? "red.300" : "brand.300"}
+                size={8}
+                transition="all 2.3s cubic-bezier(0.4, 0, 0.2, 1)"
+                className={isLongRunning ? "slide-in" : ""}
+              />
+              <span className={isLongRunning ? "slide-in" : ""}>
+                {isLongRunning ? 'Cancel' : ''}
+              </span>
+            </>
+          )}
+        </Button>
+      </Tooltip>
     </GridItem>
   );
 };

@@ -36,6 +36,7 @@ enum ProcessorMessage {
     SetOutputTrail(f64),
     LoadSettingsFromJson(String),
     SaveSettingsToJson(String),
+    SetCreateSubdirectories(bool),
     Cancel,
 }
 
@@ -146,6 +147,9 @@ impl Processor {
                             }
                             ProcessorMessage::SaveSettingsToJson(file) => {
                                 state.write_to_json(file).unwrap_or(())
+                            }
+                            ProcessorMessage::SetCreateSubdirectories(create) => {
+                                state.set_create_subdirectories(create);
                             }
                             ProcessorMessage::Cancel => {
                                 state.cancel();
@@ -266,6 +270,8 @@ impl Processor {
                     let normalise_at_end: Handle<'_, JsBoolean> =
                         cx.boolean(state.normalise_at_end);
                     let trim_all: Handle<'_, JsBoolean> = cx.boolean(state.trim_all);
+                    let create_subdirectories: Handle<'_, JsBoolean> =
+                        cx.boolean(state.create_subdirectories);
 
                     let files = cx.empty_array();
                     for i in 0..state.files.len() {
@@ -334,6 +340,7 @@ impl Processor {
                     obj.set(&mut cx, "normaliseAtEnd", normalise_at_end)?;
                     obj.set(&mut cx, "trimAll", trim_all)?;
                     obj.set(&mut cx, "permutationOutputs", permutation_outputs)?;
+                    obj.set(&mut cx, "createSubdirectories", create_subdirectories)?;
 
                     let args = vec![obj];
 
@@ -448,6 +455,12 @@ impl Processor {
         js_hook!(file, ProcessorMessage::LoadSettingsFromJson, cx);
         Ok(cx.undefined())
     }
+
+    fn js_set_create_subdirectories(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+        let create = cx.argument::<JsBoolean>(0)?.value(&mut cx);
+        js_hook!(create, ProcessorMessage::SetCreateSubdirectories, cx);
+        Ok(cx.undefined())
+    }
 }
 
 #[neon::main]
@@ -472,6 +485,7 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
     cx.export_function("trimFile", Processor::js_trim_file)?;
     cx.export_function("saveSettings", Processor::js_save_settings)?;
     cx.export_function("loadSettings", Processor::js_load_settings)?;
+    cx.export_function("setCreateSubdirectories", Processor::js_set_create_subdirectories)?;
 
     Ok(())
 }

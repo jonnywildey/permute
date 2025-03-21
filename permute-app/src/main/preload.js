@@ -93,5 +93,8 @@ contextBridge.exposeInMainWorld('Electron', {
     cancel() {
       ipcRenderer.send('cancel');
     },
+    setCreateSubdirectories(createSubfolders) {
+      ipcRenderer.send('set-create-subdirectories', createSubfolders);
+    },
   },
 });

@@ -5,11 +5,21 @@ import { useEffect } from 'react';
 import { useColorMode } from '@chakra-ui/react';
 import { SystemMenu } from './SystemMenu';
 
-export interface TopBarProps {
+interface TopBarProps {
   openWelcome: () => void;
+  overwriteFiles?: boolean;
+  createSubdirectories?: boolean;
+  onOverwriteChange?: (overwrite: boolean) => void;
+  onCreateSubdirectoriesChange?: (createSubfolders: boolean) => void;
 }
 
-export const TopBar: React.FC<TopBarProps> = ({ openWelcome }) => {
+export const TopBar: React.FC<TopBarProps> = ({
+  openWelcome,
+  overwriteFiles,
+  createSubdirectories: createSubfolders,
+  onOverwriteChange,
+  onCreateSubdirectoriesChange
+}) => {
   const { colorMode } = useColorMode();
 
   useEffect(() => {
@@ -61,7 +71,12 @@ export const TopBar: React.FC<TopBarProps> = ({ openWelcome }) => {
               Permute
             </Heading>
           </Box>
-          <SystemMenu />
+          <SystemMenu
+            overwriteFiles={overwriteFiles}
+            createSubfolders={createSubfolders}
+            onOverwriteChange={onOverwriteChange}
+            onCreateSubdirectoriesChange={onCreateSubdirectoriesChange}
+          />
         </Box>
       </GridItem>
     </>

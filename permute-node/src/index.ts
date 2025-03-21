@@ -2,7 +2,7 @@ const {
   init, cancel, runProcess, addFile, addProcessor, removeProcessor,
   getStateCallback, setOutput, setDepth, setInputTrail,
   setOutputTrail, setPermutations, setNormalised, setTrimAll, removeFile, reverseFile,
-  saveSettings, loadSettings, trimFile, deleteOutputFile
+  saveSettings, loadSettings, trimFile, deleteOutputFile, setCreateSubdirectories
 } = require("../permute-library");
 
 const PERMUTE_POLL_LATENCY = 500;
@@ -22,6 +22,7 @@ export interface IPermuteState {
   allProcessors: string[],
   normaliseAtEnd: boolean,
   trimAll: boolean,
+  createSubfolders: boolean,
   permutationOutputs: IPermutationOutput[];
 };
 
@@ -142,6 +143,9 @@ export function createPermuteProcessor() {
       return new Promise(res => getStateCb((state) => {
         res(state);
       }))
+    },
+    setCreateSubdirectories(createSubfolders: boolean) {
+      return setCreateSubdirectories.call(permuteLibrary, createSubfolders);
     }
   }
 }

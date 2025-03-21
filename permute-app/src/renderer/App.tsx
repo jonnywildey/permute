@@ -34,7 +34,7 @@ const defaultAppState: IAppState = {
   } as any,
 };
 
-const Content = ({ isOpen, onClose, onOpen }: { isOpen: boolean, onClose: () => void, onOpen: () => void }) => {
+const Content = ({ onOpen }: { onOpen: () => void }) => {
   const [state, setState] = useState<IAppState>(defaultAppState);
   const toast = useToast();
 
@@ -56,6 +56,7 @@ const Content = ({ isOpen, onClose, onOpen }: { isOpen: boolean, onClose: () => 
     outputTrail,
     processorPool,
     permutationOutputs,
+    createSubdirectories,
   } = state.permuteState;
   const refreshState = async () => {
     const permuteState = await window.Electron.ipcRenderer.getState();
@@ -172,7 +173,13 @@ const Content = ({ isOpen, onClose, onOpen }: { isOpen: boolean, onClose: () => 
     refreshState();
   };
 
-  console.log(permutationOutputs);
+  const setCreateSubdirectories = async (createSubfolders: boolean) => {
+    window.Electron.ipcRenderer.setCreateSubdirectories(createSubfolders);
+    const permuteState = await window.Electron.ipcRenderer.getState();
+    debugger;
+    setState({ permuteState });
+  };
+
 
   return (
     <Grid
@@ -183,7 +190,11 @@ const Content = ({ isOpen, onClose, onOpen }: { isOpen: boolean, onClose: () => 
       width="100%"
       height="100vh"
     >
-      <TopBar openWelcome={onOpen} />
+      <TopBar
+        openWelcome={onOpen}
+        createSubdirectories={createSubdirectories}
+        onCreateSubdirectoriesChange={setCreateSubdirectories}
+      />
       <Files
         files={files}
         addFiles={addFiles}
@@ -296,7 +307,7 @@ export default function App() {
               width="100%"
               height="100%"
             >
-              {showContent && <Content isOpen={isOpen} onClose={onClose} onOpen={onOpen} />}
+              {showContent && <Content onOpen={onOpen} />}
             </Box>
           </>
         )}
