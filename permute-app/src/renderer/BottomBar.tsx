@@ -39,7 +39,6 @@ export interface IBottomBarProps {
   cancelProcessing: () => void;
 }
 
-const bg = 'brand.150';
 const buttonBg = 'brand.200';
 const borderColour = 'gray.100';
 
@@ -68,10 +67,10 @@ export const BottomBar: React.FC<IBottomBarProps> = ({
     <GridItem
       rowSpan={6}
       colSpan={12}
-      bg={bg}
-      borderTop="0.5px solid"
-      borderTopColor={borderColour}
-      color="gray.700"
+      bg="brand.160"
+      // borderTop="0.5px solid"
+      // borderTopColor={borderColour}
+      color="brand.5700"
       borderRadius={20}
       shadow="md"
       minHeight="100%"
@@ -136,7 +135,7 @@ function InputTrail(
         colorScheme="brand"
         value={inputTrail}
         onChange={setInputTrail}
-        color="gray.600"
+        color="gray.5600"
         fontSize="sm"
       >
         <SliderMark value={0} mt="2" ml="-0.75">
@@ -202,7 +201,7 @@ function Depth(depth: number, setDepth: (depth: number) => void) {
         colorScheme="brand"
         value={depth}
         onChange={setDepth}
-        color="gray.600"
+        color="gray.5600"
         fontSize="sm"
       >
         <SliderMark value={0} mt="2" ml="-0.75">
@@ -258,7 +257,7 @@ function Permutations(
         colorScheme="brand"
         value={permutations}
         onChange={setPermutations}
-        color="gray.600"
+        color="gray.5600"
         fontSize="sm"
       >
         <SliderMark value={1} mt="2" ml="-0.75">
@@ -325,7 +324,7 @@ function OutputTrail(
         colorScheme="brand"
         value={outputTrail}
         onChange={setOutputTrail}
-        color="gray.600"
+        color="gray.5600"
         fontSize="sm"
       >
         <SliderMark value={0} mt="2" ml="-0.75">

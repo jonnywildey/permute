@@ -31,7 +31,7 @@ export const Processors = memo(({
       overflow="hidden"
       overflowY="scroll"
     >
-      <Heading textAlign="center" size="lg" color="gray.600">
+      <Heading textAlign="center" size="lg" color="brand.5600">
         Processors
       </Heading>
       <Grid

@@ -15,7 +15,7 @@ import { Files } from './Files';
 import { TopBar } from './TopBar';
 import { Output } from './Output';
 import { BottomBar } from './BottomBar';
-import { theme } from './theme';
+import { darkTheme } from './theme';
 import { Processors } from './Processors';
 import { Welcome } from './Welcome';
 import { CreateAudioContext } from './AudioContext';
@@ -257,7 +257,7 @@ export default function App() {
   }, []);
 
   return (
-    <ChakraProvider theme={theme}>
+    <ChakraProvider theme={darkTheme}>
       <CreateAudioContext>
         {loading ? (
           <>

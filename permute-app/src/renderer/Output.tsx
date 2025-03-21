@@ -66,7 +66,7 @@ const OutputFile = memo(({ file, onDelete, onShow, onReverse, onTrim, onPlay }: 
           size="sm"
           width="80%"
           display="inline"
-          color="gray.600"
+          color="brand.5600"
           pl={2}
         >
           {file.name}
@@ -78,12 +78,13 @@ const OutputFile = memo(({ file, onDelete, onShow, onReverse, onTrim, onPlay }: 
           <IconButton
             aria-label="delete"
             variant="ghost"
+            rounded="full"
             size="xs"
             icon={<DeleteIcon />}
             onClick={() => onDelete(file.path)}
-            color="gray.500"
+            color="brand.5600"
             paddingTop={0}
-            _hover={{ color: 'red.400' }}
+            _hover={{ bg: 'brand.50', color: 'red.500' }}
             mt="-4px"
             marginRight={1}
           />
@@ -119,10 +120,13 @@ const OutputFile = memo(({ file, onDelete, onShow, onReverse, onTrim, onPlay }: 
           <IconButton
             aria-label="show"
             variant="ghost"
+            rounded="full"
             size="xs"
             disabled={isAiff}
             icon={<PlayIcon />}
             onClick={() => onPlay(file)}
+            color="brand.5600"
+            _hover={{ bg: 'brand.50' }}
           />
         </Tooltip>
         <Tooltip
@@ -132,10 +136,13 @@ const OutputFile = memo(({ file, onDelete, onShow, onReverse, onTrim, onPlay }: 
           <IconButton
             aria-label="show"
             variant="ghost"
+            rounded="full"
             alignSelf="center"
             size="xs"
             icon={<ViewIcon />}
             onClick={() => onShow(file.path)}
+            color="brand.5600"
+            _hover={{ bg: 'brand.50' }}
           />
         </Tooltip>
         <Tooltip
@@ -145,10 +152,13 @@ const OutputFile = memo(({ file, onDelete, onShow, onReverse, onTrim, onPlay }: 
           <IconButton
             aria-label="show"
             variant="ghost"
+            rounded="full"
             alignSelf="center"
             size="xs"
             icon={<ReverseIcon />}
             onClick={() => onReverse(file.path)}
+            color="brand.5600"
+            _hover={{ bg: 'brand.50' }}
           />
         </Tooltip>
         <Tooltip
@@ -158,10 +168,13 @@ const OutputFile = memo(({ file, onDelete, onShow, onReverse, onTrim, onPlay }: 
           <IconButton
             aria-label="show"
             variant="ghost"
+            rounded="full"
             alignSelf="center"
             size="xs"
             icon={<TrimIcon />}
             onClick={() => onTrim(file.path)}
+            color="brand.5600"
+            _hover={{ bg: 'brand.50' }}
           />
         </Tooltip>
         <Text
@@ -237,7 +250,7 @@ export const Output = memo(({
       borderTopColor="gray.300"
       borderBottom="1px"
       borderBottomColor={outputBoxes.length ? 'gray.400' : 'gray.300'}
-      color="gray.800"
+      color="brand.5800"
     >
       <Tooltip
         openDelay={200}
@@ -249,6 +262,8 @@ export const Output = memo(({
           size="sm"
           icon={<ViewIcon />}
           onClick={() => showFile(output)}
+          color="brand.5600"
+          _hover={{ bg: 'brand.50' }}
         />
       </Tooltip>
       <Heading ml={1} className="output-heading" size="sm">
@@ -269,7 +284,7 @@ export const Output = memo(({
       overflow="hidden"
       flexDirection="column"
     >
-      <Heading textAlign="center" size="lg" color="gray.600">
+      <Heading textAlign="center" size="lg" color="brand.5600">
         Output
       </Heading>
       <Center>

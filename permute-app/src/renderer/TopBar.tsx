@@ -1,7 +1,7 @@
 import { Box, GridItem, Heading, Image } from '@chakra-ui/react';
 import logo from '../img/logo.png';
 
-const bg = 'brand.150';
+const bg = 'brand.160';
 
 export interface TopBarProps {
   openWelcome: () => void;
@@ -30,7 +30,7 @@ export const TopBar: React.FC<TopBarProps> = ({ openWelcome }) => {
             ml={3}
             textAlign="center"
             size="lg"
-            color="gray.800"
+            color="brand.5800"
             display="inline"
           >
             Permute

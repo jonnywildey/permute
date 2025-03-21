@@ -26,7 +26,7 @@ export interface IFilesProps {
   showFile: (file: string) => void;
 }
 
-const buttonBg = 'brand.500';
+const buttonBg = 'brand.550';
 const bg = 'brand.25';
 const fileBorderColour = 'brand.150';
 
@@ -61,7 +61,7 @@ const FileBox = memo(({ file, onRemove, onShow, onPlay }: {
           size="sm"
           width="80%"
           display="inline"
-          color="gray.600"
+          color="brand.5600"
           pl={2}
         >
           {file.name}
@@ -69,7 +69,7 @@ const FileBox = memo(({ file, onRemove, onShow, onPlay }: {
         <CloseButton
           display="inline"
           float="right"
-          color="gray.600"
+          color="brand.5600"
           size="sm"
           onClick={() => onRemove(file.path)}
         />
@@ -90,10 +90,13 @@ const FileBox = memo(({ file, onRemove, onShow, onPlay }: {
           <IconButton
             aria-label="play"
             variant="ghost"
+            rounded="full"
             size="xs"
             disabled={isAiff}
             icon={<PlayIcon />}
             onClick={() => onPlay(file)}
+            color="brand.5600"
+            _hover={{ bg: 'brand.50' }}
           />
         </Tooltip>
         <Tooltip
@@ -103,17 +106,21 @@ const FileBox = memo(({ file, onRemove, onShow, onPlay }: {
           <IconButton
             aria-label="show"
             variant="ghost"
+            rounded="full"
             size="xs"
             alignSelf="center"
             icon={<ViewIcon />}
+
             onClick={() => onShow(file.path)}
+            color="brand.5600"
+            _hover={{ bg: 'brand.50' }}
           />
         </Tooltip>
         <Text
           pr={2}
           width="100%"
           textAlign="right"
-          color="gray.500"
+          color="brand.5500"
           fontSize="sm"
           lineHeight={1}
         >
@@ -183,20 +190,20 @@ export const Files = memo(({
       height="100%"
       shadow="base"
     >
-      <Heading textAlign="center" size="lg" color="gray.600">
+      <Heading textAlign="center" size="lg" color="brand.5600">
         Files
       </Heading>
       <Box
         className="file-upload-container"
         borderBottom={fileBoxes.length ? '1px solid' : 'none'}
-        borderBottomColor="gray.400"
+        borderBottomColor="brand.400"
       >
         <Center>
           <Button
             width="75%"
             bgColor={isDrag ? buttonBg : buttonBg}
             color="gray.50"
-            _hover={{ backgroundColor: 'brand.550' }}
+            _hover={{ backgroundColor: 'brand.500' }}
             fontSize="xl"
             cursor="pointer"
             shadow="base"

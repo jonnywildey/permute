@@ -47,7 +47,7 @@ export const AudioPlayer: React.FC = () => {
           onClick={onClick}
         />
         <Box
-          bg="brand.150"
+          bg="brand.126"
           className="audio-position"
           pos="relative"
           onClick={onClick}
@@ -70,16 +70,22 @@ export const AudioPlayer: React.FC = () => {
         <IconButton
           aria-label="show"
           variant="ghost"
+          rounded="full"
           size="xs"
           icon={isPlaying ? <LargePauseIcon /> : <LargePlayIcon />}
           onClick={() => (isPlaying ? pause() : resume())}
+          color="brand.5600"
+          _hover={{ bg: 'brand.50' }}
         />
         <IconButton
           aria-label="show"
           variant="ghost"
+          rounded="full"
           size="xs"
           icon={<LargeStopIcon />}
           onClick={() => stop()}
+          color="brand.5600"
+          _hover={{ bg: 'brand.50' }}
         />
       </Box>
     </GridItem>
