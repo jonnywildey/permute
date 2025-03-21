@@ -1,5 +1,6 @@
 import { Button, Tooltip } from '@chakra-ui/react';
 import { processorDescriptions } from './processorDescriptions';
+import { memo } from 'react';
 
 export interface IProcessorProps {
   name: string;
@@ -10,11 +11,11 @@ export interface IProcessorProps {
 const bg = 'brand.600';
 const bdDisabled = 'brand.650';
 
-export const Processor: React.FC<IProcessorProps> = ({
+export const Processor = memo(({
   enabled,
   name,
   onClick,
-}) => {
+}: IProcessorProps) => {
   const button = (
     <Button
       key={name}
@@ -40,4 +41,4 @@ export const Processor: React.FC<IProcessorProps> = ({
   }
 
   return button;
-};
+});

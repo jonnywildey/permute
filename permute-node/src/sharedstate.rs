@@ -11,6 +11,7 @@ use std::io::BufReader;
 use std::io::Write;
 use std::sync::mpsc;
 use std::thread::JoinHandle;
+use std::fs;
 
 #[derive(Debug, Clone)]
 pub struct SharedState {
@@ -27,17 +28,20 @@ pub struct SharedState {
     pub trim_all: bool,
     pub high_sample_rate: bool,
     pub processor_count: Option<i32>,
+    pub constrain_length: bool,
+    pub create_subdirectories: bool,
 
     pub update_sender: mpsc::Sender<PermuteUpdate>,
     pub processing: bool,
     pub permutation_outputs: Vec<OutputProgress>,
     pub files: Vec<AudioInfo>,
+    pub cancel_sender: mpsc::Sender<()>,
 }
 
 impl SharedState {
     pub fn init(update_sender: mpsc::Sender<PermuteUpdate>) -> Self {
+        let (cancel_sender, _) = mpsc::channel();
         Self {
-            // files: vec![],
             high_sample_rate: false,
             input_trail: 0.0,
             normalise_at_end: true,
@@ -54,12 +58,20 @@ impl SharedState {
             processing: false,
             permutation_outputs: vec![],
             files: vec![],
+            cancel_sender,
+            constrain_length: true,
+            create_subdirectories: true,
         }
     }
 
-    fn to_permute_params(&self) -> PermuteFilesParams {
+    fn to_permute_params(&mut self) -> PermuteFilesParams {
+        let (cancel_sender, cancel_receiver) = mpsc::channel();
+        // Store the new sender for future cancellation
+        self.cancel_sender = cancel_sender;
+        
         PermuteFilesParams {
             files: self.files.iter().map(|ai| ai.path.clone()).collect(),
+            constrain_length: self.constrain_length,
             high_sample_rate: self.high_sample_rate,
             input_trail: self.input_trail,
             normalise_at_end: self.normalise_at_end,
@@ -75,6 +87,8 @@ impl SharedState {
             processor_pool: self.processor_pool.clone(),
             output_file_as_wav: true,
             update_sender: self.update_sender.to_owned(),
+            create_subdirectories: self.create_subdirectories,
+            cancel_receiver,
         }
     }
 
@@ -155,6 +169,14 @@ impl SharedState {
         Ok(())
     }
 
+    pub fn cancel(&mut self) {
+        self.processing = false;
+        self.error = "Processing cancelled by user".to_string();
+        self.permutation_outputs.clear();
+        self.processing = false;
+        let _ = self.cancel_sender.send(());
+    }
+
     pub fn set_normalised(&mut self, normalised: bool) {
         self.normalise_at_end = normalised;
     }
@@ -224,9 +246,19 @@ impl SharedState {
         self.permutation_outputs = vec![];
         self.processing = true;
         self.error = String::default();
-        let permute_params = Self::to_permute_params(&self);
+        let permute_params = self.to_permute_params();
 
         permute_files(permute_params)
+    }
+
+    pub fn delete_output_file(&mut self, file: String) -> Result<(), std::io::Error> {
+        fs::remove_file(&file)?;
+        self.permutation_outputs.retain(|po| po.output != file);
+        Ok(())
+    }
+
+    pub fn set_create_subdirectories(&mut self, create: bool) {
+        self.create_subdirectories = create;
     }
 }
 
@@ -257,6 +289,7 @@ impl SharedState {
             permutations: self.permutations,
             processor_count: self.processor_count,
             processor_pool: self.processor_pool.clone(),
+            create_subdirectories: self.create_subdirectories,
         };
         let json = serde_json::to_string(&data)?;
         let mut file = File::create(path)?;
@@ -280,7 +313,8 @@ impl SharedState {
         self.permutations = data.permutations;
         self.processor_count = data.processor_count;
         self.processor_pool = data.processor_pool;
-
+        self.create_subdirectories = data.create_subdirectories;
+        
         Ok(())
     }
 }
@@ -298,4 +332,5 @@ pub struct SharedStateSerializable {
     pub trim_all: bool,
     pub high_sample_rate: bool,
     pub processor_count: Option<i32>,
+    pub create_subdirectories: bool,
 }

@@ -2,10 +2,10 @@ const {
   init, cancel, runProcess, addFile, addProcessor, removeProcessor,
   getStateCallback, setOutput, setDepth, setInputTrail,
   setOutputTrail, setPermutations, setNormalised, setTrimAll, removeFile, reverseFile,
-  saveSettings, loadSettings, trimFile
+  saveSettings, loadSettings, trimFile, deleteOutputFile, setCreateSubdirectories
 } = require("../permute-library");
 
-const PERMUTE_POLL_LATENCY = 500;
+const PERMUTE_POLL_LATENCY = 100;
 
 export interface IPermuteState {
   output: string,
@@ -22,6 +22,7 @@ export interface IPermuteState {
   allProcessors: string[],
   normaliseAtEnd: boolean,
   trimAll: boolean,
+  createSubdirectories: boolean,
   permutationOutputs: IPermutationOutput[];
 };
 
@@ -77,6 +78,9 @@ export function createPermuteProcessor() {
     removeFile(file: string) {
       return removeFile.call(permuteLibrary, file);
     },
+    deleteOutputFile(file: string) {
+      return deleteOutputFile.call(permuteLibrary, file);
+    },
     reverseFile(file: string, updateFn: GetStateCallback, onFinished: GetStateCallback) {
       pollHandle = setInterval(() => {
         getStateCallback.call(permuteLibrary, (state: IPermuteState) => {
@@ -110,29 +114,32 @@ export function createPermuteProcessor() {
     setOutput(output: string) {
       return setOutput.call(permuteLibrary, output);
     },
-    setDepth(output: string) {
-      return setDepth.call(permuteLibrary, output);
+    setDepth(depth: string) {
+      return setDepth.call(permuteLibrary, depth);
     },
-    setPermutations(output: string) {
-      return setPermutations.call(permuteLibrary, output);
+    setPermutations(permutations: string) {
+      return setPermutations.call(permuteLibrary, permutations);
     },
-    setNormalised(output: string) {
-      return setNormalised.call(permuteLibrary, output);
+    setNormalised(n: string) {
+      return setNormalised.call(permuteLibrary, n);
     },
-    setTrimAll(output: string) {
-      return setTrimAll.call(permuteLibrary, output);
+    setTrimAll(t: string) {
+      return setTrimAll.call(permuteLibrary, t);
     },
-    setInputTrail(output: string) {
-      return setInputTrail.call(permuteLibrary, output);
+    setInputTrail(it: string) {
+      return setInputTrail.call(permuteLibrary, it);
     },
-    setOutputTrail(output: string) {
-      return setOutputTrail.call(permuteLibrary, output);
+    setOutputTrail(ot: string) {
+      return setOutputTrail.call(permuteLibrary, ot);
     },
     loadSettings(file: string) {
       return loadSettings.call(permuteLibrary, file);
     },
     saveSettings(file: string) {
       return saveSettings.call(permuteLibrary, file);
+    },
+    setCreateSubdirectories(createSubfolders: boolean) {
+      return setCreateSubdirectories.call(permuteLibrary, createSubfolders);
     },
     getStateCallback,
     async getState(): Promise<IPermuteState> {

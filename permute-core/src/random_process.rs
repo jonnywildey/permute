@@ -2,6 +2,8 @@ use crate::{permute_error::PermuteError, permute_files::PermuteUpdate, process::
 use rand::prelude::*;
 use strum::IntoEnumIterator;
 
+const MAX_LENGTH_INCREASING: usize = 3;
+
 pub struct GetProcessorNodeParams {
     pub normalise_at_end: bool,
     pub trim_at_end: bool,
@@ -9,7 +11,10 @@ pub struct GetProcessorNodeParams {
     pub depth: usize,
     pub processor_pool: Vec<PermuteNodeName>,
     pub processor_count: Option<i32>,
+    pub constrain_length: bool,
 }
+
+
 
 pub fn generate_processor_sequence(
     GetProcessorNodeParams {
@@ -19,16 +24,30 @@ pub fn generate_processor_sequence(
         depth,
         processor_pool,
         processor_count,
+        constrain_length,
     }: GetProcessorNodeParams,
 ) -> Vec<PermuteNodeName> {
     let mut rng = thread_rng();
-
     let processor_count = processor_count.unwrap_or(rng.gen_range(2..5));
     let mut processors: Vec<PermuteNodeName> = vec![];
 
     for _ in 0..processor_count {
-        processors.push(processor_pool[rng.gen_range(0..processor_pool.len())])
+        let available_processors: Vec<PermuteNodeName> = if constrain_length && count_length_increasing(&processors) >= MAX_LENGTH_INCREASING {
+            // If we've hit the length increase limit, filter out length-increasing processors
+                processor_pool
+                    .iter()
+                    .filter(|p| !is_length_increasing(p))
+                    .cloned()
+                    .collect()
+        } else {
+            processor_pool.clone()
+        };
+
+        if !available_processors.is_empty() {
+            processors.push(available_processors[rng.gen_range(0..available_processors.len())]);
+        }
     }
+
     if depth > 1 {
         processors = [
             generate_processor_sequence(GetProcessorNodeParams {
@@ -38,11 +57,13 @@ pub fn generate_processor_sequence(
                 processor_pool,
                 high_sample_rate: false,
                 processor_count: Some(processor_count),
+                constrain_length,
             }),
             processors,
         ]
         .concat();
     }
+
     if high_sample_rate {
         processors.insert(0, PermuteNodeName::SampleRateConversionHigh);
         processors.push(PermuteNodeName::SampleRateConversionOriginal);
@@ -55,6 +76,17 @@ pub fn generate_processor_sequence(
     }
 
     processors
+}
+
+fn is_length_increasing(processor: &PermuteNodeName) -> bool {
+    matches!(
+        processor,
+        PermuteNodeName::GranularTimeStretch | PermuteNodeName::HalfSpeed
+    )
+}
+
+fn count_length_increasing(processors: &[PermuteNodeName]) -> usize {
+    processors.iter().filter(|p| is_length_increasing(p)).count()
 }
 
 pub fn get_processor_function(name: PermuteNodeName) -> ProcessorFn {

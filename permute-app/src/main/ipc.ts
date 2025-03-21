@@ -5,6 +5,9 @@ import path from 'path';
 const configPath = path.join(app.getPath('userData'), 'config.json');
 export const processor = createPermuteProcessor();
 
+// Load settings immediately when the processor is created
+processor.loadSettings(configPath);
+
 ipcMain.on('open-output-dialog', async (event) => {
   const result = await dialog.showOpenDialog({ properties: ['openDirectory'] });
   console.log(result.filePaths);
@@ -20,6 +23,10 @@ ipcMain.on('run-processor', async (event) => {
       event.reply('run-processor-ended', state);
     }
   );
+});
+
+ipcMain.on('cancel', async () => {
+  processor.cancel();
 });
 
 ipcMain.on('reverse-file', async (event, file) => {
@@ -86,9 +93,14 @@ ipcMain.on('show-file', async (_, file) => {
   shell.showItemInFolder(file);
 });
 
+ipcMain.on('delete-output-file', async (_, file) => {
+  processor.deleteOutputFile(file);
+});
+
+ipcMain.on('set-create-subdirectories', async (_, param) => {
+  processor.setCreateSubdirectories(param);
+});
+
 app.on('before-quit', () => {
   processor.saveSettings(configPath);
-});
-app.on('ready', () => {
-  processor.loadSettings(configPath);
 });

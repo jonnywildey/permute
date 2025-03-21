@@ -21,7 +21,9 @@ export const processorDescriptions: Record<string, React.ReactNode> = {
     'A thickening chorus effect. Depth, speed and mix levels are randomised',
   Flange: `A "zero-through" flange effect. Speed and depth are randomised`,
   Phaser: 'A basic phaser effect. Speed and depth are randomised',
-  Tremolo: `Low-ish frequency amplitude modulation`,
+  Tremolo: `Low-ish frequency amplitude modulation. Weirdly good for percussive sounds`,
   Lazer: `Amplitude modulation where the frequency is determined by strength of signal. 
-  Good for robot sounds`
+  Good for robot sounds and adding high frequency elements to a sound`,
+  'LFO Filter': `A low-frequency oscillator that controls the cutoff frequency of a filter.`,
+  'Line Filter': `Filter frequency increases (or decreases) over the length of the audio.`,
 };

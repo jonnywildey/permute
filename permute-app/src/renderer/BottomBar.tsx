@@ -12,9 +12,11 @@ import {
   Heading,
   Grid,
   Tooltip,
+  useColorMode,
 } from '@chakra-ui/react';
 import type { IPermutationOutput, IPermutationInput } from 'permute-node';
 import { AudioPlayer } from './AudioPlayer';
+import { useState, useEffect } from 'react';
 
 export interface IBottomBarProps {
   runProcessor: () => void;
@@ -35,9 +37,9 @@ export interface IBottomBarProps {
   setTrimAll: (trimAll: boolean) => void;
   setInputTrail: (trail: number) => void;
   setOutputTrail: (trail: number) => void;
+  cancelProcessing: () => void;
 }
 
-const bg = 'brand.150';
 const buttonBg = 'brand.200';
 const borderColour = 'gray.100';
 
@@ -60,15 +62,18 @@ export const BottomBar: React.FC<IBottomBarProps> = ({
   outputTrail,
   processorPool,
   permutations,
+  cancelProcessing,
 }) => {
+  const { colorMode } = useColorMode();
+
   return (
     <GridItem
       rowSpan={6}
       colSpan={12}
-      bg={bg}
-      borderTop="0.5px solid"
-      borderTopColor={borderColour}
-      color="gray.700"
+      bg={colorMode === 'dark' ? 'brand.160' : 'brand.150'}
+      // borderTop="0.5px solid"
+      // borderTopColor={borderColour}
+      color="brand.5700"
       borderRadius={20}
       shadow="md"
       minHeight="100%"
@@ -95,7 +100,8 @@ export const BottomBar: React.FC<IBottomBarProps> = ({
           permutations={permutations}
           processorPool={processorPool}
           runProcessor={runProcessor}
-          />
+          cancelProcessing={cancelProcessing}
+        />
         {OutputTrail(outputTrail, setOutputTrail)}
         {Permutations(permutations, setPermutations)}
         {TrimAll(trimAll, setTrimAll)}
@@ -132,7 +138,7 @@ function InputTrail(
         colorScheme="brand"
         value={inputTrail}
         onChange={setInputTrail}
-        color="gray.600"
+        color="gray.5600"
         fontSize="sm"
       >
         <SliderMark value={0} mt="2" ml="-0.75">
@@ -198,7 +204,7 @@ function Depth(depth: number, setDepth: (depth: number) => void) {
         colorScheme="brand"
         value={depth}
         onChange={setDepth}
-        color="gray.600"
+        color="gray.5600"
         fontSize="sm"
       >
         <SliderMark value={0} mt="2" ml="-0.75">
@@ -254,7 +260,7 @@ function Permutations(
         colorScheme="brand"
         value={permutations}
         onChange={setPermutations}
-        color="gray.600"
+        color="gray.5600"
         fontSize="sm"
       >
         <SliderMark value={1} mt="2" ml="-0.75">
@@ -321,7 +327,7 @@ function OutputTrail(
         colorScheme="brand"
         value={outputTrail}
         onChange={setOutputTrail}
-        color="gray.600"
+        color="gray.5600"
         fontSize="sm"
       >
         <SliderMark value={0} mt="2" ml="-0.75">
@@ -369,6 +375,7 @@ export interface IRunProps {
   files: IPermutationInput[];
   processorPool: string[];
   permutations: number;
+  cancelProcessing: () => void;
 }
 
 const Run: React.FC<IRunProps> = ({
@@ -379,31 +386,84 @@ const Run: React.FC<IRunProps> = ({
   permutationOutputs,
   processorPool,
   permutations,
+  cancelProcessing,
 }) => {
+  const [timeElapsed, setTimeElapsed] = useState(0);
   const progress =
     permutationOutputs.reduce((acc, permutationOutput) => {
       return acc + permutationOutput.progress;
     }, 0) /
     (files.length * permutations);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (processing) {
+      interval = setInterval(() => {
+        setTimeElapsed(prev => prev + 1);
+      }, 1000);
+    } else {
+      setTimeElapsed(0);
+    }
+    return () => clearInterval(interval);
+  }, [processing]);
+
+  const isLongRunning = timeElapsed >= 5;
+  const noFiles = files.length === 0;
+  const noOutput = !output;
+  const noProcessors = processorPool.length === 0;
+
+  // During processing, only enable the button if it's been running long enough to show cancel
+  // When not processing, disable if any required conditions are not met
+  const isDisabled = processing
+    ? !isLongRunning
+    : (noFiles || noOutput || noProcessors);
+
+  const getDisabledReason = () => {
+    if (noFiles) return "Please add some audio files";
+    if (noOutput) return "Please select an output directory";
+    if (noProcessors) return "Please select at least one processor";
+    return "";
+  };
+
   return (
-    <GridItem rowSpan={2} colSpan={3} display="flex" pl={6} pr={6}>
-      <Button
-        onClick={runProcessor}
-        disabled={
-          processing || !output || !files.length || !processorPool.length
-        }
-        width="100%"
-        bg={buttonBg}
-        color="gray.50"
-        fontSize="2xl"
-        shadow="sm"
-      >
-        {!processing ? (
-          'Run'
-        ) : (
-          <CircularProgress value={progress} color="brand.300" size={8} />
-        )}
-      </Button>
+    <GridItem rowSpan={2} colSpan={3} display="flex" pl={6} pr={6} alignItems="center">
+      <Tooltip label={!processing && isDisabled ? getDisabledReason() : ""} isDisabled={!isDisabled || processing}>
+        <Button
+          onClick={isLongRunning ? cancelProcessing : runProcessor}
+          disabled={isDisabled}
+          width="100%"
+          bg={isDisabled ? "brand.210" : !processing ? buttonBg : undefined}
+          color={!processing ? "gray.50" : undefined}
+          fontSize="2xl"
+          shadow="sm"
+          _hover={isLongRunning ? { bg: "red.200" } : { bg: "brand.210" }}
+          transition="all 0.3s ease-in-out"
+          display="flex"
+          alignItems="center"
+          justifyContent={isLongRunning ? "flex-start" : "center"}
+          gap={3}
+          px={6}
+          className={processing ? "color-shift" : ""}
+          cursor={isDisabled ? "not-allowed" : "pointer"}
+        >
+          {!processing ? (
+            'Run'
+          ) : (
+            <>
+              <CircularProgress
+                value={progress}
+                color={isLongRunning ? "red.300" : "brand.300"}
+                size={8}
+                transition="all 2.3s cubic-bezier(0.4, 0, 0.2, 1)"
+                className={isLongRunning ? "slide-in" : ""}
+              />
+              <span className={isLongRunning ? "slide-in" : ""}>
+                {isLongRunning ? 'Cancel' : ''}
+              </span>
+            </>
+          )}
+        </Button>
+      </Tooltip>
     </GridItem>
   );
 };
