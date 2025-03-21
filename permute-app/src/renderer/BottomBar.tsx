@@ -12,6 +12,7 @@ import {
   Heading,
   Grid,
   Tooltip,
+  useColorMode,
 } from '@chakra-ui/react';
 import type { IPermutationOutput, IPermutationInput } from 'permute-node';
 import { AudioPlayer } from './AudioPlayer';
@@ -63,11 +64,13 @@ export const BottomBar: React.FC<IBottomBarProps> = ({
   permutations,
   cancelProcessing,
 }) => {
+  const { colorMode } = useColorMode();
+
   return (
     <GridItem
       rowSpan={6}
       colSpan={12}
-      bg="brand.160"
+      bg={colorMode === 'dark' ? 'brand.160' : 'brand.150'}
       // borderTop="0.5px solid"
       // borderTopColor={borderColour}
       color="brand.5700"
@@ -405,12 +408,13 @@ const Run: React.FC<IRunProps> = ({
   }, [processing]);
 
   const isLongRunning = timeElapsed >= 5;
+  const isDisabled = !processing ? (!output || !files.length || !processorPool.length) : !isLongRunning;
 
   return (
-    <GridItem rowSpan={2} colSpan={3} display="flex" pl={6} pr={6} alignItems="center">
+    <GridItem rowSpan={2} colSpan={3} display="flex" pl={6} pr={6} alignItems="flex-end">
       <Button
         onClick={isLongRunning ? cancelProcessing : runProcessor}
-        disabled={!processing && (!output || !files.length || !processorPool.length)}
+        disabled={isDisabled}
         width="100%"
         bg={!processing ? buttonBg : undefined}
         color={!processing ? "gray.50" : undefined}
@@ -424,6 +428,7 @@ const Run: React.FC<IRunProps> = ({
         gap={3}
         px={6}
         className={processing ? "color-shift" : ""}
+        cursor={isDisabled ? "not-allowed" : "pointer"}
       >
         {!processing ? (
           'Run'

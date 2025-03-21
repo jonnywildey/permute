@@ -10,6 +10,7 @@ import {
   List,
   ListItem,
   Tooltip,
+  useColorMode,
 } from '@chakra-ui/react';
 import { ViewIcon, DeleteIcon } from '@chakra-ui/icons';
 import type { IPermutationOutput } from 'permute-node';
@@ -42,6 +43,7 @@ const OutputFile = memo(({ file, onDelete, onShow, onReverse, onTrim, onPlay }: 
   onTrim: (path: string) => void;
   onPlay: (file: IPermutationOutput) => void;
 }) => {
+  const { colorMode } = useColorMode();
   const props: PropsOf<typeof Box> = {
     key: file.path,
     borderBottom: '1px solid',
@@ -181,9 +183,9 @@ const OutputFile = memo(({ file, onDelete, onShow, onReverse, onTrim, onPlay }: 
           pr={2}
           width="100%"
           textAlign="right"
-          color="gray.500"
           fontSize="sm"
           lineHeight={1}
+          color={colorMode === 'dark' ? 'brand.5500' : 'grey.500'}
         >
           {displayTime(file.durationSec)}
         </Text>

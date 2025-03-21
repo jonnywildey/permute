@@ -7,7 +7,8 @@ import {
   Center,
   Text,
   Heading,
-  Box
+  Box,
+  useColorMode
 } from '@chakra-ui/react';
 import type { IPermuteState } from 'permute-node';
 import { useEffect, useState } from 'react';
@@ -15,7 +16,7 @@ import { Files } from './Files';
 import { TopBar } from './TopBar';
 import { Output } from './Output';
 import { BottomBar } from './BottomBar';
-import { darkTheme } from './theme';
+import { theme } from './theme';
 import { Processors } from './Processors';
 import { Welcome } from './Welcome';
 import { CreateAudioContext } from './AudioContext';
@@ -39,6 +40,11 @@ const Content = () => {
   const { onOpen } = useDisclosure({
     defaultIsOpen: !state.permuteState.output,
   });
+  const { toggleColorMode, colorMode } = useColorMode();
+
+  useEffect(() => {
+    document.body.setAttribute('data-theme', colorMode);
+  }, [colorMode]);
 
   const {
     allProcessors,
@@ -257,7 +263,7 @@ export default function App() {
   }, []);
 
   return (
-    <ChakraProvider theme={darkTheme}>
+    <ChakraProvider theme={theme}>
       <CreateAudioContext>
         {loading ? (
           <>

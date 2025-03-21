@@ -10,6 +10,7 @@ import {
   Center,
   Text,
   Tooltip,
+  useColorMode,
 } from '@chakra-ui/react';
 import { ViewIcon } from '@chakra-ui/icons';
 import { useContext, useCallback, memo } from 'react';
@@ -36,8 +37,8 @@ const FileBox = memo(({ file, onRemove, onShow, onPlay }: {
   onShow: (path: string) => void;
   onPlay: (file: IPermutationInput) => void;
 }) => {
+  const { colorMode } = useColorMode();
   const props: PropsOf<typeof Box> = {
-    key: file.path,
     borderBottom: '1px solid',
     borderBottomColor: fileBorderColour,
     pos: 'relative',
@@ -47,7 +48,7 @@ const FileBox = memo(({ file, onRemove, onShow, onPlay }: {
   const isAiff = ext === "aif" || ext === "aiff"
 
   return (
-    <Box {...props}>
+    <Box key={file.path} {...props}>
       <Box
         pt={1}
         display="flex"
@@ -120,7 +121,7 @@ const FileBox = memo(({ file, onRemove, onShow, onPlay }: {
           pr={2}
           width="100%"
           textAlign="right"
-          color="brand.5500"
+          color={colorMode === 'dark' ? 'brand.5500' : 'grey.500'}
           fontSize="sm"
           lineHeight={1}
         >
@@ -137,6 +138,7 @@ export const Files = memo(({
   removeFile,
   showFile,
 }: IFilesProps) => {
+  const { colorMode } = useColorMode();
   const { playFile } = useContext(AudioContext);
 
   const handleRemove = useCallback((path: string) => {
@@ -196,7 +198,7 @@ export const Files = memo(({
       <Box
         className="file-upload-container"
         borderBottom={fileBoxes.length ? '1px solid' : 'none'}
-        borderBottomColor="brand.400"
+        borderBottomColor={colorMode === 'dark' ? 'brand.400' : 'brand.150'}
       >
         <Center>
           <Button
