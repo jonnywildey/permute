@@ -40,11 +40,11 @@
     ],
     "afterSign": ".erb/scripts/notarize.js",
     "mac": {
+      "x64ArchFiles": "**/libsndfile.1.dylib",
       "target": {
         "target": "pkg",
         "arch": [
-          "arm64",
-          "x64"
+          "universal"
         ]
       },
       "type": "distribution",
@@ -59,8 +59,8 @@
     "pkg": {
       "scripts": "pkg-scripts",
       "installLocation": "/Applications",
-      "allowAnywhere": true,
-      "allowCurrentUserHome": true,
+      "allowAnywhere": false,
+      "allowCurrentUserHome": false,
       "allowRootDirectory": true
     },
     "win": {
