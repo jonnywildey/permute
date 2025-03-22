@@ -1,4 +1,5 @@
 mod display_node;
+mod files;
 mod osc;
 mod permute_error;
 mod permute_files;
@@ -6,7 +7,6 @@ mod process;
 mod random_process;
 
 use std::{sync::mpsc, thread};
-
 use display_node::*;
 use permute_files::*;
 use structopt::StructOpt;
@@ -42,6 +42,9 @@ struct PermuteArgs {
     /// Whether to trim at end
     #[structopt(long = "trimAll")]
     trim_all: bool,
+    /// Store new permutations in a subdirectory. Avoids overwrites
+    #[structopt(long = "createSubdirectories")]
+    create_subdirectories: bool,
     /// Whether to run fx at a high sample rate
     #[structopt(long = "highSampleRate")]
     high_sample_rate: bool,
@@ -51,14 +54,14 @@ struct PermuteArgs {
     /// Run audio through a specific process
     #[structopt(long = "processor", default_value = "")]
     processor: String,
+    /// Whether to constrain the length of audio by limiting length-increasing processors
+    #[structopt(long = "constrainLength", takes_value = false)]
+    constrain_length: bool,
 }
 
 fn main() {
     let args = PermuteArgs::from_args();
-    println!(
-        "Permuting {} to {}, {} mutations",
-        args.file, args.output, args.permutations
-    );
+    let (cancel_sender, cancel_receiver) = mpsc::channel();
 
     let processor_pool: Vec<PermuteNodeName> = match args.processor.as_str() {
         "" => vec![
@@ -89,6 +92,11 @@ fn main() {
 
     let (tx, rx) = mpsc::channel::<PermuteUpdate>();
 
+    println!(
+        "Permuting {} to {}, {} mutations",
+        args.file, args.output, args.permutations
+    );
+
     thread::spawn(move || {
         permute_files(PermuteFilesParams {
             files: vec![args.file],
@@ -101,19 +109,22 @@ fn main() {
             high_sample_rate: args.high_sample_rate,
             normalise_at_end: args.normalise,
             trim_all: args.trim_all,
+            create_subdirectories: args.create_subdirectories,
             output_file_as_wav: args.output_file_as_wav,
             update_sender: tx,
             processor_count,
+            constrain_length: args.constrain_length,
+            cancel_receiver,
         });
     });
 
     while let Ok(message) = rx.recv() {
         match message {
             PermuteUpdate::UpdatePermuteNodeCompleted(permutation, _, _) => {
-                let percentage_progress: f64 = ((permutation.node_index as f64 + 1.0)
-                    / permutation.processors.len() as f64)
-                    * 100.0;
-                println!("{}%", percentage_progress.round());
+                    let percentage_progress: f64 = ((permutation.node_index as f64 + 1.0)
+                        / permutation.processors.len() as f64)
+                        * 100.0;
+                    println!("{}%", percentage_progress.round());
             }
             PermuteUpdate::UpdatePermuteNodeStarted(permutation, _, _) => {
                 if permutation.node_index == 0 {
@@ -121,19 +132,21 @@ fn main() {
                 }
             }
             PermuteUpdate::UpdateSetProcessors(permutation, processors) => {
-                let pretty_processors = processors
-                    .iter()
-                    .map(|p| get_processor_display_name(*p))
-                    .collect::<Vec<String>>();
-                println!(
-                    "File {} Processors {:#?}",
-                    permutation.output, pretty_processors
-                );
+                    let pretty_processors = processors
+                        .iter()
+                        .map(|p| get_processor_display_name(*p))
+                        .collect::<Vec<String>>();
+                    println!(
+                        "File {} Processors {:#?}",
+                        permutation.output, pretty_processors
+                    );
             }
             PermuteUpdate::Error(err) => {
-                panic!("{}", err);
+                    panic!("{}", err);
             }
-            PermuteUpdate::ProcessComplete => {}
+            PermuteUpdate::ProcessComplete => {
+                    println!("Processing complete");
+            }
         }
     }
 }

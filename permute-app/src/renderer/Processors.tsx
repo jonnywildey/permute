@@ -1,5 +1,6 @@
 import { Grid, GridItem, Heading } from '@chakra-ui/react';
 import { Processor } from './Processor';
+import { memo, useCallback } from 'react';
 
 export interface IProcessorsProps {
   allProcessors: string[];
@@ -7,17 +8,20 @@ export interface IProcessorsProps {
   setProcessorEnabled: (processor: string, enabled: boolean) => void;
 }
 
-export const Processors: React.FC<IProcessorsProps> = ({
+export const Processors = memo(({
   allProcessors,
   processorPool,
   setProcessorEnabled,
-}) => {
+}: IProcessorsProps) => {
+  const handleProcessorClick = useCallback((processor: string, enabled: boolean) => {
+    setProcessorEnabled(processor, !enabled);
+  }, [setProcessorEnabled]);
+
   const processors = allProcessors.map((ap) => {
     const enabled = processorPool.some((pp) => pp === ap);
-    const onClick = () => setProcessorEnabled(ap, !enabled);
-
-    return <Processor key={ap} name={ap} enabled={enabled} onClick={onClick} />;
+    return <Processor key={ap} name={ap} enabled={enabled} onClick={() => handleProcessorClick(ap, enabled)} />;
   });
+
   return (
     <GridItem
       rowSpan={17}
@@ -27,7 +31,7 @@ export const Processors: React.FC<IProcessorsProps> = ({
       overflow="hidden"
       overflowY="scroll"
     >
-      <Heading textAlign="center" size="lg" color="gray.600">
+      <Heading textAlign="center" size="lg" color="brand.5600">
         Processors
       </Heading>
       <Grid
@@ -40,4 +44,4 @@ export const Processors: React.FC<IProcessorsProps> = ({
       </Grid>
     </GridItem>
   );
-};
+});

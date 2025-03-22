@@ -87,5 +87,14 @@ contextBridge.exposeInMainWorld('Electron', {
         ipcRenderer.send('get-file-stats', files);
       });
     },
+    deleteOutputFile(file) {
+      ipcRenderer.send('delete-output-file', file);
+    },
+    cancel() {
+      ipcRenderer.send('cancel');
+    },
+    setCreateSubdirectories(createSubfolders) {
+      ipcRenderer.send('set-create-subdirectories', createSubfolders);
+    },
   },
 });
