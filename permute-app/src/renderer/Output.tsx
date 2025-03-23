@@ -195,7 +195,7 @@ const OutputFile = memo(({ file, onDelete, onShow, onReverse, onTrim, onPlay }: 
           textAlign="right"
           fontSize="sm"
           lineHeight={1}
-          color={colorMode === 'dark' ? 'brand.5600' : 'grey.500'}
+          color={colorMode === 'dark' ? 'brand.5600' : 'gray.500'}
         >
           {displayTime(file.durationSec)}
         </Text>
@@ -297,7 +297,7 @@ export const Output = memo(({
       </Link>
     </Box>
   );
-  const completeFiles = permutationOutputs.filter((f) => f.progress === 100 && f.image);
+  const completeFiles = permutationOutputs.filter((f) => f.progress === 100 && f.image && !f.deleted);
   const deleteAll = output && permutationOutputs.length > 0 && (
     <Box
       display="flex"
@@ -311,7 +311,7 @@ export const Output = memo(({
       color="brand.5600"
     >
       <Text justifyContent="start" mr={2} flex={1} fontSize="sm">
-        {permutationOutputs.length} files
+        {completeFiles.length} files
       </Text>
       <Tooltip openDelay={1000}
         label="Delete all permuted files">

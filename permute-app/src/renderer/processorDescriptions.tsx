@@ -1,3 +1,11 @@
+export const processorCategories = {
+  'Time/Pitch': ['Half speed', 'Double speed', 'Random pitch', 'Granular stretch', 'Reverse'],
+  'Modulation': ['Wow', 'Flutter', 'Chorus', 'Flange', 'Phaser', 'Tremolo', 'Lazer'],
+  'Filter/Drive': ['Fuzz', 'Saturate', 'LFO Filter', 'Line Filter'],
+  'Delay/Reverb': ['Metallic delay', 'Rhythmic delay', 'Reverb'],
+  'Cross Processing': ['Cross Gain', 'Cross Filter']
+};
+
 export const processorDescriptions: Record<string, React.ReactNode> = {
   Fuzz: `A distortion that ranges from gentle overdrive to fuzz to "running low on battery" sounds`,
   Saturate: `A gentle, smooth overdrive. This only has one setting, it has no randomised parameters`,
