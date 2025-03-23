@@ -3,7 +3,7 @@ export const processorCategories = {
   'Modulation': ['Wow', 'Flutter', 'Chorus', 'Flange', 'Phaser', 'Tremolo', 'Lazer'],
   'Filter/Drive': ['Fuzz', 'Saturate', 'LFO Filter', 'Line Filter'],
   'Delay/Reverb': ['Metallic delay', 'Rhythmic delay', 'Reverb'],
-  'Cross Processing': ['Cross Gain', 'Cross Filter']
+  'Cross Processing': ['Cross Gain', 'Cross Filter', 'Cross Distort']
 };
 
 export const processorDescriptions: Record<string, React.ReactNode> = {
@@ -36,8 +36,11 @@ export const processorDescriptions: Record<string, React.ReactNode> = {
   'Line Filter': `Filter frequency increases (or decreases) over the length of the audio.`,
   'Cross Gain': `Modulates the gain of the audio based on the RMS energy of another audio file. 
     Modulating Audio file is stretched to the length of the original audio.
-    Cross effects run quite slow.`,
+    Cross effects run quite slow. Be careful with high depth values or large numbers of files`,
   'Cross Filter': `Modulates a filter's frequency based on the RMS energy of another audio file. 
   Modulating Audio file is stretched to the length of the original audio.
-  Cross effects run quite slow.`,
+  Cross effects run quite slow. Be careful with high depth values or large numbers of files`,
+  'Cross Distort': `Modulates the distortion amount based on the RMS energy of another audio file.
+  The distortion factor varies between two random values based on the modulating audio's amplitude.
+  Cross effects run quite slow. Be careful with high depth values or large numbers of files`,
 };

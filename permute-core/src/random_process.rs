@@ -7,6 +7,8 @@ use crate::process::{
     PermuteNodeName,
     CrossGainParams,
     cross_gain,
+    CrossDistortParams,
+    cross_distort,
 };
 use rand::Rng;
 
@@ -149,6 +151,7 @@ pub fn get_processor_function(name: PermuteNodeName) -> ProcessorFn {
         PermuteNodeName::OscillatingFilter => random_oscillating_filter,
         PermuteNodeName::CrossGain => random_cross_gain,
         PermuteNodeName::CrossFilter => random_cross_filter,
+        PermuteNodeName::CrossDistort => random_cross_distort,
     }
 }
 
@@ -658,6 +661,39 @@ pub fn random_cross_filter(params: &ProcessorParams) -> Result<ProcessorParams, 
 
     let result = cross_filter(params, &cross_params);
     complete_event!(PermuteNodeName::CrossFilter, params);
+    result
+}
+
+pub fn random_cross_distort(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
+    start_event!(PermuteNodeName::CrossDistort, params);
+    let mut rng = rand::thread_rng();
+    
+    // Get a random file from the files list
+    let sidechain_file = match select_sidechain_file(&params.permutation.file, &params.permutation.files) {
+        Some(file) => file,
+        None => {
+            // If there's only one file, just return the original
+            complete_event!(PermuteNodeName::CrossDistort, params);
+            return Ok(params.clone());
+        }
+    };
+
+    // Generate random distortion parameters
+    // Using similar ranges to the random_fuzz function
+    let min_factors = [0.0, 0.05, 0.1, 0.15, 0.2, 0.22, 0.28, 0.3];
+    let increase_factors = [0.2, 0.23, 0.3, 0.4, 0.6, 0.7, 0.8, 0.82, 0.9];
+    let min_factor = min_factors[rng.gen_range(0..min_factors.len())];
+    let increase = increase_factors[rng.gen_range(0..increase_factors.len())];
+    
+    let cross_params = CrossDistortParams {
+        sidechain_file,
+        min_factor,
+        max_factor: min_factor + increase,
+        window_size_ms: 100.0, // Fixed 100ms window for RMS calculation
+    };
+
+    let result = cross_distort(params, &cross_params);
+    complete_event!(PermuteNodeName::CrossDistort, params);
     result
 }
 

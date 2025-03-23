@@ -1,6 +1,6 @@
 use biquad::*;
 use serde::{Deserialize, Serialize};
-use sndfile::{Endian, MajorFormat, SubtypeFormat, OpenOptions, ReadOptions, SndFileIO};
+use sndfile::{Endian, MajorFormat, SubtypeFormat};
 use std::{
     f64::consts::{E, PI},
     sync::mpsc,
@@ -74,10 +74,11 @@ pub enum PermuteNodeName {
     LineFilter,
     CrossGain,
     CrossFilter,
+    CrossDistort,
 }
 
 // Only processors we want to be visible to users
-pub const ALL_PROCESSORS: [PermuteNodeName; 22] = [
+pub const ALL_PROCESSORS: [PermuteNodeName; 23] = [
     PermuteNodeName::GranularTimeStretch,
     PermuteNodeName::Fuzz,
     PermuteNodeName::Saturate,
@@ -95,6 +96,7 @@ pub const ALL_PROCESSORS: [PermuteNodeName; 22] = [
     PermuteNodeName::Wow,
     PermuteNodeName::Tremolo,
     PermuteNodeName::Lazer,
+    // Do not expose these to users
     // PermuteNodeName::Normalise,
     // PermuteNodeName::Trim,
     // PermuteNodeName::SampleRateConversionHigh,
@@ -104,6 +106,7 @@ pub const ALL_PROCESSORS: [PermuteNodeName; 22] = [
     PermuteNodeName::LineFilter,
     PermuteNodeName::CrossGain,
     PermuteNodeName::CrossFilter,
+    PermuteNodeName::CrossDistort,
 ];
 
 pub fn reverse(
@@ -1800,4 +1803,41 @@ fn calculate_rms(samples: &[f64], window_size: usize) -> Vec<f64> {
     }
 
     rms_values
+}
+
+#[derive(Debug, Clone)]
+pub struct CrossDistortParams {
+    pub sidechain_file: String,
+    pub min_factor: f64,
+    pub max_factor: f64,
+    pub window_size_ms: f64,
+}
+
+pub fn cross_distort(params: &ProcessorParams, distort_params: &CrossDistortParams) -> Result<ProcessorParams, PermuteError> {
+    // Get the RMS signal from the sidechain file
+    let rms_signal = get_sidechain_rms_signal(
+        &distort_params.sidechain_file,
+        distort_params.window_size_ms,
+        params.samples.len(),
+        params.sample_rate,
+    )?;
+
+    let mut new_samples = params.samples.clone();
+    
+    // Process each sample
+    for (i, sample) in new_samples.iter_mut().enumerate() {
+        let rms = rms_signal[i];
+        
+        // Calculate the current distortion factor based on RMS
+        let factor = distort_params.min_factor + (rms * (distort_params.max_factor - distort_params.min_factor));
+        
+        // Apply distortion with varying factor
+        let s = sample.signum();
+        *sample = sample.abs().powf(factor) * s;
+    }
+
+    Ok(ProcessorParams {
+        samples: new_samples,
+        ..params.clone()
+    })
 }
