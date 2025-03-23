@@ -72,9 +72,9 @@ export const Processors = memo(({
         </Menu>
       </Box>
       <Grid
-        templateRows={`repeat(${Math.floor(allProcessors.length / 3)}, 1fr)`}
-        templateColumns="repeat(3, 1fr)"
-        gap={5}
+        templateRows={`repeat(${Math.ceil(allProcessors.length / 4)}, 1fr)`}
+        templateColumns="repeat(4, 1fr)"
+        gap={4}
         pt={3}
       >
         {processors}
