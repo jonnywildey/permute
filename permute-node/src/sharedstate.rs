@@ -271,6 +271,14 @@ impl SharedState {
     pub fn set_create_subdirectories(&mut self, create: bool) {
         self.create_subdirectories = create;
     }
+
+    pub fn select_all_processors(&mut self) {
+        self.processor_pool = self.all_processors.clone();
+    }
+
+    pub fn deselect_all_processors(&mut self) {
+        self.processor_pool.clear();
+    }
 }
 
 impl Finalize for SharedState {}

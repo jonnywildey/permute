@@ -38,6 +38,8 @@ enum ProcessorMessage {
     LoadSettingsFromJson(String),
     SaveSettingsToJson(String),
     SetCreateSubdirectories(bool),
+    SelectAllProcessors,
+    DeselectAllProcessors,
     Cancel,
 }
 
@@ -160,6 +162,12 @@ impl Processor {
                             }
                             ProcessorMessage::SetCreateSubdirectories(create) => {
                                 state.set_create_subdirectories(create);
+                            }
+                            ProcessorMessage::SelectAllProcessors => {
+                                state.select_all_processors();
+                            }
+                            ProcessorMessage::DeselectAllProcessors => {
+                                state.deselect_all_processors();
                             }
                             ProcessorMessage::Cancel => {
                                 state.cancel();
@@ -476,6 +484,16 @@ impl Processor {
         js_hook!(create, ProcessorMessage::SetCreateSubdirectories, cx);
         Ok(cx.undefined())
     }
+
+    fn js_select_all_processors(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+        js_hook!(ProcessorMessage::SelectAllProcessors, cx);
+        Ok(cx.undefined())
+    }
+
+    fn js_deselect_all_processors(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+        js_hook!(ProcessorMessage::DeselectAllProcessors, cx);
+        Ok(cx.undefined())
+    }
 }
 
 #[neon::main]
@@ -502,6 +520,8 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
     cx.export_function("saveSettings", Processor::js_save_settings)?;
     cx.export_function("loadSettings", Processor::js_load_settings)?;
     cx.export_function("setCreateSubdirectories", Processor::js_set_create_subdirectories)?;
+    cx.export_function("selectAllProcessors", Processor::js_select_all_processors)?;
+    cx.export_function("deselectAllProcessors", Processor::js_deselect_all_processors)?;
 
     Ok(())
 }

@@ -99,5 +99,11 @@ contextBridge.exposeInMainWorld('Electron', {
     setCreateSubdirectories(createSubfolders) {
       ipcRenderer.send('set-create-subdirectories', createSubfolders);
     },
+    selectAllProcessors() {
+      ipcRenderer.send('select-all-processors');
+    },
+    deselectAllProcessors() {
+      ipcRenderer.send('deselect-all-processors');
+    },
   },
 });

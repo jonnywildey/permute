@@ -105,6 +105,14 @@ ipcMain.on('set-create-subdirectories', async (_, param) => {
   processor.setCreateSubdirectories(param);
 });
 
+ipcMain.on('select-all-processors', async () => {
+  processor.selectAllProcessors();
+});
+
+ipcMain.on('deselect-all-processors', async () => {
+  processor.deselectAllProcessors();
+});
+
 app.on('before-quit', () => {
   processor.saveSettings(configPath);
 });

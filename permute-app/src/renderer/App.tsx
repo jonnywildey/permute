@@ -194,6 +194,16 @@ const Content = ({ onOpen }: { onOpen: () => void }) => {
     refreshState();
   };
 
+  const selectAllProcessors = async () => {
+    await window.Electron.ipcRenderer.selectAllProcessors();
+    refreshState();
+  };
+
+  const deselectAllProcessors = async () => {
+    await window.Electron.ipcRenderer.deselectAllProcessors();
+    refreshState();
+  };
+
   const cancelProcessing = async () => {
     window.Electron.ipcRenderer.cancel();
     refreshState();
@@ -230,6 +240,8 @@ const Content = ({ onOpen }: { onOpen: () => void }) => {
         allProcessors={allProcessors}
         processorPool={processorPool}
         setProcessorEnabled={setProcessorEnabled}
+        onSelectAll={selectAllProcessors}
+        onDeselectAll={deselectAllProcessors}
       />
       <Output
         output={output}

@@ -21,6 +21,8 @@ const {
   setPermutations,
   setTrimAll,
   trimFile,
+  selectAllProcessors,
+  deselectAllProcessors,
 } = require("../permute-library");
 
 const PERMUTE_POLL_LATENCY = 100;
@@ -161,6 +163,12 @@ export function createPermuteProcessor() {
     },
     setCreateSubdirectories(createSubfolders: boolean) {
       return setCreateSubdirectories.call(permuteLibrary, createSubfolders);
+    },
+    selectAllProcessors() {
+      return selectAllProcessors.call(permuteLibrary);
+    },
+    deselectAllProcessors() {
+      return deselectAllProcessors.call(permuteLibrary);
     },
     getStateCallback,
     async getState(): Promise<IPermuteState> {
