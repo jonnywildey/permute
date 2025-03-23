@@ -63,6 +63,8 @@ lipo -create \
 echo "Checking universal binary dependencies..."
 check_dylib_deps "permute-library/index.node"
 
+npm run build-ts
+
 # Clean up temporary directory
 rm -rf arm64_lib
 

@@ -90,6 +90,9 @@ contextBridge.exposeInMainWorld('Electron', {
     deleteOutputFile(file) {
       ipcRenderer.send('delete-output-file', file);
     },
+    deleteAllOutputFiles() {
+      ipcRenderer.send('delete-all-output-files');
+    },
     cancel() {
       ipcRenderer.send('cancel');
     },

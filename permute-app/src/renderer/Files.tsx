@@ -19,6 +19,7 @@ import { AudioContext } from './AudioContext';
 import { PlayIcon } from './icons/PlayIcon';
 import { displayTime } from './displayTime';
 import { useDropzone } from 'react-dropzone'
+import { CloseIcon, LargeCloseIcon } from './icons/CloseIcon';
 
 export interface IFilesProps {
   files: IPermutationInput[];
@@ -67,12 +68,15 @@ const FileBox = memo(({ file, onRemove, onShow, onPlay }: {
         >
           {file.name}
         </Heading>
-        <CloseButton
-          display="inline"
-          float="right"
+        <IconButton
+          aria-label="close"
+          variant="ghost"
+          rounded="full"
+          icon={<LargeCloseIcon />}
           color="brand.5600"
-          size="sm"
+          size="xs"
           onClick={() => onRemove(file.path)}
+          _hover={{ bg: 'brand.50' }}
         />
       </Box>
       <Box

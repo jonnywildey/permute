@@ -156,3 +156,12 @@ body[data-theme="light"] {
 .chakra-alert {
   background-color: var(--chakra-colors-brand-200) !important;
 }
+
+.filename-ellipsis {
+  direction: rtl;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+}
