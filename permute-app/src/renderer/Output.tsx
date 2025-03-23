@@ -11,6 +11,7 @@ import {
   ListItem,
   Tooltip,
   useColorMode,
+  Link,
 } from '@chakra-ui/react';
 import { ViewIcon, DeleteIcon } from '@chakra-ui/icons';
 import type { IPermutationOutput } from 'permute-node';
@@ -20,6 +21,8 @@ import { AudioContext } from './AudioContext';
 import { displayTime } from './displayTime';
 import { ReverseIcon } from './icons/ReverseIcon';
 import { TrimIcon } from './icons/TrimIcon';
+import { LargeFolderIcon } from './icons/FolderIcon';
+import { LargeTrashIcon } from './icons/TrashIcon';
 
 export interface IOutputProps {
   output: string;
@@ -29,6 +32,7 @@ export interface IOutputProps {
   reverseFile: (file: string) => void;
   trimFile: (file: string) => void;
   deleteOutputFile: (file: string) => void;
+  deleteAllOutputFiles: () => void;
 }
 
 const buttonBg = 'brand.175';
@@ -45,16 +49,15 @@ const OutputFile = memo(({ file, onDelete, onShow, onReverse, onTrim, onPlay }: 
 }) => {
   const { colorMode } = useColorMode();
   const props: PropsOf<typeof Box> = {
-    key: file.path,
     borderBottom: '1px solid',
     borderBottomColor: fileBorderColour,
-    color: 'gray.700',
+    color: 'gray.50',
   };
   const ext = file.path.split(".").pop()?.toLowerCase();
   const isAiff = ext === "aif" || ext === "aiff"
 
   return (
-    <Box {...props}>
+    <Box key={file.path} {...props}>
       <Box
         pt={1}
         display="flex"
@@ -64,15 +67,21 @@ const OutputFile = memo(({ file, onDelete, onShow, onReverse, onTrim, onPlay }: 
         marginBottom={1}
         justifyContent="space-between"
       >
-        <Heading
-          size="sm"
-          width="80%"
-          display="inline"
-          color="brand.5600"
-          pl={2}
+        <Tooltip
+          openDelay={500}
+          label={file.name}
         >
-          {file.name}
-        </Heading>
+          <Heading
+            size="sm"
+            width="80%"
+            display="block"
+            color="brand.5600"
+            pl={2}
+            className="filename-ellipsis"
+          >
+            {file.name}
+          </Heading>
+        </Tooltip>
         <Tooltip
           openDelay={200}
           label="Delete file"
@@ -86,9 +95,10 @@ const OutputFile = memo(({ file, onDelete, onShow, onReverse, onTrim, onPlay }: 
             onClick={() => onDelete(file.path)}
             color="brand.5600"
             paddingTop={0}
-            _hover={{ bg: 'brand.50', color: 'red.500' }}
+            _hover={{ bg: 'brand.50', color: 'pink.700' }}
             mt="-4px"
             marginRight={1}
+            boxSize="20px"
           />
         </Tooltip>
       </Box>
@@ -96,7 +106,7 @@ const OutputFile = memo(({ file, onDelete, onShow, onReverse, onTrim, onPlay }: 
         openDelay={200}
         label={
           <List>
-            {file.processors.map((p, i) => (
+            {file.processors.map((p: string, i: number) => (
               <ListItem key={`${p}${i}`}>
                 {i + 1}: {p}
               </ListItem>
@@ -202,6 +212,7 @@ export const Output = memo(({
   trimFile,
   permutationOutputs,
   deleteOutputFile,
+  deleteAllOutputFiles,
 }: IOutputProps) => {
   const { playFile } = useContext(AudioContext);
 
@@ -239,40 +250,85 @@ export const Output = memo(({
       />
     ));
 
-  const directory = output ? (
+  const directory = output && (
     <Box
       display="flex"
       paddingTop={3}
       paddingBottom={3}
-      paddingLeft={0}
+      paddingLeft={2}
       paddingRight={2}
       mt={5}
       alignItems="center"
       borderTop="1px"
-      borderTopColor="gray.300"
+      borderTopColor="brand.150"
       borderBottom="1px"
-      borderBottomColor={outputBoxes.length ? 'gray.400' : 'gray.300'}
+      borderBottomColor="brand.150"
       color="brand.5800"
     >
-      <Tooltip
-        openDelay={200}
-        label="Open directory"
+      <Box
+        display="flex"
+        color="brand.5600"
+        mr={2}
+        cursor="pointer"
+        _hover={{ color: 'brand.5800' }}
       >
         <IconButton
           aria-label="show"
           variant="ghost"
-          size="sm"
-          icon={<ViewIcon />}
+          rounded="full"
+          alignSelf="center"
+          size="xs"
+          icon={<LargeFolderIcon />}
           onClick={() => showFile(output)}
           color="brand.5600"
           _hover={{ bg: 'brand.50' }}
         />
-      </Tooltip>
-      <Heading ml={1} className="output-heading" size="sm">
+      </Box>
+      <Link
+        onClick={() => showFile(output)}
+        flex={1}
+        className="output-heading"
+        fontSize="sm"
+        fontWeight="semibold"
+        color="brand.5600"
+        _hover={{ textDecoration: 'underline', color: 'brand.5800' }}
+      >
         {output}
-      </Heading>
+      </Link>
     </Box>
-  ) : null;
+  );
+  const completeFiles = permutationOutputs.filter((f) => f.progress === 100 && f.image);
+  const deleteAll = output && permutationOutputs.length > 0 && (
+    <Box
+      display="flex"
+      alignItems="center"
+      justifyContent="flex-end"
+      px={2}
+      py={1}
+      borderBottom="1px"
+      borderBottomColor="brand.150"
+      fontSize="sm"
+      color="brand.5600"
+    >
+      <Text justifyContent="start" mr={2} flex={1} fontSize="sm">
+        {permutationOutputs.length} files
+      </Text>
+      <Tooltip openDelay={1000}
+        label="Delete all permuted files">
+        <Button
+          variant="ghost"
+          size="sm"
+          hidden={completeFiles.length === 0}
+          leftIcon={<LargeTrashIcon />}
+          onClick={deleteAllOutputFiles}
+          color="brand.5600"
+          _hover={{ bg: 'brand.50', color: 'pink.700' }}
+        >
+          Delete All
+        </Button>
+      </Tooltip>
+    </Box>
+  )
 
   return (
     <GridItem
@@ -305,6 +361,7 @@ export const Output = memo(({
         </Button>
       </Center>
       {directory}
+      {deleteAll}
       <Box overflowY="scroll" overflowX="hidden">
         {outputBoxes}
       </Box>

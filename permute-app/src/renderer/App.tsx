@@ -173,6 +173,11 @@ const Content = ({ onOpen }: { onOpen: () => void }) => {
     const permuteState = await window.Electron.ipcRenderer.getState();
     setState({ permuteState });
   };
+  const deleteAllOutputFiles = async () => {
+    window.Electron.ipcRenderer.deleteAllOutputFiles();
+    const permuteState = await window.Electron.ipcRenderer.getState();
+    setState({ permuteState });
+  };
   const setOutput = async () => {
     window.Electron.ipcRenderer.openOutputDialog(([output]: [string]) => {
       window.Electron.ipcRenderer.setOutput(output);
@@ -234,6 +239,7 @@ const Content = ({ onOpen }: { onOpen: () => void }) => {
         reverseFile={reverseFile}
         trimFile={trimFile}
         deleteOutputFile={deleteOutputFile}
+        deleteAllOutputFiles={deleteAllOutputFiles}
       />
       <BottomBar
         permutationOutputs={permutationOutputs}

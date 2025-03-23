@@ -427,7 +427,11 @@ const Run: React.FC<IRunProps> = ({
 
   return (
     <GridItem rowSpan={2} colSpan={3} display="flex" pl={6} pr={6} alignItems="center">
-      <Tooltip label={!processing && isDisabled ? getDisabledReason() : ""} isDisabled={!isDisabled || processing}>
+      <Tooltip
+        label={!processing && isDisabled ? getDisabledReason() : ""}
+        isDisabled={!isDisabled || processing}
+        fontSize="md"
+      >
         <Button
           onClick={isLongRunning ? cancelProcessing : runProcessor}
           disabled={isDisabled}

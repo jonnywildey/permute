@@ -97,6 +97,10 @@ ipcMain.on('delete-output-file', async (_, file) => {
   processor.deleteOutputFile(file);
 });
 
+ipcMain.on('delete-all-output-files', async () => {
+  processor.deleteAllOutputFiles();
+});
+
 ipcMain.on('set-create-subdirectories', async (_, param) => {
   processor.setCreateSubdirectories(param);
 });

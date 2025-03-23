@@ -1,4 +1,4 @@
-import { Box, GridItem, Heading, IconButton, useColorMode } from '@chakra-ui/react';
+import { Box, GridItem, Heading, IconButton, useColorMode, Tooltip } from '@chakra-ui/react';
 import React, { useContext, useEffect, useState } from 'react';
 import { AudioContext } from './AudioContext';
 import { LargePlayIcon } from './icons/PlayIcon';
@@ -64,9 +64,22 @@ export const AudioPlayer: React.FC = () => {
         </Box>
       </Box>
       <Box display="flex" alignItems="baseline" pt={2.5} pr={1}>
-        <Heading size="md" pl={2} pr={2} width="100%" color={colorMode === 'dark' ? 'gray.50' : 'gray.800'}>
-          {file.name}
-        </Heading>
+        <Tooltip
+          openDelay={500}
+          label={file.name}
+        >
+          <Heading
+            size="md"
+            pl={2}
+            pr={2}
+            mb={2}
+            width="100%"
+            color={colorMode === 'dark' ? 'gray.50' : 'gray.800'}
+            className="filename-ellipsis"
+          >
+            {file.name}
+          </Heading>
+        </Tooltip>
 
         <IconButton
           aria-label="show"
