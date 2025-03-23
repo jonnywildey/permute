@@ -22,6 +22,7 @@ import { displayTime } from './displayTime';
 import { ReverseIcon } from './icons/ReverseIcon';
 import { TrimIcon } from './icons/TrimIcon';
 import { LargeFolderIcon } from './icons/FolderIcon';
+import { LargeTrashIcon } from './icons/TrashIcon';
 
 export interface IOutputProps {
   output: string;
@@ -76,7 +77,7 @@ const OutputFile = memo(({ file, onDelete, onShow, onReverse, onTrim, onPlay }: 
           {file.name}
         </Heading>
         <Tooltip
-          openDelay={200}
+          openDelay={1000}
           label="Delete file"
         >
           <IconButton
@@ -88,9 +89,10 @@ const OutputFile = memo(({ file, onDelete, onShow, onReverse, onTrim, onPlay }: 
             onClick={() => onDelete(file.path)}
             color="brand.5600"
             paddingTop={0}
-            _hover={{ bg: 'brand.50', color: 'red.500' }}
+            _hover={{ bg: 'brand.50', color: 'pink.700' }}
             mt="-4px"
             marginRight={1}
+            boxSize="20px"
           />
         </Tooltip>
       </Box>
@@ -306,16 +308,19 @@ export const Output = memo(({
         {permutationOutputs.length} files
       </Text>
       {completeFiles.length > 0 && (
-        <Button
-          variant="ghost"
-          size="sm"
-          leftIcon={<DeleteIcon />}
-          onClick={deleteAllOutputFiles}
-          color="brand.5600"
-          _hover={{ bg: 'brand.50', color: 'red.500' }}
-        >
-          Delete All
-        </Button>
+        <Tooltip openDelay={1000}
+          label="Delete all permuted files">
+          <Button
+            variant="ghost"
+            size="sm"
+            leftIcon={<LargeTrashIcon />}
+            onClick={deleteAllOutputFiles}
+            color="brand.5600"
+            _hover={{ bg: 'brand.50', color: 'pink.700' }}
+          >
+            Delete All
+          </Button>
+        </Tooltip>
       )}
     </Box>
   )

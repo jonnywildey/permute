@@ -34,7 +34,7 @@ export const Processor = memo(({
   const description = processorDescriptions[name];
   if (description) {
     return (
-      <Tooltip openDelay={500} label={description}>
+      <Tooltip openDelay={500} label={description} fontSize="md">
         {button}
       </Tooltip>
     );
