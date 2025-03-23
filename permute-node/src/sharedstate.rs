@@ -139,6 +139,7 @@ impl SharedState {
             processors,
             progress: 0,
             audio_info: AudioInfo::default(),
+            deleted: false,
         });
     }
 
@@ -248,17 +249,19 @@ impl SharedState {
 
     pub fn delete_output_file(&mut self, file: String) -> Result<(), std::io::Error> {
         fs::remove_file(&file)?;
-        self.permutation_outputs.retain(|po| po.output != file);
+        if let Some(output) = self.permutation_outputs.iter_mut().find(|po| po.output == file) {
+            output.deleted = true;
+        }
         Ok(())
     }
 
     pub fn delete_all_output_files(&mut self) -> Result<(), std::io::Error> {
-        for output in self.permutation_outputs.iter() {
+        for output in self.permutation_outputs.iter_mut() {
             if let Err(e) = fs::remove_file(&output.output) {
                 println!("Error deleting file {}: {}", output.output, e);
             }
+            output.deleted = true;
         }
-        self.permutation_outputs.clear();
         Ok(())
     }
 
@@ -290,6 +293,7 @@ pub struct OutputProgress {
     pub permutation: Permutation,
     pub processors: Vec<PermuteNodeName>,
     pub audio_info: AudioInfo,
+    pub deleted: bool,
 }
 
 impl Finalize for OutputProgress {}

@@ -46,7 +46,6 @@ const Content = ({ onOpen }: { onOpen: () => void }) => {
   const refreshState = async () => {
     try {
       const permuteState = await window.Electron.ipcRenderer.getState();
-      console.log("state", permuteState);
       setState({ ...state, permuteState });
     } catch (error) {
       console.error('Failed to refresh state:', error);

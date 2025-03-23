@@ -60,6 +60,7 @@ export interface IPermutationOutput {
   processors: string[];
   name: string;
   durationSec: number;
+  deleted: boolean;
 }
 
 export type GetStateCallback = (state: IPermuteState) => void;

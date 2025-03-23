@@ -237,7 +237,7 @@ export const Output = memo(({
   }, [playFile]);
 
   const outputBoxes = permutationOutputs
-    .filter((f) => f.progress === 100 && f.image)
+    .filter((f) => f.progress === 100 && f.image && !f.deleted)
     .map((file) => (
       <OutputFile
         key={file.path}

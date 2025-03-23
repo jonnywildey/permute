@@ -333,6 +333,8 @@ impl Processor {
                         output_obj.set(&mut cx, "progress", progress)?;
                         let duration_sec = cx.number(permutation_output.audio_info.duration_sec);
                         output_obj.set(&mut cx, "durationSec", duration_sec)?;
+                        let deleted = cx.boolean(permutation_output.deleted);
+                        output_obj.set(&mut cx, "deleted", deleted)?;
 
                         let node_names = cx.empty_array();
                         for j in 0..permutation_output.processors.len() {
