@@ -67,17 +67,23 @@ const OutputFile = memo(({ file, onDelete, onShow, onReverse, onTrim, onPlay }: 
         marginBottom={1}
         justifyContent="space-between"
       >
-        <Heading
-          size="sm"
-          width="80%"
-          display="inline"
-          color="brand.5600"
-          pl={2}
-        >
-          {file.name}
-        </Heading>
         <Tooltip
-          openDelay={1000}
+          openDelay={500}
+          label={file.name}
+        >
+          <Heading
+            size="sm"
+            width="80%"
+            display="block"
+            color="brand.5600"
+            pl={2}
+            className="filename-ellipsis"
+          >
+            {file.name}
+          </Heading>
+        </Tooltip>
+        <Tooltip
+          openDelay={200}
           label="Delete file"
         >
           <IconButton
@@ -307,21 +313,20 @@ export const Output = memo(({
       <Text justifyContent="start" mr={2} flex={1} fontSize="sm">
         {permutationOutputs.length} files
       </Text>
-      {completeFiles.length > 0 && (
-        <Tooltip openDelay={1000}
-          label="Delete all permuted files">
-          <Button
-            variant="ghost"
-            size="sm"
-            leftIcon={<LargeTrashIcon />}
-            onClick={deleteAllOutputFiles}
-            color="brand.5600"
-            _hover={{ bg: 'brand.50', color: 'pink.700' }}
-          >
-            Delete All
-          </Button>
-        </Tooltip>
-      )}
+      <Tooltip openDelay={1000}
+        label="Delete all permuted files">
+        <Button
+          variant="ghost"
+          size="sm"
+          hidden={completeFiles.length === 0}
+          leftIcon={<LargeTrashIcon />}
+          onClick={deleteAllOutputFiles}
+          color="brand.5600"
+          _hover={{ bg: 'brand.50', color: 'pink.700' }}
+        >
+          Delete All
+        </Button>
+      </Tooltip>
     </Box>
   )
 
