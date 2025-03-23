@@ -26,6 +26,10 @@ export const processorDescriptions: Record<string, React.ReactNode> = {
   Good for robot sounds and adding high frequency elements to a sound`,
   'LFO Filter': `A low-frequency oscillator that controls the cutoff frequency of a filter.`,
   'Line Filter': `Filter frequency increases (or decreases) over the length of the audio.`,
-  'Cross Gain': `Modulates the gain of the audio based on the RMS energy of another audio file. Modulating Audio file is stretched to the length of the original audio.`,
-  'Cross Filter': `Modulates a filter's frequency based on the RMS energy of another audio file. Modulating Audio file is stretched to the length of the original audio.`,
+  'Cross Gain': `Modulates the gain of the audio based on the RMS energy of another audio file. 
+    Modulating Audio file is stretched to the length of the original audio.
+    Cross effects run quite slow, so be patient.`,
+  'Cross Filter': `Modulates a filter's frequency based on the RMS energy of another audio file. 
+  Modulating Audio file is stretched to the length of the original audio.
+  Cross effects run quite slow, so be patient.`,
 };

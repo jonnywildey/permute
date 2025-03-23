@@ -9,6 +9,7 @@ use strum::EnumIter;
 
 use crate::osc::*;
 use crate::{permute_error::PermuteError, permute_files::PermuteUpdate};
+use crate::{ audio_cache::AUDIO_CACHE, rms_cache::{get_cached_rms, cache_rms}};
 
 pub type ProcessorFn = fn(&ProcessorParams) -> Result<ProcessorParams, PermuteError>;
 
@@ -1725,9 +1726,13 @@ pub fn get_sidechain_rms_signal(
     target_length: usize,
     target_sample_rate: usize,
 ) -> Result<Vec<f64>, PermuteError> {
-    // Read the sidechain file
-    let mut snd = sndfile::OpenOptions::ReadOnly(ReadOptions::Auto).from_path(sidechain_file)?;
-    let samples: Vec<f64> = snd.read_all_to_vec()?;
+    // Check if RMS values are in cache
+    if let Some(cached_rms) = get_cached_rms(sidechain_file, window_size_ms, target_length, target_sample_rate) {
+        return Ok(cached_rms);
+    }
+    
+    // If not in cache, calculate RMS values
+    let samples = AUDIO_CACHE.get_samples(sidechain_file)?;
     
     // Convert window size from ms to samples
     let window_size = ((window_size_ms / 1000.0) * target_sample_rate as f64) as usize;
@@ -1736,16 +1741,27 @@ pub fn get_sidechain_rms_signal(
     let rms_values = calculate_rms(&samples, window_size);
     
     // Resample to match target length if necessary
-    if rms_values.len() != target_length {
+    let final_rms = if rms_values.len() != target_length {
         let mut resampled = Vec::with_capacity(target_length);
         for i in 0..target_length {
             let idx = (i as f64 * (rms_values.len() as f64 - 1.0) / (target_length as f64 - 1.0)) as usize;
             resampled.push(rms_values[idx]);
         }
-        Ok(resampled)
+        resampled
     } else {
-        Ok(rms_values)
-    }
+        rms_values
+    };
+
+    // Cache the calculated RMS values
+    cache_rms(
+        sidechain_file.to_string(),
+        window_size_ms,
+        target_length,
+        target_sample_rate,
+        final_rms.clone()
+    );
+
+    Ok(final_rms)
 }
 
 fn calculate_rms(samples: &[f64], window_size: usize) -> Vec<f64> {

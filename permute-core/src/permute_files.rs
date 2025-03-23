@@ -1,4 +1,4 @@
-use crate::{files::*, permute_error::PermuteError, process::*, random_process::*};
+use crate::{files::*, permute_error::PermuteError, process::*, random_process::*, audio_cache::AUDIO_CACHE};
 use sndfile::*;
 use std::sync::mpsc;
 use std::sync::mpsc::Sender;
@@ -82,14 +82,15 @@ fn permute_file(
         true => MajorFormat::WAV,
         false => snd.get_major_format(),
     };
-    let samples_64: Vec<f64> = snd.read_all_to_vec()?;
     let endian = snd.get_endian();
+
+    let samples_64 = AUDIO_CACHE.get_samples(&file)?;
 
     let input_trail_buffer =
         vec![0_f64; (sample_rate as f64 * params.input_trail * channels as f64).ceil() as usize];
     let output_trail_buffer =
         vec![0_f64; (sample_rate as f64 * params.output_trail * channels as f64).ceil() as usize];
-    let samples_64 = [input_trail_buffer, samples_64, output_trail_buffer].concat();
+    let samples_64 = [input_trail_buffer, samples_64.to_vec(), output_trail_buffer].concat();
 
     let sample_length = samples_64.len();
 
@@ -204,14 +205,16 @@ pub fn process_file(
     process: PermuteNodeName,
     update_sender: Sender<PermuteUpdate>,
 ) -> Result<(), PermuteError> {
-    let mut snd = sndfile::OpenOptions::ReadOnly(ReadOptions::Auto).from_path(file.clone())?;
+    let snd = sndfile::OpenOptions::ReadOnly(ReadOptions::Auto).from_path(file.clone())?;
     let sample_rate = snd.get_samplerate();
     let channels = snd.get_channels();
-    let samples: Vec<f64> = snd.read_all_to_vec()?;
     let endian = snd.get_endian();
-    let sample_length = samples.len();
     let file_format = snd.get_major_format();
     let sub_format = snd.get_subtype_format();
+
+    // Use audio cache to get samples
+    let samples = AUDIO_CACHE.get_samples(&file)?;
+    let sample_length = samples.len();
 
     let process_fn = get_processor_function(process);
 
@@ -221,7 +224,7 @@ pub fn process_file(
         file_format,
         sub_format,
         sample_length,
-        samples,
+        samples: samples.to_vec(),
         sample_rate,
         update_sender: update_sender.clone(),
         permutation: Permutation {
