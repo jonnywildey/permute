@@ -22,6 +22,7 @@ enum ProcessorMessage {
     AddFile(String),
     RemoveFile(String),
     DeleteOutputFile(String),
+    DeleteAllOutputFiles,
     ReverseFile(String),
     TrimFile(String),
     AddProcessor(String),
@@ -69,7 +70,7 @@ impl Processor {
         let channel_clone = channel.clone();
 
         // Spawn the main processing thread with proper cleanup
-        let process_handle = thread::Builder::new()
+        let _process_handle = thread::Builder::new()
             .name("ProcessThread".to_string())
             .spawn(move || {
                 let result = catch_unwind(|| {
@@ -97,6 +98,15 @@ impl Processor {
                                     Ok(()) => {}
                                     Err(err) => {
                                         println!("Error deleting output file: {}", err.to_string());
+                                        state.set_error(err.to_string());
+                                    }
+                                }
+                            }
+                            ProcessorMessage::DeleteAllOutputFiles => {
+                                match state.delete_all_output_files() {
+                                    Ok(()) => {}
+                                    Err(err) => {
+                                        println!("Error deleting all output files: {}", err.to_string());
                                         state.set_error(err.to_string());
                                     }
                                 }
@@ -390,6 +400,11 @@ impl Processor {
         Ok(cx.undefined())
     }
 
+    fn js_delete_all_output_files(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+        js_hook!(ProcessorMessage::DeleteAllOutputFiles, cx);
+        Ok(cx.undefined())
+    }
+
     fn js_set_permutations(mut cx: FunctionContext) -> JsResult<JsUndefined> {
         let permutations = cx.argument::<JsNumber>(0)?.value(&mut cx) as usize;
         js_hook!(permutations, ProcessorMessage::SetPermutations, cx);
@@ -472,6 +487,7 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
     cx.export_function("addFile", Processor::js_add_file)?;
     cx.export_function("removeFile", Processor::js_remove_file)?;
     cx.export_function("deleteOutputFile", Processor::js_delete_output_file)?;
+    cx.export_function("deleteAllOutputFiles", Processor::js_delete_all_output_files)?;
     cx.export_function("addProcessor", Processor::js_add_processor)?;
     cx.export_function("removeProcessor", Processor::js_remove_processor)?;
     cx.export_function("setOutput", Processor::js_set_output)?;

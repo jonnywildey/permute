@@ -88,6 +88,7 @@ impl SharedState {
             output_file_as_wav: true,
             update_sender: self.update_sender.to_owned(),
             create_subdirectories: self.create_subdirectories,
+            
             cancel_receiver,
         }
     }
@@ -254,6 +255,16 @@ impl SharedState {
     pub fn delete_output_file(&mut self, file: String) -> Result<(), std::io::Error> {
         fs::remove_file(&file)?;
         self.permutation_outputs.retain(|po| po.output != file);
+        Ok(())
+    }
+
+    pub fn delete_all_output_files(&mut self) -> Result<(), std::io::Error> {
+        for output in self.permutation_outputs.iter() {
+            if let Err(e) = fs::remove_file(&output.output) {
+                println!("Error deleting file {}: {}", output.output, e);
+            }
+        }
+        self.permutation_outputs.clear();
         Ok(())
     }
 

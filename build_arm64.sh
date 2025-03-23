@@ -22,7 +22,7 @@ cd ..
 # Step 3: Install the new permute-node package in the app
 echo "Installing permute-node in the app..."
 cd permute-node
-arch -arm64 npm run update-deps
+arch -arm64 npm run build-update
 cd ..
 
 # Step 4: Build and package the app
