@@ -1,6 +1,14 @@
 use crate::{permute_error::PermuteError, permute_files::PermuteUpdate, process::*};
 use rand::prelude::*;
 use strum::IntoEnumIterator;
+use crate::process::{
+    CrossFilterParams, 
+    cross_filter,
+    PermuteNodeName,
+    CrossGainParams,
+    cross_gain,
+};
+use rand::Rng;
 
 const MAX_LENGTH_INCREASING: usize = 3;
 
@@ -14,7 +22,31 @@ pub struct GetProcessorNodeParams {
     pub constrain_length: bool,
 }
 
+macro_rules! start_event {
+    ($name:expr, $params:expr) => {{
+        $params
+            .update_sender
+            .send(PermuteUpdate::UpdatePermuteNodeStarted(
+                $params.permutation.clone(),
+                $name,
+                PermuteNodeEvent::NodeProcessStarted,
+            ))?;
+    }};
+}
+pub(crate) use start_event;
 
+macro_rules! complete_event {
+    ($name:expr, $params:expr) => {{
+        $params
+            .update_sender
+            .send(PermuteUpdate::UpdatePermuteNodeCompleted(
+                $params.permutation.clone(),
+                $name,
+                PermuteNodeEvent::NodeProcessComplete,
+            ))?;
+    }};
+}
+pub(crate) use complete_event;
 
 pub fn generate_processor_sequence(
     GetProcessorNodeParams {
@@ -115,6 +147,8 @@ pub fn get_processor_function(name: PermuteNodeName) -> ProcessorFn {
         PermuteNodeName::Filter => random_filter,
         PermuteNodeName::LineFilter => random_line_filter,
         PermuteNodeName::OscillatingFilter => random_oscillating_filter,
+        PermuteNodeName::CrossGain => random_cross_gain,
+        PermuteNodeName::CrossFilter => random_cross_filter,
     }
 }
 
@@ -269,7 +303,7 @@ pub fn random_wow(params: &ProcessorParams) -> Result<ProcessorParams, PermuteEr
 }
 
 pub fn random_tremolo(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
-    start_event!(PermuteNodeName::Wow, params);
+    start_event!(PermuteNodeName::Tremolo, params);
     let mut rng = thread_rng();
 
     let factors = [
@@ -292,7 +326,7 @@ pub fn random_tremolo(params: &ProcessorParams) -> Result<ProcessorParams, Permu
 }
 
 pub fn random_lazer(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
-    start_event!(PermuteNodeName::Wow, params);
+    start_event!(PermuteNodeName::Lazer, params);
     let mut rng = thread_rng();
 
     let hz_options = [
@@ -333,7 +367,7 @@ pub fn random_lazer(params: &ProcessorParams) -> Result<ProcessorParams, Permute
             frame_ms: 10,
         },
     )?;
-    complete_event!(PermuteNodeName::Tremolo, new_params);
+    complete_event!(PermuteNodeName::Lazer, new_params);
     Ok(new_params)
 }
 
@@ -482,7 +516,7 @@ pub fn random_filter(params: &ProcessorParams) -> Result<ProcessorParams, Permut
 pub fn random_oscillating_filter(
     params: &ProcessorParams,
 ) -> Result<ProcessorParams, PermuteError> {
-    start_event!(PermuteNodeName::Filter, params);
+    start_event!(PermuteNodeName::OscillatingFilter, params);
 
     let mut rng = thread_rng();
 
@@ -512,12 +546,12 @@ pub fn random_oscillating_filter(
 
     let new_params = multi_oscillating_filter(&params.to_owned(), &filter_params)?;
 
-    complete_event!(PermuteNodeName::Filter, new_params);
+    complete_event!(PermuteNodeName::OscillatingFilter, new_params);
     Ok(new_params)
 }
 
 pub fn random_line_filter(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
-    start_event!(PermuteNodeName::Filter, params);
+    start_event!(PermuteNodeName::LineFilter, params);
 
     let mut rng = thread_rng();
 
@@ -544,7 +578,7 @@ pub fn random_line_filter(params: &ProcessorParams) -> Result<ProcessorParams, P
 
     let new_params = multi_line_filter(&params.to_owned(), &filter_params)?;
 
-    complete_event!(PermuteNodeName::Filter, new_params);
+    complete_event!(PermuteNodeName::LineFilter, new_params);
     Ok(new_params)
 }
 
@@ -556,27 +590,91 @@ pub fn normalise(params: &ProcessorParams) -> Result<ProcessorParams, PermuteErr
     Ok(new_params)
 }
 
-macro_rules! start_event {
-    ($name:expr, $params:expr) => {{
-        $params
-            .update_sender
-            .send(PermuteUpdate::UpdatePermuteNodeStarted(
-                $params.permutation.clone(),
-                $name,
-                PermuteNodeEvent::NodeProcessStarted,
-            ))?;
-    }};
+pub fn random_cross_gain(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
+    start_event!(PermuteNodeName::CrossGain, params);
+    let mut rng = thread_rng();
+
+    // Get a random file from the files list
+    let sidechain_file = match select_sidechain_file(&params.permutation.file, &params.permutation.files) {
+        Some(file) => file,
+        None => {
+            // If there's only one file, just return the original
+            complete_event!(PermuteNodeName::CrossGain, params);
+            return Ok(params.clone());
+        }
+    };
+
+    let cross_params = CrossGainParams {
+        sidechain_file,
+        depth: rng.gen_range(0.2..0.9), // Fixed depth for now, could be randomized
+        invert: rng.gen_bool(0.5),
+        window_size_ms: 100.0, // 10ms window size
+    };
+
+    let new_params = cross_gain(params, &cross_params)?;
+    complete_event!(PermuteNodeName::CrossGain, new_params);
+    Ok(new_params)
 }
-pub(crate) use start_event;
-macro_rules! complete_event {
-    ($name:expr, $params:expr) => {{
-        $params
-            .update_sender
-            .send(PermuteUpdate::UpdatePermuteNodeCompleted(
-                $params.permutation.clone(),
-                $name,
-                PermuteNodeEvent::NodeProcessComplete,
-            ))?;
-    }};
+
+pub fn random_cross_filter(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
+    start_event!(PermuteNodeName::CrossFilter, params);
+    let mut rng = rand::thread_rng();
+    
+    // Get a random file from the files list
+    let sidechain_file = match select_sidechain_file(&params.permutation.file, &params.permutation.files) {
+        Some(file) => file,
+        None => {
+            // If there's only one file, just return the original
+            complete_event!(PermuteNodeName::CrossFilter, params);
+            return Ok(params.clone());
+        }
+    };
+
+    // Generate random filter parameters
+    let types = [
+        biquad::Type::HighPass,
+        biquad::Type::LowPass,
+        biquad::Type::LowPass, // make low pass most likely
+        biquad::Type::BandPass,
+    ];
+    let filter_type = types[rng.gen_range(0..types.len())];
+
+    // Base frequency between 200Hz and 2000Hz
+    let base_freq = rng.gen_range(50.0..800.0);
+    // Maximum frequency between base_freq and 10000Hz
+    let max_freq = rng.gen_range(base_freq..10000.0);
+    // Q factor between 0.5 and 1.35 (similar to random_line_filter)
+    let q = rng.gen_range(0.5..1.35);
+    
+    let cross_params = CrossFilterParams {
+        sidechain_file,
+        filter_type,
+        base_freq,
+        max_freq,
+        q,
+        window_size_ms: 100.0, // Fixed 10ms window for RMS calculation
+        invert: rng.gen_bool(0.5),
+    };
+
+    let result = cross_filter(params, &cross_params);
+    complete_event!(PermuteNodeName::CrossFilter, params);
+    result
 }
-pub(crate) use complete_event;
+
+/// Select a random file from the available files list that is different from the current file
+pub fn select_sidechain_file(current_file: &str, available_files: &[String]) -> Option<String> {
+    if available_files.len() < 2 {
+        return None;
+    }
+    
+    let mut rng = rand::thread_rng();
+    let filtered_files: Vec<&String> = available_files.iter()
+        .filter(|f| *f != current_file)
+        .collect();
+        
+    if filtered_files.is_empty() {
+        None
+    } else {
+        Some(filtered_files[rng.gen_range(0..filtered_files.len())].clone())
+    }
+}

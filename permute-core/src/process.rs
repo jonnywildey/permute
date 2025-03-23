@@ -1,6 +1,6 @@
 use biquad::*;
 use serde::{Deserialize, Serialize};
-use sndfile::{Endian, MajorFormat, SubtypeFormat};
+use sndfile::{Endian, MajorFormat, SubtypeFormat, OpenOptions, ReadOptions, SndFileIO};
 use std::{
     f64::consts::{E, PI},
     sync::mpsc,
@@ -36,6 +36,7 @@ pub struct Permutation {
     pub processors: Vec<PermuteNodeName>,
     pub original_sample_rate: usize,
     pub node_index: usize,
+    pub files: Vec<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -44,62 +45,64 @@ pub enum PermuteNodeEvent {
     NodeProcessComplete,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, EnumIter)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, EnumIter, Serialize, Deserialize)]
 pub enum PermuteNodeName {
-    Reverse,
-    RhythmicDelay,
-    MetallicDelay,
-
     GranularTimeStretch,
-    Reverb,
-
     Fuzz,
     Saturate,
-
-    HalfSpeed,
-    DoubleSpeed,
-    RandomPitch,
-
-    Filter,
-    LineFilter,
-    Tremolo,
-    Lazer,
-    OscillatingFilter,
-
-    Wow,
-    Flutter,
-    Flange,
+    Reverse,
     Chorus,
     Phaser,
+    DoubleSpeed,
+    RandomPitch,
+    Flutter,
+    Flange,
+    HalfSpeed,
+    MetallicDelay,
+    RhythmicDelay,
+    Reverb,
+    Wow,
+    Tremolo,
+    Lazer,
     Normalise,
     Trim,
     SampleRateConversionHigh,
     SampleRateConversionOriginal,
+    Filter,
+    OscillatingFilter,
+    LineFilter,
+    CrossGain,
+    CrossFilter,
 }
 
 // Only processors we want to be visible to users
-#[allow(dead_code)]
-pub const ALL_PROCESSORS: [PermuteNodeName; 20] = [
-    PermuteNodeName::Reverse,
+pub const ALL_PROCESSORS: [PermuteNodeName; 22] = [
     PermuteNodeName::GranularTimeStretch,
-    PermuteNodeName::Reverb,
-    PermuteNodeName::Saturate,
     PermuteNodeName::Fuzz,
-    PermuteNodeName::MetallicDelay,
-    PermuteNodeName::RhythmicDelay,
-    PermuteNodeName::HalfSpeed,
+    PermuteNodeName::Saturate,
+    PermuteNodeName::Reverse,
+    PermuteNodeName::Chorus,
+    PermuteNodeName::Phaser,
     PermuteNodeName::DoubleSpeed,
     PermuteNodeName::RandomPitch,
-    PermuteNodeName::Wow,
     PermuteNodeName::Flutter,
-    PermuteNodeName::Chorus,
     PermuteNodeName::Flange,
-    PermuteNodeName::Phaser,
-    PermuteNodeName::Filter,
-    PermuteNodeName::LineFilter,
+    PermuteNodeName::HalfSpeed,
+    PermuteNodeName::MetallicDelay,
+    PermuteNodeName::RhythmicDelay,
+    PermuteNodeName::Reverb,
+    PermuteNodeName::Wow,
     PermuteNodeName::Tremolo,
     PermuteNodeName::Lazer,
+    // PermuteNodeName::Normalise,
+    // PermuteNodeName::Trim,
+    // PermuteNodeName::SampleRateConversionHigh,
+    // PermuteNodeName::SampleRateConversionOriginal,
+    PermuteNodeName::Filter,
     PermuteNodeName::OscillatingFilter,
+    PermuteNodeName::LineFilter,
+    PermuteNodeName::CrossGain,
+    PermuteNodeName::CrossFilter,
 ];
 
 pub fn reverse(
@@ -431,7 +434,11 @@ pub fn change_speed(
             let frac = offset_f - offset as f64;
 
             v1 = cs[offset];
-            v2 = cs[offset + 1];
+            v2 = if offset + 1 < cs.len() {
+                cs[offset + 1]
+            } else {
+                cs[offset]
+            };
 
             ns[i] = v1 + (v2 - v1) * frac;
         }
@@ -1615,4 +1622,166 @@ fn all_pass(samples: &Vec<f64>, delay_ms: f64, decay_factor: f64, sample_rate: u
         all_passed[i] += decay_factor * all_passed[i];
     }
     all_passed
+}
+
+#[derive(Debug, Clone)]
+pub struct CrossGainParams {
+    pub sidechain_file: String,
+    pub depth: f64,
+    pub invert: bool,
+    pub window_size_ms: f64,
+}
+
+#[derive(Debug, Clone)]
+pub struct CrossFilterParams {
+    pub sidechain_file: String,
+    pub filter_type: biquad::Type<f64>,
+    pub base_freq: f64,
+    pub max_freq: f64,
+    pub q: f64,
+    pub window_size_ms: f64,
+    pub invert: bool,
+}
+
+pub fn cross_gain(params: &ProcessorParams, gain_params: &CrossGainParams) -> Result<ProcessorParams, PermuteError> {
+    // Get the RMS signal from the sidechain file
+    let rms_signal = get_sidechain_rms_signal(
+        &gain_params.sidechain_file,
+        gain_params.window_size_ms,
+        params.samples.len(),
+        params.sample_rate,
+    )?;
+
+    // Apply gain modulation
+    let mut new_samples = params.samples.clone();
+    for (i, sample) in new_samples.iter_mut().enumerate() {
+        let rms = if gain_params.invert {
+            1.0 - rms_signal[i]
+        } else {
+            rms_signal[i]
+        };
+        *sample *= 1.0 - (gain_params.depth * rms);
+    }
+
+    Ok(ProcessorParams {
+        samples: new_samples,
+        ..params.clone()
+    })
+}
+
+pub fn cross_filter(params: &ProcessorParams, filter_params: &CrossFilterParams) -> Result<ProcessorParams, PermuteError> {
+    // Get the RMS signal from the sidechain file
+    let rms_signal = get_sidechain_rms_signal(
+        &filter_params.sidechain_file,
+        filter_params.window_size_ms,
+        params.samples.len(),
+        params.sample_rate,
+    )?;
+
+    let mut new_samples = params.samples.clone();
+    
+    // Create initial coefficients
+    let initial_coeffs = Coefficients::<f64>::from_params(
+        filter_params.filter_type,
+        (params.sample_rate as u32).hz(),
+        filter_params.base_freq.hz(),
+        filter_params.q,
+    )?;
+    let mut filter = DirectForm2Transposed::<f64>::new(initial_coeffs);
+    
+    // Process each sample
+    for (i, sample) in new_samples.iter_mut().enumerate() {
+        let rms = if filter_params.invert {
+            1.0 - rms_signal[i]
+        } else {
+            rms_signal[i]
+        };
+        
+        // Calculate the current frequency based on RMS
+        let freq = filter_params.base_freq + (rms * (filter_params.max_freq - filter_params.base_freq));
+        
+        // Update filter coefficients
+        let coeffs = Coefficients::<f64>::from_params(
+            filter_params.filter_type,
+            (params.sample_rate as u32).hz(),
+            freq.hz(),
+            filter_params.q,
+        )?;
+        filter.update_coefficients(coeffs);
+        
+        // Process the sample
+        *sample = filter.run(*sample);
+    }
+
+    Ok(ProcessorParams {
+        samples: new_samples,
+        ..params.clone()
+    })
+}
+
+pub fn get_sidechain_rms_signal(
+    sidechain_file: &str,
+    window_size_ms: f64,
+    target_length: usize,
+    target_sample_rate: usize,
+) -> Result<Vec<f64>, PermuteError> {
+    // Read the sidechain file
+    let mut snd = sndfile::OpenOptions::ReadOnly(ReadOptions::Auto).from_path(sidechain_file)?;
+    let samples: Vec<f64> = snd.read_all_to_vec()?;
+    
+    // Convert window size from ms to samples
+    let window_size = ((window_size_ms / 1000.0) * target_sample_rate as f64) as usize;
+    
+    // Calculate RMS values
+    let rms_values = calculate_rms(&samples, window_size);
+    
+    // Resample to match target length if necessary
+    if rms_values.len() != target_length {
+        let mut resampled = Vec::with_capacity(target_length);
+        for i in 0..target_length {
+            let idx = (i as f64 * (rms_values.len() as f64 - 1.0) / (target_length as f64 - 1.0)) as usize;
+            resampled.push(rms_values[idx]);
+        }
+        Ok(resampled)
+    } else {
+        Ok(rms_values)
+    }
+}
+
+fn calculate_rms(samples: &[f64], window_size: usize) -> Vec<f64> {
+    if window_size == 0 {
+        return vec![0.0; samples.len()];
+    }
+
+    let mut rms_values = Vec::with_capacity(samples.len());
+    let half_window = window_size / 2;
+
+    // First pass: calculate all RMS values
+    for i in 0..samples.len() {
+        let start = if i < half_window { 0 } else { i - half_window };
+        let end = if i + half_window >= samples.len() {
+            samples.len()
+        } else {
+            i + half_window
+        };
+
+        let sum_squares: f64 = samples[start..end]
+            .iter()
+            .map(|&x| x * x)
+            .sum();
+        let rms = (sum_squares / (end - start) as f64).sqrt();
+        rms_values.push(rms);
+    }
+
+    // Find the maximum RMS value for normalization
+    let max_rms = rms_values.iter().fold(0.0_f64, |max, &val| max.max(val));
+    
+    // Normalize all values if max_rms is greater than 0
+    if max_rms > 0.0 {
+        for rms in rms_values.iter_mut() {
+            *rms /= max_rms;
+        }
+    }
+
+    rms_values
 }

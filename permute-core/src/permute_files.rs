@@ -4,8 +4,6 @@ use std::sync::mpsc;
 use std::sync::mpsc::Sender;
 use std::thread;
 use std::thread::JoinHandle;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
 
 pub enum PermuteUpdate {
     Error(String),
@@ -148,6 +146,7 @@ fn permute_file(
             processors: processors.clone(),
             original_sample_rate: sample_rate,
             node_index: 0,
+            files: params.files.clone(),
         };
         let processor_params = ProcessorParams {
             samples: samples_64.clone(),
@@ -233,6 +232,7 @@ pub fn process_file(
             permutation_index: 0,
             processor_pool: vec![process],
             processors: vec![process],
+            files: vec![file.clone()],
         },
     })?;
 

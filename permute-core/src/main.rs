@@ -19,6 +19,9 @@ struct PermuteArgs {
     /// The audio file to process
     #[structopt(long, short)]
     file: String,
+    /// Additional audio files (comma-separated) to use as sidechain sources
+    #[structopt(long, use_delimiter = true, value_delimiter = ",")]
+    files: Vec<String>,
     /// Output of processed file
     #[structopt(long, short = "o")]
     output: String,
@@ -61,7 +64,7 @@ struct PermuteArgs {
 
 fn main() {
     let args = PermuteArgs::from_args();
-    let (cancel_sender, cancel_receiver) = mpsc::channel();
+    let (_cancel_sender, cancel_receiver) = mpsc::channel();
 
     let processor_pool: Vec<PermuteNodeName> = match args.processor.as_str() {
         "" => vec![
@@ -81,6 +84,8 @@ fn main() {
             PermuteNodeName::Lazer,
             PermuteNodeName::LineFilter,
             PermuteNodeName::OscillatingFilter,
+            PermuteNodeName::CrossGain,
+            PermuteNodeName::CrossFilter,
         ],
         str => vec![get_processor_from_display_name(str).expect("Processor not found")],
     };
@@ -97,9 +102,12 @@ fn main() {
         args.file, args.output, args.permutations
     );
 
+    let mut all_files = vec![args.file.clone()];
+    all_files.extend(args.files);
+
     thread::spawn(move || {
         permute_files(PermuteFilesParams {
-            files: vec![args.file],
+            files: all_files,
             output: args.output,
             input_trail: args.input_trail,
             output_trail: args.output_trail,

@@ -42,16 +42,18 @@
         }
       },
       "args": [
-        "--file=examples/guitarloop16.wav",
-        "--output=./renders/",
+        "--file=examples/beep24.wav",
+        "--files=examples/amen.wav",
+        "--trimAll",
+        "--output",
+        "./renders/",
         "--inputTrail=0",
         "--outputTrail=2",
-        "--permutations=4",
+        "--permutations=1",
         "--depth=1",
         "--normalise",
-        "--trimAll",
         "--processorCount=1",
-        "--processor=Lazer"
+        "--processor=Sidechain Gain"
       ],
       "cwd": "${workspaceFolder}"
     },
