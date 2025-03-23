@@ -23,6 +23,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "audio-info"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "sndfile",
+]
+
+[[package]]
 name = "biquad"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -115,6 +123,7 @@ checksum = "7fc7aa29613bd6a620df431842069224d8bc9011086b1db4c0e0cd47fa03ec9a"
 name = "permute"
 version = "0.1.0"
 dependencies = [
+ "audio-info",
  "biquad",
  "hound",
  "lazy_static",

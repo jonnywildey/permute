@@ -157,6 +157,9 @@ fn main() {
             PermuteUpdate::ProcessComplete => {
                     println!("Processing complete");
             }
+            PermuteUpdate::AudioInfoGenerated(file, _) => {
+                    println!("Generated audio info for {}", file);
+            }
         }
     }
 }

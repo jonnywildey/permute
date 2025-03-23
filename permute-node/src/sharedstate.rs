@@ -161,12 +161,6 @@ impl SharedState {
 
     pub fn set_finished(&mut self) -> Result<(), AudioFileError> {
         self.processing = false;
-
-        for permutation_output in self.permutation_outputs.iter_mut() {
-            permutation_output
-                .audio_info
-                .update_file(permutation_output.output.clone())?;
-        }
         Ok(())
     }
 
@@ -278,6 +272,12 @@ impl SharedState {
 
     pub fn deselect_all_processors(&mut self) {
         self.processor_pool.clear();
+    }
+
+    pub fn update_output_audioinfo(&mut self, file: String, audio_info: AudioInfo) {
+        if let Some(output) = self.permutation_outputs.iter_mut().find(|po| po.output == file) {
+            output.audio_info = audio_info;
+        }
     }
 }
 

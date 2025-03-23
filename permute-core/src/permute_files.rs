@@ -4,6 +4,7 @@ use std::sync::mpsc;
 use std::sync::mpsc::Sender;
 use std::thread;
 use std::thread::JoinHandle;
+use audio_info::AudioInfo;
 
 pub enum PermuteUpdate {
     Error(String),
@@ -11,6 +12,7 @@ pub enum PermuteUpdate {
     UpdatePermuteNodeCompleted(Permutation, PermuteNodeName, PermuteNodeEvent),
     UpdateSetProcessors(Permutation, Vec<PermuteNodeName>),
     ProcessComplete,
+    AudioInfoGenerated(String, AudioInfo),
 }
 
 #[derive(Debug)]
@@ -173,18 +175,6 @@ fn permute_file(
             processor_params: processor_params.clone(),
             processors: processor_fns.to_vec(),
         })?;
-        // let output_format = match params.output_file_as_wav {
-        //     true => MajorFormat::WAV,
-        //     false => output_params.file_format,
-        // };
-        // let output_path = match params.output_file_as_wav {
-        //     true => {
-        //         let mut path = PathBuf::from(output_params.permutation.output.clone());
-        //         path.set_extension("wav");
-        //         path.into_os_string().into_string().unwrap()
-        //     }
-        //     false => output_params.permutation.output.clone(),
-        // };
 
         let mut snd = sndfile::OpenOptions::WriteOnly(WriteOptions::new(
             output_params.file_format,
@@ -196,6 +186,15 @@ fn permute_file(
         .from_path(output_params.permutation.output.clone())?;
 
         snd.write_from_iter(output_params.samples.clone().into_iter())?;
+
+        // Generate audio info for the output file
+        let mut audio_info = AudioInfo::default();
+        if let Ok(()) = audio_info.update_file(output_params.permutation.output.clone()) {
+            params.update_sender.send(PermuteUpdate::AudioInfoGenerated(
+                output_params.permutation.output.clone(),
+                audio_info,
+            ))?;
+        }
     }
     Ok(())
 }

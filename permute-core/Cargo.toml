@@ -15,3 +15,4 @@ serde = { version = "1.0.134", features = ["derive"] }
 biquad = "0.4.1"
 strum = { version = "0.23", features = ["derive"] }
 lazy_static = "1.4.0"
+audio-info = { path = "../audio-info" }

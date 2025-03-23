@@ -202,6 +202,9 @@ impl Processor {
                             PermuteUpdate::UpdateSetProcessors(permutation, processors) => {
                                 state.add_output_progress(permutation, processors);
                             }
+                            PermuteUpdate::AudioInfoGenerated(file, audio_info) => {
+                                state.update_output_audioinfo(file, audio_info);
+                            }
                             PermuteUpdate::ProcessComplete => {
                                 match state.set_finished() {
                                     Ok(()) => {}

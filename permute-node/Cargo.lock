@@ -186,6 +186,7 @@ dependencies = [
 name = "permute"
 version = "0.1.0"
 dependencies = [
+ "audio-info",
  "biquad",
  "hound",
  "lazy_static",
