@@ -249,17 +249,17 @@ impl SharedState {
 
     pub fn reverse_file(&mut self, file: String) -> Result<(), PermuteError> {
         self.processing = true;
-        let search_file = file.clone();
         let update_sender = Arc::try_unwrap(self.update_sender.clone())
             .unwrap_or_else(|arc| (*arc).clone());
         process_file(file.clone(), PermuteNodeName::Reverse, update_sender)?;
-
+        
         self.processing = false;
-        // Find file index and update audio info
-        if let Some(file_index) = self.files.iter().position(|f| f.path == file) {
-            if let Some(output) = self.outputs.get_mut(&(file_index, 1)) {
-                let mut ai = output.audio_info.clone();
-                ai.update_file(search_file).unwrap();
+        
+        // Update audio info for the output file
+        for output in self.outputs.values_mut() {
+            if output.output == file {
+                output.audio_info.update_file(file.clone())?;
+                break;
             }
         }
         Ok(())
@@ -267,17 +267,17 @@ impl SharedState {
 
     pub fn trim_file(&mut self, file: String) -> Result<(), PermuteError> {
         self.processing = true;
-        let search_file = file.clone();
         let update_sender = Arc::try_unwrap(self.update_sender.clone())
             .unwrap_or_else(|arc| (*arc).clone());
         process_file(file.clone(), PermuteNodeName::Trim, update_sender)?;
         
         self.processing = false;
-        // Find file index and update audio info
-        if let Some(file_index) = self.files.iter().position(|f| f.path == file) {
-            if let Some(output) = self.outputs.get_mut(&(file_index, 1)) {
-                let mut ai = output.audio_info.clone();
-                ai.update_file(search_file).unwrap();
+        
+        // Update audio info for the output file
+        for output in self.outputs.values_mut() {
+            if output.output == file {
+                output.audio_info.update_file(file.clone())?;
+                break;
             }
         }
         Ok(())
@@ -373,6 +373,10 @@ impl SharedState {
 
     pub fn clear(&mut self) {
         self.outputs.clear();
+    }
+
+    pub fn set_viewed_welcome(&mut self, viewed: bool) {
+        self.viewed_welcome = viewed;
     }
 }
 

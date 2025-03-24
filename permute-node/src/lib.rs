@@ -42,6 +42,7 @@ enum ProcessorMessage {
     SetCreateSubdirectories(bool),
     SelectAllProcessors,
     DeselectAllProcessors,
+    SetViewedWelcome(bool),
     Cancel,
 }
 
@@ -172,6 +173,9 @@ impl Processor {
                                 }
                                 ProcessorMessage::DeselectAllProcessors => {
                                     state.deselect_all_processors();
+                                }
+                                ProcessorMessage::SetViewedWelcome(viewed) => {
+                                    state.set_viewed_welcome(viewed);
                                 }
                                 ProcessorMessage::Cancel => {
                                     state.cancel();
@@ -505,6 +509,12 @@ impl Processor {
         js_hook!(ProcessorMessage::DeselectAllProcessors, cx);
         Ok(cx.undefined())
     }
+
+    fn js_set_viewed_welcome(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+        let viewed = cx.argument::<JsBoolean>(0)?.value(&mut cx);
+        js_hook!(viewed, ProcessorMessage::SetViewedWelcome, cx);
+        Ok(cx.undefined())
+    }
 }
 
 #[neon::main]
@@ -533,6 +543,7 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
     cx.export_function("setCreateSubdirectories", Processor::js_set_create_subdirectories)?;
     cx.export_function("selectAllProcessors", Processor::js_select_all_processors)?;
     cx.export_function("deselectAllProcessors", Processor::js_deselect_all_processors)?;
+    cx.export_function("setViewedWelcome", Processor::js_set_viewed_welcome)?;
 
     Ok(())
 }

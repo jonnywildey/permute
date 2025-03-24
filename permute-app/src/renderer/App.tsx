@@ -367,7 +367,6 @@ export default function App() {
   }, [onClose]);
 
   // Don't render welcome screen until we have state
-  debugger;
   const shouldShowWelcome = !loading && isOpen && !state.permuteState.viewedWelcome;
 
   return (
