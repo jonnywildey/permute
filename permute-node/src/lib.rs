@@ -324,26 +324,26 @@ impl Processor {
                         all_processors.set(&mut cx, i as u32, str)?;
                     }
                     let permutation_outputs = cx.empty_array();
-                    for i in 0..state.permutation_outputs.len() {
-                        let permutation_output = &state.permutation_outputs[i];
+                    let ordered_outputs = state.get_ordered_outputs();
+                    for (i, output) in ordered_outputs.iter().enumerate() {
                         let output_obj = cx.empty_object();
-                        let output = cx.string(permutation_output.output.clone());
-                        output_obj.set(&mut cx, "path", output)?;
-                        let name = cx.string(permutation_output.audio_info.name.clone());
+                        let output_path = cx.string(output.output.clone());
+                        output_obj.set(&mut cx, "path", output_path)?;
+                        let name = cx.string(output.audio_info.name.clone());
                         output_obj.set(&mut cx, "name", name)?;
-                        let image = cx.string(permutation_output.audio_info.image.clone());
+                        let image = cx.string(output.audio_info.image.clone());
                         output_obj.set(&mut cx, "image", image)?;
-                        let progress = cx.number(permutation_output.progress);
+                        let progress = cx.number(output.progress);
                         output_obj.set(&mut cx, "progress", progress)?;
-                        let duration_sec = cx.number(permutation_output.audio_info.duration_sec);
+                        let duration_sec = cx.number(output.audio_info.duration_sec);
                         output_obj.set(&mut cx, "durationSec", duration_sec)?;
-                        let deleted = cx.boolean(permutation_output.deleted);
+                        let deleted = cx.boolean(output.deleted);
                         output_obj.set(&mut cx, "deleted", deleted)?;
 
                         let node_names = cx.empty_array();
-                        for j in 0..permutation_output.processors.len() {
+                        for j in 0..output.processors.len() {
                             let display_name = cx.string(get_processor_display_name(
-                                permutation_output.processors[j],
+                                output.processors[j],
                             ));
                             node_names.set(&mut cx, j as u32, display_name)?;
                         }

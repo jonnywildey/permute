@@ -11,6 +11,8 @@ interface TopBarProps {
   createSubdirectories?: boolean;
   onOverwriteChange?: (overwrite: boolean) => void;
   onCreateSubdirectoriesChange?: (createSubfolders: boolean) => void;
+  onSaveScene?: () => void;
+  onLoadScene?: () => void;
 }
 
 export const TopBar: React.FC<TopBarProps> = ({
@@ -18,7 +20,9 @@ export const TopBar: React.FC<TopBarProps> = ({
   overwriteFiles,
   createSubdirectories: createSubfolders,
   onOverwriteChange,
-  onCreateSubdirectoriesChange
+  onCreateSubdirectoriesChange,
+  onSaveScene,
+  onLoadScene
 }) => {
   const { colorMode } = useColorMode();
 
@@ -76,6 +80,8 @@ export const TopBar: React.FC<TopBarProps> = ({
             createSubfolders={createSubfolders}
             onOverwriteChange={onOverwriteChange}
             onCreateSubdirectoriesChange={onCreateSubdirectoriesChange}
+            onSaveScene={onSaveScene}
+            onLoadScene={onLoadScene}
           />
         </Box>
       </GridItem>

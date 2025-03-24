@@ -133,9 +133,11 @@ pub fn reverse(
     let channels = *channels as i32;
 
     for i in 0..*sample_length {
-        let channel_offset: i32 = (channels * -1 + 1) + 2 * (i as i32 % channels);
-        let sample_i: i32 = *sample_length as i32 - 1 - i as i32 + channel_offset;
-        new_samples[i] = samples[sample_i as usize];
+        let channel_idx = i as i32 % channels;
+        let sample_group = i as i32 / channels;
+        let reversed_group = (*sample_length as i32 / channels) - 1 - sample_group;
+        let sample_i = (reversed_group * channels + channel_idx) as usize;
+        new_samples[i] = samples[sample_i];
     }
 
     update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(

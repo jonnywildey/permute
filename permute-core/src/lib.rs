@@ -1,5 +1,5 @@
 pub mod display_node;
-mod files;
+pub mod files;
 mod osc;
 pub mod permute_error;
 pub mod permute_files;

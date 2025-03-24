@@ -4,7 +4,6 @@ import {
   Heading,
   Input,
   IconButton,
-  CloseButton,
   PropsOf,
   Button,
   Center,
@@ -19,7 +18,7 @@ import { AudioContext } from './AudioContext';
 import { PlayIcon } from './icons/PlayIcon';
 import { displayTime } from './displayTime';
 import { useDropzone } from 'react-dropzone'
-import { CloseIcon, LargeCloseIcon } from './icons/CloseIcon';
+import { LargeCloseIcon } from './icons/CloseIcon';
 
 export interface IFilesProps {
   files: IPermutationInput[];

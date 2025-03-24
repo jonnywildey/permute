@@ -16,6 +16,8 @@ declare global {
         openOutputDialog(callback: (args: [string]) => void): void;
         removeFile(file: string): void;
         removeProcessor(name: string): void;
+        saveScene(callback: (filePath: string) => void): void;
+        loadScene(callback: (filePath: string) => void): void;
         reverseFile(
           updateFn: (state: IPermuteState) => void,
           completeFn: (state: IPermuteState) => void,

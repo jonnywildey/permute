@@ -6,6 +6,14 @@ contextBridge.exposeInMainWorld('Electron', {
       ipcRenderer.once('open-output-dialog', (event, ...args) => f(...args));
       ipcRenderer.send('open-output-dialog');
     },
+    saveScene(f) {
+      ipcRenderer.once('save-scene-dialog', (event, ...args) => f(...args));
+      ipcRenderer.send('save-scene-dialog');
+    },
+    loadScene(f) {
+      ipcRenderer.once('load-scene-dialog', (event, ...args) => f(...args));
+      ipcRenderer.send('load-scene-dialog');
+    },
     runProcessor(updateFn, completeFn) {
       const listener = (event, ...args) => {
         updateFn(...args);

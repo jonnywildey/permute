@@ -227,6 +227,34 @@ const Content = ({ onOpen }: { onOpen: () => void }) => {
     setState({ permuteState });
   };
 
+  const handleSaveScene = () => {
+    window.Electron.ipcRenderer.saveScene((filePath) => {
+      if (filePath) {
+        toast({
+          description: 'Scene saved successfully',
+          status: 'success',
+          duration: 3000,
+          isClosable: true,
+        });
+        refreshState();
+      }
+    });
+  };
+
+  const handleLoadScene = () => {
+    window.Electron.ipcRenderer.loadScene(async (filePath) => {
+      if (filePath) {
+        const permuteState = await window.Electron.ipcRenderer.getState();
+        setState({ permuteState });
+        toast({
+          description: 'Scene loaded successfully',
+          status: 'success',
+          duration: 3000,
+          isClosable: true,
+        });
+      }
+    });
+  };
 
   return (
     <Grid
@@ -241,6 +269,8 @@ const Content = ({ onOpen }: { onOpen: () => void }) => {
         openWelcome={onOpen}
         createSubdirectories={createSubdirectories}
         onCreateSubdirectoriesChange={setCreateSubdirectories}
+        onSaveScene={handleSaveScene}
+        onLoadScene={handleLoadScene}
       />
       <Files
         files={files}

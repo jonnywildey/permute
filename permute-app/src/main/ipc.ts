@@ -14,6 +14,28 @@ ipcMain.on('open-output-dialog', async (event) => {
   event.reply('open-output-dialog', result.filePaths);
 });
 
+ipcMain.on('save-scene-dialog', async (event) => {
+  const result = await dialog.showSaveDialog({
+    filters: [{ name: 'Scene Files', extensions: ['json'] }],
+    defaultPath: 'scene.json'
+  });
+  if (!result.canceled && result.filePath) {
+    processor.saveSettings(result.filePath);
+    event.reply('save-scene-dialog', result.filePath);
+  }
+});
+
+ipcMain.on('load-scene-dialog', async (event) => {
+  const result = await dialog.showOpenDialog({
+    filters: [{ name: 'Scene Files', extensions: ['json'] }],
+    properties: ['openFile']
+  });
+  if (!result.canceled && result.filePaths.length > 0) {
+    processor.loadSettings(result.filePaths[0]);
+    event.reply('load-scene-dialog', result.filePaths[0]);
+  }
+});
+
 ipcMain.on('run-processor', async (event) => {
   processor.runProcess(
     (state: IPermuteState) => {

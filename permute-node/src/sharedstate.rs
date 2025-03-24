@@ -9,12 +9,14 @@ use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::BufReader;
 use std::io::Write;
+use std::path::Path;
 use std::sync::Arc;
 use std::thread::JoinHandle;
 use std::fs;
 use crossbeam_channel::{Sender, Receiver};
 use std::sync::Mutex;
 use std::thread;
+use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 pub struct SharedState {
@@ -36,7 +38,8 @@ pub struct SharedState {
 
     pub update_sender: Arc<Sender<PermuteUpdate>>,
     pub processing: bool,
-    pub permutation_outputs: Vec<OutputProgress>,
+    // Store outputs by (filename, permutation_index)
+    outputs: HashMap<(String, usize), OutputProgress>,
     pub files: Vec<AudioInfo>,
     pub cancel_sender: Sender<()>,
 }
@@ -61,7 +64,7 @@ impl SharedState {
             processor_pool: ALL_PROCESSORS.to_vec(),
             all_processors: ALL_PROCESSORS.to_vec(),
             processing: false,
-            permutation_outputs: vec![],
+            outputs: HashMap::new(),
             files: vec![],
             cancel_sender,
             constrain_length: true,
@@ -99,7 +102,29 @@ impl SharedState {
             return Ok(());
         }
         let mut audio_info = AudioInfo::default();
-        audio_info.update_file(file)?;
+        audio_info.update_file(file.clone())?;
+        
+        // Pre-create output progress entries for all permutations
+        for i in 1..=self.permutations {
+            self.outputs.insert((file.clone(), i), OutputProgress {
+                output: String::new(), // Will be set when actually processing
+                progress: 0,
+                permutation: Permutation {
+                    file: file.clone(),
+                    permutation_index: i,
+                    output: String::new(),
+                    processor_pool: vec![],
+                    processors: vec![],
+                    original_sample_rate: 0,
+                    node_index: 0,
+                    files: vec![],
+                },
+                processors: vec![],
+                audio_info: AudioInfo::default(),
+                deleted: false,
+            });
+        }
+
         self.files.push(audio_info);
         Ok(())
     }
@@ -128,14 +153,28 @@ impl SharedState {
         self.error = error;
     }
 
+    pub fn get_ordered_outputs(&self) -> Vec<OutputProgress> {
+        let mut ordered = Vec::new();
+        // For each input file
+        for file in &self.files {
+            // For each permutation number
+            for i in 1..=self.permutations {
+                if let Some(output) = self.outputs.get(&(file.path.clone(), i)) {
+                    ordered.push(output.clone());
+                }
+            }
+        }
+        ordered
+    }
+
     pub fn add_output_progress(
         &mut self,
         permutation: Permutation,
         processors: Vec<PermuteNodeName>,
     ) {
-        let path = permutation.output.clone();
-        let _ = &self.permutation_outputs.push(OutputProgress {
-            output: path,
+        let key = (permutation.file.clone(), permutation.permutation_index);
+        self.outputs.insert(key, OutputProgress {
+            output: permutation.output.clone(),
             permutation: permutation.clone(),
             processors,
             progress: 0,
@@ -148,16 +187,10 @@ impl SharedState {
         let percentage_progress: f64 =
             ((permutation.node_index as f64 + 1.0) / permutation.processors.len() as f64) * 100.0;
 
-        let op = self
-            .permutation_outputs
-            .iter_mut()
-            .find(|op| op.output == permutation.output);
-        match op {
-            Some(op) => {
-                op.progress = percentage_progress as i32;
-                op.permutation = permutation.clone();
-            }
-            None => {}
+        let key = (permutation.file.clone(), permutation.permutation_index);
+        if let Some(output) = self.outputs.get_mut(&key) {
+            output.progress = percentage_progress as i32;
+            output.permutation = permutation.clone();
         }
     }
 
@@ -169,7 +202,6 @@ impl SharedState {
     pub fn cancel(&mut self) {
         self.processing = false;
         self.error = "Processing cancelled by user".to_string();
-        self.permutation_outputs.clear();
         self.processing = false;
         let _ = self.cancel_sender.send(());
     }
@@ -203,19 +235,12 @@ impl SharedState {
         let search_file = file.clone();
         let update_sender = Arc::try_unwrap(self.update_sender.clone())
             .unwrap_or_else(|arc| (*arc).clone());
-        process_file(file, PermuteNodeName::Reverse, update_sender)?;
+        process_file(file.clone(), PermuteNodeName::Reverse, update_sender)?;
 
         self.processing = false;
-        let permutation_output = self
-            .permutation_outputs
-            .iter_mut()
-            .find(|po| po.output == search_file);
-        match permutation_output {
-            Some(po) => {
-                let mut ai = po.audio_info.clone();
-                ai.update_file(search_file).unwrap();
-            }
-            None => {}
+        if let Some(output) = self.outputs.get_mut(&(file, 1)) {
+            let mut ai = output.audio_info.clone();
+            ai.update_file(search_file).unwrap();
         }
         Ok(())
     }
@@ -225,18 +250,12 @@ impl SharedState {
         let search_file = file.clone();
         let update_sender = Arc::try_unwrap(self.update_sender.clone())
             .unwrap_or_else(|arc| (*arc).clone());
-        process_file(file, PermuteNodeName::Trim, update_sender)?;
+        process_file(file.clone(), PermuteNodeName::Trim, update_sender)?;
+        
         self.processing = false;
-        let permutation_output = self
-            .permutation_outputs
-            .iter_mut()
-            .find(|po| po.output == search_file);
-        match permutation_output {
-            Some(po) => {
-                let mut ai = po.audio_info.clone();
-                ai.update_file(search_file).unwrap();
-            }
-            None => {}
+        if let Some(output) = self.outputs.get_mut(&(file, 1)) {
+            let mut ai = output.audio_info.clone();
+            ai.update_file(search_file).unwrap();
         }
         Ok(())
     }
@@ -272,18 +291,36 @@ impl SharedState {
 
     pub fn delete_output_file(&mut self, file: String) -> Result<(), std::io::Error> {
         fs::remove_file(&file)?;
-        if let Some(output) = self.permutation_outputs.iter_mut().find(|po| po.output == file) {
+        if let Some(output) = self.outputs.get_mut(&(file.clone(), 1)) {
             output.deleted = true;
         }
         Ok(())
     }
 
     pub fn delete_all_output_files(&mut self) -> Result<(), std::io::Error> {
-        for output in self.permutation_outputs.iter_mut() {
+        let mut to_delete = Vec::new();
+        let mut last_output_path = String::new();
+        
+        for ((file, _), output) in self.outputs.iter() {
             if let Err(e) = fs::remove_file(&output.output) {
                 println!("Error deleting file {}: {}", output.output, e);
             }
-            output.deleted = true;
+            last_output_path = output.output.clone();
+            to_delete.push(file.clone());
+        }
+        
+        for file in to_delete {
+            for i in 1..=self.permutations {
+                self.outputs.get_mut(&(file.clone(), i)).map(|o| o.deleted = true);
+            }
+        }
+
+        if self.create_subdirectories && !last_output_path.is_empty() {
+            if let Some(dir) = Path::new(&last_output_path).parent() {
+                if dir.is_dir() && dir.read_dir().unwrap().next().is_none() {
+                    fs::remove_dir(dir)?;
+                }
+            }
         }
         Ok(())
     }
@@ -301,9 +338,18 @@ impl SharedState {
     }
 
     pub fn update_output_audioinfo(&mut self, file: String, audio_info: AudioInfo) {
-        if let Some(output) = self.permutation_outputs.iter_mut().find(|po| po.output == file) {
-            output.audio_info = audio_info;
+        // Find the output entry that matches this output file path
+        for ((_, _), output) in self.outputs.iter_mut() {
+            if output.output == file {
+                output.audio_info = audio_info.clone();
+                output.permutation.output = file.clone();
+                break;
+            }
         }
+    }
+
+    pub fn clear(&mut self) {
+        self.outputs.clear();
     }
 }
 
