@@ -1,10 +1,11 @@
 use crate::{files::*, permute_error::PermuteError, process::*, random_process::*, audio_cache::AUDIO_CACHE};
 use sndfile::*;
-use std::sync::mpsc;
-use std::sync::mpsc::Sender;
+use std::sync::Arc;
 use std::thread;
 use std::thread::JoinHandle;
 use audio_info::AudioInfo;
+use rayon::prelude::*;
+use crossbeam_channel::{Sender, Receiver};
 
 pub enum PermuteUpdate {
     Error(String),
@@ -15,7 +16,7 @@ pub enum PermuteUpdate {
     AudioInfoGenerated(String, AudioInfo),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PermuteFilesParams {
     pub files: Vec<String>,
     pub output: String,
@@ -29,17 +30,16 @@ pub struct PermuteFilesParams {
     pub high_sample_rate: bool,
     pub processor_count: Option<i32>,
     pub output_file_as_wav: bool,
-    pub update_sender: mpsc::Sender<PermuteUpdate>,
+    pub update_sender: Arc<Sender<PermuteUpdate>>,
     pub create_subdirectories: bool,
-    pub cancel_receiver: mpsc::Receiver<()>,
+    pub cancel_receiver: Arc<Receiver<()>>,
     pub constrain_length: bool,
 }
 
-pub fn permute_files(params: PermuteFilesParams) -> JoinHandle<()> {
+pub fn permute_files(mut params: PermuteFilesParams) -> JoinHandle<()> {
     thread::Builder::new()
         .name("PermuteThread".to_string())
         .spawn(move || {
-            let mut params = params;
             let output = match params.create_subdirectories {
                 true => {
                     let o = get_output_run(params.output.clone());
@@ -49,21 +49,24 @@ pub fn permute_files(params: PermuteFilesParams) -> JoinHandle<()> {
             };
             params.output = output;
             params.create_subdirectories = false;
-            for i in 0..params.files.len() {
+
+            // Process files in parallel using rayon
+            params.files.par_iter().for_each(|file| {
                 if params.cancel_receiver.try_recv().is_ok() {
                     params.update_sender.send(PermuteUpdate::ProcessComplete)
                         .expect("Error sending message");
                     return;
                 }
-                let file = params.files[i].clone();
-                let result = permute_file(&params, file);
+
+                let result = permute_file(&params, file.clone());
                 if let Err(err) = result {
                     params
                         .update_sender
                         .send(PermuteUpdate::Error(err.to_string()))
                         .expect("Error sending message");
                 }
-            }
+            });
+
             params
                 .update_sender
                 .send(PermuteUpdate::ProcessComplete)
@@ -160,7 +163,7 @@ fn permute_file(
             file_format,
             sub_format,
             endian,
-            update_sender: params.update_sender.to_owned(),
+            update_sender: params.update_sender.clone(),
         };
         let _ = params.update_sender.send(PermuteUpdate::UpdateSetProcessors(
             permutation.clone(),
@@ -225,7 +228,7 @@ pub fn process_file(
         sample_length,
         samples: samples.to_vec(),
         sample_rate,
-        update_sender: update_sender.clone(),
+        update_sender: Arc::new(update_sender.clone()),
         permutation: Permutation {
             file: file.clone(),
             node_index: 0,

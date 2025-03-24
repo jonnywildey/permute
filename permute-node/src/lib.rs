@@ -5,15 +5,16 @@ use permute::display_node::*;
 use permute::permute_files::*;
 use sharedstate::*;
 use std::fmt::Error;
-use std::sync::{mpsc, Arc, Mutex};
+use std::sync::{Arc, Mutex};
 use std::thread;
 use std::panic::catch_unwind;
+use crossbeam_channel::{Sender, Receiver, SendError};
 
 type ProcessorCallback = Box<dyn FnOnce(&Channel, SharedState) + Send>;
 
 // Wraps a SQLite connection a channel, allowing concurrent access
 struct Processor {
-    tx: mpsc::Sender<ProcessorMessage>,
+    tx: Sender<ProcessorMessage>,
 }
 
 // Messages sent on the database channel
@@ -58,15 +59,12 @@ impl Processor {
     where
         C: Context<'a>,
     {
-        // Channel for sending callbacks to execute on the processor connection thread
-        let (tx, rx) = mpsc::channel::<ProcessorMessage>();
+        let (tx, rx) = crossbeam_channel::bounded::<ProcessorMessage>(100);
         let channel = cx.channel();
 
-        // process
-        let (permute_tx, permute_rx) = mpsc::channel::<PermuteUpdate>();
+        let (permute_tx, permute_rx) = crossbeam_channel::bounded::<PermuteUpdate>(100);
         let state = Arc::new(Mutex::new(SharedState::init(permute_tx)));
 
-        // process thread
         let js_state = Arc::clone(&state);
         let process_state = Arc::clone(&state);
         let channel_clone = channel.clone();
@@ -188,7 +186,7 @@ impl Processor {
             .expect("Failed to spawn process thread");
 
         // Spawn the update handling thread with proper cleanup
-        let update_handle = thread::Builder::new()
+        let _update_handle = thread::Builder::new()
             .name("UpdateThread".to_string())
             .spawn(move || {
                 let result = catch_unwind(|| {
@@ -245,9 +243,8 @@ impl Processor {
     fn set_state_callback(
         &self,
         callback: impl FnOnce(&Channel, SharedState) + Send + 'static,
-    ) -> Result<(), mpsc::SendError<ProcessorMessage>> {
-        self.tx
-            .send(ProcessorMessage::GetStateCallback(Box::new(callback)))
+    ) -> Result<(), SendError<ProcessorMessage>> {
+        self.tx.send(ProcessorMessage::GetStateCallback(Box::new(callback)))
     }
 }
 

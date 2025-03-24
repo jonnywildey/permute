@@ -8,10 +8,11 @@ mod rms_cache;
 mod process;
 mod random_process;
 
-use std::{sync::mpsc, thread};
+use std::{sync::Arc, thread};
 use display_node::*;
 use permute_files::*;
 use structopt::StructOpt;
+use crossbeam_channel;
 
 use crate::process::PermuteNodeName;
 
@@ -66,7 +67,8 @@ struct PermuteArgs {
 
 fn main() {
     let args = PermuteArgs::from_args();
-    let (_cancel_sender, cancel_receiver) = mpsc::channel();
+    let (cancel_sender, cancel_receiver) = crossbeam_channel::bounded(1);
+    let (tx, rx) = crossbeam_channel::bounded(100); // Buffer size of 100 for updates
 
     let processor_pool: Vec<PermuteNodeName> = match args.processor.as_str() {
         "" => vec![
@@ -97,8 +99,6 @@ fn main() {
         _ => Some(args.processor_count),
     };
 
-    let (tx, rx) = mpsc::channel::<PermuteUpdate>();
-
     println!(
         "Permuting {} to {}, {} mutations",
         args.file, args.output, args.permutations
@@ -121,10 +121,10 @@ fn main() {
             trim_all: args.trim_all,
             create_subdirectories: args.create_subdirectories,
             output_file_as_wav: args.output_file_as_wav,
-            update_sender: tx,
+            update_sender: Arc::new(tx),
             processor_count,
             constrain_length: args.constrain_length,
-            cancel_receiver,
+            cancel_receiver: Arc::new(cancel_receiver),
         });
     });
 

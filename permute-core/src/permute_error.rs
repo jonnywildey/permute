@@ -2,7 +2,7 @@ use biquad::Errors as FilterErrors;
 use sndfile::SndFileError;
 use std::fmt::Display;
 use std::io;
-use std::sync::mpsc::SendError;
+use crossbeam_channel::SendError;
 
 use crate::permute_files::PermuteUpdate;
 

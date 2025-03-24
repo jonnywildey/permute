@@ -9,9 +9,10 @@ use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::BufReader;
 use std::io::Write;
-use std::sync::mpsc;
+use std::sync::Arc;
 use std::thread::JoinHandle;
 use std::fs;
+use crossbeam_channel::{Sender, Receiver};
 
 #[derive(Debug, Clone)]
 pub struct SharedState {
@@ -31,16 +32,16 @@ pub struct SharedState {
     pub constrain_length: bool,
     pub create_subdirectories: bool,
 
-    pub update_sender: mpsc::Sender<PermuteUpdate>,
+    pub update_sender: Arc<Sender<PermuteUpdate>>,
     pub processing: bool,
     pub permutation_outputs: Vec<OutputProgress>,
     pub files: Vec<AudioInfo>,
-    pub cancel_sender: mpsc::Sender<()>,
+    pub cancel_sender: Sender<()>,
 }
 
 impl SharedState {
-    pub fn init(update_sender: mpsc::Sender<PermuteUpdate>) -> Self {
-        let (cancel_sender, _) = mpsc::channel();
+    pub fn init(update_sender: Sender<PermuteUpdate>) -> Self {
+        let (cancel_sender, _) = crossbeam_channel::bounded(1);
         Self {
             high_sample_rate: false,
             input_trail: 0.0,
@@ -52,7 +53,7 @@ impl SharedState {
             permutation_depth: 2,
             permutations: 3,
             processor_count: None,
-            update_sender,
+            update_sender: Arc::new(update_sender),
             processor_pool: ALL_PROCESSORS.to_vec(),
             all_processors: ALL_PROCESSORS.to_vec(),
             processing: false,
@@ -65,7 +66,7 @@ impl SharedState {
     }
 
     fn to_permute_params(&mut self) -> PermuteFilesParams {
-        let (cancel_sender, cancel_receiver) = mpsc::channel();
+        let (cancel_sender, cancel_receiver) = crossbeam_channel::bounded(1);
         // Store the new sender for future cancellation
         self.cancel_sender = cancel_sender;
         
@@ -86,10 +87,9 @@ impl SharedState {
             },
             processor_pool: self.processor_pool.clone(),
             output_file_as_wav: true,
-            update_sender: self.update_sender.to_owned(),
+            update_sender: self.update_sender.clone(),
             create_subdirectories: self.create_subdirectories,
-            
-            cancel_receiver,
+            cancel_receiver: Arc::new(cancel_receiver),
         }
     }
 
@@ -200,7 +200,8 @@ impl SharedState {
     pub fn reverse_file(&mut self, file: String) -> Result<(), PermuteError> {
         self.processing = true;
         let search_file = file.clone();
-        let update_sender = self.update_sender.clone();
+        let update_sender = Arc::try_unwrap(self.update_sender.clone())
+            .unwrap_or_else(|arc| (*arc).clone());
         process_file(file, PermuteNodeName::Reverse, update_sender)?;
 
         self.processing = false;
@@ -221,7 +222,8 @@ impl SharedState {
     pub fn trim_file(&mut self, file: String) -> Result<(), PermuteError> {
         self.processing = true;
         let search_file = file.clone();
-        let update_sender = self.update_sender.clone();
+        let update_sender = Arc::try_unwrap(self.update_sender.clone())
+            .unwrap_or_else(|arc| (*arc).clone());
         process_file(file, PermuteNodeName::Trim, update_sender)?;
         self.processing = false;
         let permutation_output = self

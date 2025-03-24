@@ -3,8 +3,9 @@ use serde::{Deserialize, Serialize};
 use sndfile::{Endian, MajorFormat, SubtypeFormat};
 use std::{
     f64::consts::{E, PI},
-    sync::mpsc,
+    sync::Arc,
 };
+use crossbeam_channel::Sender;
 use strum::EnumIter;
 
 use crate::osc::*;
@@ -25,7 +26,7 @@ pub struct ProcessorParams {
     pub file_format: MajorFormat,
     pub endian: Endian,
 
-    pub update_sender: mpsc::Sender<PermuteUpdate>,
+    pub update_sender: Arc<Sender<PermuteUpdate>>,
 }
 
 #[derive(Debug, Clone)]
@@ -40,7 +41,7 @@ pub struct Permutation {
     pub files: Vec<String>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, EnumIter, Serialize, Deserialize)]
 pub enum PermuteNodeEvent {
     NodeProcessStarted,
     NodeProcessComplete,
