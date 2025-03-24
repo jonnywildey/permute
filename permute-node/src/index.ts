@@ -23,6 +23,7 @@ const {
   trimFile,
   selectAllProcessors,
   deselectAllProcessors,
+  setViewedWelcome,
 } = require("../permute-library");
 
 const PERMUTE_POLL_LATENCY = 100;
@@ -43,7 +44,8 @@ export interface IPermuteState {
   normaliseAtEnd: boolean,
   trimAll: boolean,
   createSubdirectories: boolean,
-  permutationOutputs: IPermutationOutput[];
+  permutationOutputs: IPermutationOutput[],
+  viewedWelcome: boolean,
 };
 
 export interface IPermutationInput {
@@ -170,6 +172,9 @@ export function createPermuteProcessor() {
     },
     deselectAllProcessors() {
       return deselectAllProcessors.call(permuteLibrary);
+    },
+    setViewedWelcome(viewed: boolean) {
+      return setViewedWelcome.call(permuteLibrary, viewed);
     },
     getStateCallback,
     async getState(): Promise<IPermuteState> {

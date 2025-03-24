@@ -297,6 +297,7 @@ impl Processor {
                     let trim_all: Handle<'_, JsBoolean> = cx.boolean(state.trim_all);
                     let create_subdirectories: Handle<'_, JsBoolean> =
                         cx.boolean(state.create_subdirectories);
+                    let viewed_welcome: Handle<'_, JsBoolean> = cx.boolean(state.viewed_welcome);
 
                     let files = cx.empty_array();
                     for i in 0..state.files.len() {
@@ -368,6 +369,7 @@ impl Processor {
                     obj.set(&mut cx, "trimAll", trim_all)?;
                     obj.set(&mut cx, "permutationOutputs", permutation_outputs)?;
                     obj.set(&mut cx, "createSubdirectories", create_subdirectories)?;
+                    obj.set(&mut cx, "viewedWelcome", viewed_welcome)?;
 
                     let args = vec![obj];
 

@@ -42,6 +42,7 @@ declare global {
           completeFn: (state: IPermuteState) => void,
           file: string
         ): void;
+        setViewedWelcome(viewed: boolean): void;
       } & IpcRenderer;
     };
   }

@@ -32,6 +32,7 @@ const defaultAppState: IAppState = {
     files: [],
     permutationOutputs: [],
     processorPool: [],
+    viewedWelcome: false,
   } as any,
 };
 
@@ -323,33 +324,51 @@ const Content = ({ onOpen }: { onOpen: () => void }) => {
 export default function App() {
   const [loading, setLoading] = useState(true);
   const [showContent, setShowContent] = useState(false);
+  const [state, setState] = useState<IAppState>(defaultAppState);
   const { isOpen, onClose, onOpen } = useDisclosure({
-    defaultIsOpen: true,
+    defaultIsOpen: true, // We'll control this after state loads
   });
 
-  useEffect(() => {
-    // Preload the background image
-    const img = new Image();
-    img.src = require('../img/bg2.png');
+  const handleWelcomeClose = () => {
+    window.Electron.ipcRenderer.setViewedWelcome(true);
+    onClose();
+  };
 
-    // Wait for both the timeout and image load
+  useEffect(() => {
+    // Load initial state and preload images in parallel
     Promise.all([
-      new Promise(resolve => setTimeout(resolve, 1500)),
+      window.Electron.ipcRenderer.getState().then(permuteState => {
+        setState({ permuteState });
+        return permuteState;
+      }),
       new Promise(resolve => {
+        const img = new Image();
+        img.src = require('../img/bg2.png');
         if (img.complete) {
           resolve(null);
         } else {
           img.onload = () => resolve(null);
         }
-      })
-    ]).then(() => {
+      }),
+      // Add minimum loading time for smoother UX
+      new Promise(resolve => setTimeout(resolve, 1500))
+    ]).then(([permuteState]) => {
       setLoading(false);
       // Add a small delay before showing the main content
       setTimeout(() => {
         setShowContent(true);
       }, 500);
+
+      // Set initial welcome screen state based on loaded state
+      if (permuteState.viewedWelcome) {
+        onClose();
+      }
     });
-  }, []);
+  }, [onClose]);
+
+  // Don't render welcome screen until we have state
+  debugger;
+  const shouldShowWelcome = !loading && isOpen && !state.permuteState.viewedWelcome;
 
   return (
     <ChakraProvider theme={theme}>
@@ -379,7 +398,7 @@ export default function App() {
           </>
         ) : (
           <>
-            <Welcome isOpen={isOpen} onClose={onClose} />
+            {shouldShowWelcome && <Welcome isOpen={true} onClose={handleWelcomeClose} />}
             <Box
               opacity={showContent ? 1 : 0}
               transform={showContent ? "translateY(0)" : "translateY(20px)"}

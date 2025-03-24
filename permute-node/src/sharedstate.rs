@@ -35,6 +35,7 @@ pub struct SharedState {
     pub processor_count: Option<i32>,
     pub constrain_length: bool,
     pub create_subdirectories: bool,
+    pub viewed_welcome: bool,
 
     pub update_sender: Arc<Sender<PermuteUpdate>>,
     pub processing: bool,
@@ -69,6 +70,7 @@ impl SharedState {
             cancel_sender,
             constrain_length: true,
             create_subdirectories: true,
+            viewed_welcome: false,
         }
     }
 
@@ -404,6 +406,7 @@ impl SharedState {
             processor_count: self.processor_count,
             processor_pool: self.processor_pool.clone(),
             create_subdirectories: self.create_subdirectories,
+            viewed_welcome: self.viewed_welcome,
         };
         let json = serde_json::to_string(&data)?;
         let mut file = File::create(path)?;
@@ -428,6 +431,7 @@ impl SharedState {
         self.processor_count = data.processor_count;
         self.processor_pool = data.processor_pool;
         self.create_subdirectories = data.create_subdirectories;
+        self.viewed_welcome = data.viewed_welcome;
         
         Ok(())
     }
@@ -447,4 +451,5 @@ pub struct SharedStateSerializable {
     pub high_sample_rate: bool,
     pub processor_count: Option<i32>,
     pub create_subdirectories: bool,
+    pub viewed_welcome: bool,
 }

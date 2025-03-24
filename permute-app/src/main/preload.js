@@ -113,5 +113,8 @@ contextBridge.exposeInMainWorld('Electron', {
     deselectAllProcessors() {
       ipcRenderer.send('deselect-all-processors');
     },
+    setViewedWelcome(viewed) {
+      ipcRenderer.send('set-viewed-welcome', viewed);
+    },
   },
 });

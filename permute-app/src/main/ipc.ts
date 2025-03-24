@@ -135,6 +135,10 @@ ipcMain.on('deselect-all-processors', async () => {
   processor.deselectAllProcessors();
 });
 
+ipcMain.on('set-viewed-welcome', async (_, param) => {
+  processor.setViewedWelcome(param);
+});
+
 app.on('before-quit', () => {
   processor.saveSettings(configPath);
 });
