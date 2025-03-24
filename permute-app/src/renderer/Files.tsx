@@ -185,7 +185,7 @@ export const Files = memo(({
 
   return (
     <GridItem
-      rowSpan={17}
+      rowSpan={19}
       colSpan={3}
       bg={bg}
       pt={4}

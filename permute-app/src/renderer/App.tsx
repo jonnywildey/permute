@@ -11,7 +11,7 @@ import {
   useColorMode
 } from '@chakra-ui/react';
 import type { IPermuteState } from 'permute-node';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Files } from './Files';
 import { TopBar } from './TopBar';
 import { Output } from './Output';
@@ -20,6 +20,7 @@ import { theme } from './theme';
 import { Processors } from './Processors';
 import { Welcome } from './Welcome';
 import { CreateAudioContext } from './AudioContext';
+import { debounce } from 'lodash';
 
 export interface IAppState {
   permuteState: IPermuteState;
@@ -43,20 +44,31 @@ const Content = ({ onOpen }: { onOpen: () => void }) => {
     document.body.setAttribute('data-theme', colorMode);
   }, [colorMode]);
 
-  const refreshState = async () => {
-    try {
-      const permuteState = await window.Electron.ipcRenderer.getState();
-      setState({ ...state, permuteState });
-    } catch (error) {
-      console.error('Failed to refresh state:', error);
-      toast({
-        description: 'Failed to refresh application state',
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-      });
-    }
-  };
+  // Create a debounced version of the state refresh
+  const refreshState = useCallback(
+    debounce(async () => {
+      try {
+        const permuteState = await window.Electron.ipcRenderer.getState();
+        setState(prevState => ({ ...prevState, permuteState }));
+      } catch (error) {
+        console.error('Failed to refresh state:', error);
+        toast({
+          description: 'Failed to refresh application state',
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+        });
+      }
+    }, 100),
+    [toast]
+  );
+
+  // Cleanup the debounced function when component unmounts
+  useEffect(() => {
+    return () => {
+      refreshState.cancel();
+    };
+  }, [refreshState]);
 
   useEffect(() => {
     const setup = async () => {
@@ -218,7 +230,7 @@ const Content = ({ onOpen }: { onOpen: () => void }) => {
 
   return (
     <Grid
-      templateRows="repeat(24, 1fr)"
+      templateRows="repeat(26, 1fr)"
       templateColumns="repeat(12, 1fr)"
       gap={3}
       padding={2}

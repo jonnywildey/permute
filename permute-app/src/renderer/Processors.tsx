@@ -55,7 +55,7 @@ export const Processors = memo(({
 
   return (
     <GridItem
-      rowSpan={17}
+      rowSpan={19}
       colSpan={6}
       maxHeight="100%"
       padding="4"
