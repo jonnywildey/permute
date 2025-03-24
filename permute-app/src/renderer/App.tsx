@@ -243,14 +243,21 @@ const Content = ({ onOpen }: { onOpen: () => void }) => {
   };
 
   const handleLoadScene = () => {
-    window.Electron.ipcRenderer.loadScene(async (filePath) => {
-      if (filePath) {
+    window.Electron.ipcRenderer.loadScene(async (response) => {
+      if (response.success) {
         const permuteState = await window.Electron.ipcRenderer.getState();
         setState({ permuteState });
         toast({
           description: 'Scene loaded successfully',
           status: 'success',
           duration: 3000,
+          isClosable: true,
+        });
+      } else {
+        toast({
+          description: 'Error loading scene',
+          status: 'error',
+          duration: 5000,
           isClosable: true,
         });
       }

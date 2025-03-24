@@ -22,32 +22,6 @@ export const SystemMenu: React.FC<SystemMenuProps> = ({
   const overwriteLabel = "Every run will overwrite existing files with the same name. If you want to keep files, you will need to move or rename them first."
   const createSubfoldersLabel = "Every run will create a new subfolder for each permutation.  This will ensure all files are kept, but may create a lot of subfolders and files."
 
-  const handleSaveScene = () => {
-    window.Electron.ipcRenderer.saveScene((filePath) => {
-      if (filePath) {
-        toast({
-          description: 'Scene saved successfully',
-          status: 'success',
-          duration: 3000,
-          isClosable: true,
-        });
-      }
-    });
-  };
-
-  const handleLoadScene = () => {
-    window.Electron.ipcRenderer.loadScene((filePath) => {
-      if (filePath) {
-        toast({
-          description: 'Scene loaded successfully',
-          status: 'success',
-          duration: 3000,
-          isClosable: true,
-        });
-      }
-    });
-  };
-
   return (
     <Menu closeOnSelect={false}>
       <MenuButton

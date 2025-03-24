@@ -153,8 +153,12 @@ body[data-theme="light"] {
   background-size: 400% !important;
 }
 
+.chakra-alert[data-status="error"] {
+  background-color: #ed91b2 !important;
+}
+
 .chakra-alert {
-  background-color: var(--chakra-colors-brand-200) !important;
+  background-color: #49bd90 !important;
 }
 
 .filename-ellipsis {

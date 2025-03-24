@@ -31,8 +31,28 @@ ipcMain.on('load-scene-dialog', async (event) => {
     properties: ['openFile']
   });
   if (!result.canceled && result.filePaths.length > 0) {
-    processor.loadSettings(result.filePaths[0]);
-    event.reply('load-scene-dialog', result.filePaths[0]);
+    try {
+      processor.loadSettings(result.filePaths[0]);
+      // Get state to check for errors
+      const state = await processor.getState();
+      if (state.error) {
+        event.reply('load-scene-dialog', {
+          success: false,
+          error: state.error
+        });
+      } else {
+        event.reply('load-scene-dialog', {
+          success: true,
+          filePath: result.filePaths[0]
+        });
+      }
+    } catch (error: any) {
+      console.error(error);
+      event.reply('load-scene-dialog', {
+        success: false,
+        error: `failed to load scene`
+      });
+    }
   }
 });
 

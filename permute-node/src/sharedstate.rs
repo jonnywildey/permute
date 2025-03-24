@@ -74,6 +74,14 @@ impl SharedState {
         }
     }
 
+    pub fn clear_error(&mut self) {
+        self.error = String::default();
+    }
+
+    pub fn set_error(&mut self, error: String) {
+        self.error = error;
+    }
+
     fn to_permute_params(&mut self) -> PermuteFilesParams {
         let (cancel_sender, cancel_receiver) = crossbeam_channel::bounded(1);
         // Store the new sender for future cancellation
@@ -100,6 +108,7 @@ impl SharedState {
     }
 
     pub fn add_file(&mut self, file: String) -> Result<(), AudioFileError> {
+        self.clear_error();
         if self.files.iter().any(|f| f.path == file) {
             return Ok(());
         }
@@ -135,10 +144,12 @@ impl SharedState {
     }
 
     pub fn remove_file(&mut self, file: String) {
+        self.clear_error();
         self.files.retain(|f| f.path != file);
     }
 
     pub fn add_processor(&mut self, name: String) {
+        self.clear_error();
         let processor = get_processor_from_display_name(&name).unwrap();
         if self.processor_pool.iter().all(|p| *p != processor) {
             let _ = &self.processor_pool.push(processor);
@@ -146,16 +157,14 @@ impl SharedState {
     }
 
     pub fn remove_processor(&mut self, name: String) {
+        self.clear_error();
         let processor = get_processor_from_display_name(&name).unwrap();
         self.processor_pool.retain(|p| *p != processor);
     }
 
     pub fn set_output(&mut self, output: String) {
+        self.clear_error();
         self.output = output;
-    }
-
-    pub fn set_error(&mut self, error: String) {
-        self.error = error;
     }
 
     pub fn get_ordered_outputs(&self) -> Vec<OutputProgress> {
@@ -248,6 +257,7 @@ impl SharedState {
     }
 
     pub fn reverse_file(&mut self, file: String) -> Result<(), PermuteError> {
+        self.clear_error();
         self.processing = true;
         let update_sender = Arc::try_unwrap(self.update_sender.clone())
             .unwrap_or_else(|arc| (*arc).clone());
@@ -266,6 +276,7 @@ impl SharedState {
     }
 
     pub fn trim_file(&mut self, file: String) -> Result<(), PermuteError> {
+        self.clear_error();
         self.processing = true;
         let update_sender = Arc::try_unwrap(self.update_sender.clone())
             .unwrap_or_else(|arc| (*arc).clone());
@@ -284,6 +295,7 @@ impl SharedState {
     }
 
     pub fn run_process(&mut self) -> JoinHandle<()> {
+        self.clear_error();
         if self.processing {
             return thread::spawn(|| {});
         }
@@ -396,7 +408,8 @@ pub struct OutputProgress {
 impl Finalize for OutputProgress {}
 
 impl SharedState {
-    pub fn write_to_json(&self, path: String) -> std::io::Result<()> {
+    pub fn write_to_json(&mut self, path: String) -> std::io::Result<()> {
+        self.clear_error();
         let data = SharedStateSerializable {
             files: self.files.clone(),
             high_sample_rate: self.high_sample_rate,
@@ -419,9 +432,22 @@ impl SharedState {
     }
 
     pub fn read_from_json(&mut self, path: String) -> std::io::Result<()> {
-        let file = File::open(path)?;
+        self.clear_error();
+        let file = File::open(&path).map_err(|e| {
+            std::io::Error::new(
+                std::io::ErrorKind::Other,
+                format!("Could not open file '{}': {}", path, e)
+            )
+        })?;
+        
         let reader = BufReader::new(file);
-        let data: SharedStateSerializable = serde_json::from_reader(reader)?;
+        let data: SharedStateSerializable = serde_json::from_reader(reader)
+            .map_err(|e| {
+                std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    format!("Invalid scene file format: {}", e)
+                )
+            })?;
 
         self.files = data.files;
         self.high_sample_rate = data.high_sample_rate;
@@ -443,17 +469,43 @@ impl SharedState {
 
 #[derive(Serialize, Deserialize)]
 pub struct SharedStateSerializable {
+    #[serde(default)]
     pub files: Vec<AudioInfo>,
+    #[serde(default)]
     pub output: String,
+    #[serde(default = "default_input_trail")]
     pub input_trail: f64,
+    #[serde(default = "default_output_trail")]
     pub output_trail: f64,
+    #[serde(default = "default_permutations")]
     pub permutations: usize,
+    #[serde(default = "default_permutation_depth")]
     pub permutation_depth: usize,
+    #[serde(default = "default_processor_pool")]
     pub processor_pool: Vec<PermuteNodeName>,
+    #[serde(default = "default_normalise_at_end")]
     pub normalise_at_end: bool,
+    #[serde(default)]
     pub trim_all: bool,
+    #[serde(default)]
     pub high_sample_rate: bool,
+    #[serde(default = "default_processor_count")]
     pub processor_count: Option<i32>,
+    #[serde(default = "default_true")]
     pub create_subdirectories: bool,
+    #[serde(default)]
     pub viewed_welcome: bool,
 }
+
+fn default_input_trail() -> f64 { 0.0 }
+fn default_output_trail() -> f64 { 2.0 }
+fn default_permutations() -> usize { 3 }
+fn default_permutation_depth() -> usize { 2 }
+fn default_processor_pool() -> Vec<PermuteNodeName> { ALL_PROCESSORS.to_vec() }
+fn default_normalise_at_end() -> bool { true }
+fn default_processor_count() -> Option<i32> { 
+    Some(std::thread::available_parallelism()
+        .map(|n| std::cmp::min(n.get(), 4) as i32)
+        .unwrap_or(1))
+}
+fn default_true() -> bool { true }

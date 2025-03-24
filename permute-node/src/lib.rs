@@ -160,7 +160,13 @@ impl Processor {
                                     state.set_depth(depth);
                                 }
                                 ProcessorMessage::LoadSettingsFromJson(file) => {
-                                    state.read_from_json(file).unwrap_or(())
+                                  match state.read_from_json(file) {
+                                    Ok(()) => {}
+                                    Err(err) => {
+                                        println!("Error loading settings: {}", err.to_string());
+                                        state.set_error(err.to_string());
+                                    }
+                                  }
                                 }
                                 ProcessorMessage::SaveSettingsToJson(file) => {
                                     state.write_to_json(file).unwrap_or(())
