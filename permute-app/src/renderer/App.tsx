@@ -36,7 +36,7 @@ const defaultAppState: IAppState = {
   } as any,
 };
 
-const Content = ({ onOpen }: { onOpen: () => void }) => {
+const Content = () => {
   const [state, setState] = useState<IAppState>(defaultAppState);
   const toast = useToast();
   const { colorMode } = useColorMode();
@@ -71,6 +71,8 @@ const Content = ({ onOpen }: { onOpen: () => void }) => {
     };
   }, [refreshState]);
 
+
+
   useEffect(() => {
     const setup = async () => {
       try {
@@ -91,6 +93,10 @@ const Content = ({ onOpen }: { onOpen: () => void }) => {
     };
     setup();
   }, [toast]);
+
+  const { isOpen, onClose, onOpen } = useDisclosure({
+    defaultIsOpen: false, // We'll control this after state loads
+  });
 
   const {
     allProcessors,
@@ -145,27 +151,27 @@ const Content = ({ onOpen }: { onOpen: () => void }) => {
     window.Electron.ipcRenderer.trimFile(refreshState, onFinished, file);
   };
   const setDepth = async (depth: number) => {
-    window.Electron.ipcRenderer.setDepth(depth);
+    await window.Electron.ipcRenderer.setDepth(depth);
     refreshState();
   };
   const setPermutations = async (permutations: number) => {
-    window.Electron.ipcRenderer.setPermutations(permutations);
+    await window.Electron.ipcRenderer.setPermutations(permutations);
     refreshState();
   };
   const setNormalised = async (normaliseAtEnd: boolean) => {
-    window.Electron.ipcRenderer.setNormalised(normaliseAtEnd);
+    await window.Electron.ipcRenderer.setNormalised(normaliseAtEnd);
     refreshState();
   };
   const setTrimAll = async (trimAll: boolean) => {
-    window.Electron.ipcRenderer.setTrimAll(trimAll);
+    await window.Electron.ipcRenderer.setTrimAll(trimAll);
     refreshState();
   };
   const setInputTrail = async (inputTrail: number) => {
-    window.Electron.ipcRenderer.setInputTrail(inputTrail);
+    await window.Electron.ipcRenderer.setInputTrail(inputTrail);
     refreshState();
   };
   const setOutputTrail = async (outputTrail: number) => {
-    window.Electron.ipcRenderer.setOutputTrail(outputTrail);
+    await window.Electron.ipcRenderer.setOutputTrail(outputTrail);
     refreshState();
   };
   const addFiles = async (files: string[]) => {
@@ -273,6 +279,7 @@ const Content = ({ onOpen }: { onOpen: () => void }) => {
       width="100%"
       height="100vh"
     >
+      <Welcome isOpen={isOpen} onClose={onClose} />
       <TopBar
         openWelcome={onOpen}
         createSubdirectories={createSubdirectories}
@@ -332,7 +339,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [showContent, setShowContent] = useState(false);
   const [state, setState] = useState<IAppState>(defaultAppState);
-  const { isOpen, onClose, onOpen } = useDisclosure({
+  const { isOpen, onClose } = useDisclosure({
     defaultIsOpen: true, // We'll control this after state loads
   });
 
@@ -412,7 +419,7 @@ export default function App() {
               width="100%"
               height="100%"
             >
-              {showContent && <Content onOpen={onOpen} />}
+              {showContent && <Content />}
             </Box>
           </>
         )}
