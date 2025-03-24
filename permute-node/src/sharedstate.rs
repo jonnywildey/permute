@@ -13,6 +13,8 @@ use std::sync::Arc;
 use std::thread::JoinHandle;
 use std::fs;
 use crossbeam_channel::{Sender, Receiver};
+use std::sync::Mutex;
+use std::thread;
 
 #[derive(Debug, Clone)]
 pub struct SharedState {
@@ -52,7 +54,9 @@ impl SharedState {
             output_trail: 2.0,
             permutation_depth: 2,
             permutations: 3,
-            processor_count: None,
+            processor_count: Some(std::thread::available_parallelism()
+                .map(|n| std::cmp::min(n.get(), 4) as i32)
+                .unwrap_or(1)),
             update_sender: Arc::new(update_sender),
             processor_pool: ALL_PROCESSORS.to_vec(),
             all_processors: ALL_PROCESSORS.to_vec(),
@@ -81,10 +85,7 @@ impl SharedState {
             output_trail: self.output_trail,
             permutation_depth: self.permutation_depth,
             permutations: self.permutations,
-            processor_count: match self.permutation_depth {
-                0 => Some(1),
-                _ => None,
-            },
+            processor_count: self.processor_count,
             processor_pool: self.processor_pool.clone(),
             output_file_as_wav: true,
             update_sender: self.update_sender.clone(),
@@ -241,12 +242,32 @@ impl SharedState {
     }
 
     pub fn run_process(&mut self) -> JoinHandle<()> {
-        self.permutation_outputs = vec![];
+        if self.processing {
+            return thread::spawn(|| {});
+        }
         self.processing = true;
-        self.error = String::default();
-        let permute_params = self.to_permute_params();
-
-        permute_files(permute_params)
+        let params = self.to_permute_params();
+        
+        // Spawn a thread for the actual processing
+        let state = Arc::new(Mutex::new(self.clone()));
+        thread::spawn(move || {
+            // Get the handle from permute_files and wait for it
+            let handle = permute_files(params);
+            // Wait for the processing to complete
+            match handle.join() {
+                Ok(_) => {
+                    if let Ok(mut state) = state.lock() {
+                        let _ = state.set_finished();
+                    }
+                }
+                Err(e) => {
+                    if let Ok(mut state) = state.lock() {
+                        state.set_error(format!("Processing thread panicked: {:?}", e));
+                        let _ = state.set_finished();
+                    }
+                }
+            }
+        })
     }
 
     pub fn delete_output_file(&mut self, file: String) -> Result<(), std::io::Error> {

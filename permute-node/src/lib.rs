@@ -15,6 +15,7 @@ type ProcessorCallback = Box<dyn FnOnce(&Channel, SharedState) + Send>;
 // Wraps a SQLite connection a channel, allowing concurrent access
 struct Processor {
     tx: Sender<ProcessorMessage>,
+    worker_count: usize,
 }
 
 // Messages sent on the database channel
@@ -49,16 +50,15 @@ impl Finalize for Processor {}
 // Internal implementation
 impl Processor {
     // Creates a new instance of `Processor`
-    //
-    // 1. Creates a js/processor channel
-    // 2. Creates a permute/processor channel
-    // 3. Spawns a thread and moves the channel receiver and connection to it
-    // 4. On a separate thread, read closures off the channel and execute with access
-    //    to the connection.
     fn new<'a, C>(cx: &mut C) -> Result<Self, Error>
     where
         C: Context<'a>,
     {
+        // Get number of CPU cores, but cap at 4 to avoid excessive resource usage
+        let worker_count = std::thread::available_parallelism()
+            .map(|n| std::cmp::min(n.get(), 4))
+            .unwrap_or(1);
+
         let (tx, rx) = crossbeam_channel::bounded::<ProcessorMessage>(100);
         let channel = cx.channel();
 
@@ -69,121 +69,128 @@ impl Processor {
         let process_state = Arc::clone(&state);
         let channel_clone = channel.clone();
 
-        // Spawn the main processing thread with proper cleanup
-        let _process_handle = thread::Builder::new()
-            .name("ProcessThread".to_string())
-            .spawn(move || {
-                let result = catch_unwind(|| {
-                    while let Ok(message) = rx.recv() {
-                        let mut state = js_state.lock().unwrap();
-                        match message {
-                            ProcessorMessage::GetStateCallback(f) => {
-                                f(&channel_clone, state.clone());
-                            }
-                            ProcessorMessage::Run => {
-                                state.run_process();
-                            }
-                            ProcessorMessage::AddFile(file) => match state.add_file(file) {
-                                Ok(()) => {}
-                                Err(err) => {
-                                    println!("Error adding file: {:?}", err.to_string());
-                                    state.set_error(err.to_string());
+        // Spawn worker threads
+        for i in 0..worker_count {
+            let worker_state = Arc::clone(&state);
+            let worker_rx = rx.clone();
+            let worker_channel = channel.clone();
+            let worker_js_state = Arc::clone(&js_state);
+            
+            thread::Builder::new()
+                .name(format!("ProcessThread_{}", i))
+                .spawn(move || {
+                    let result = catch_unwind(|| {
+                        while let Ok(message) = worker_rx.recv() {
+                            let mut state = worker_state.lock().unwrap();
+                            match message {
+                                ProcessorMessage::GetStateCallback(f) => {
+                                    f(&worker_channel, state.clone());
                                 }
-                            },
-                            ProcessorMessage::RemoveFile(file) => {
-                                state.remove_file(file);
-                            }
-                            ProcessorMessage::DeleteOutputFile(file) => {
-                                match state.delete_output_file(file) {
+                                ProcessorMessage::Run => {
+                                    state.run_process();
+                                }
+                                ProcessorMessage::AddFile(file) => match state.add_file(file) {
                                     Ok(()) => {}
                                     Err(err) => {
-                                        println!("Error deleting output file: {}", err.to_string());
+                                        println!("Error adding file: {:?}", err.to_string());
                                         state.set_error(err.to_string());
                                     }
+                                },
+                                ProcessorMessage::RemoveFile(file) => {
+                                    state.remove_file(file);
                                 }
-                            }
-                            ProcessorMessage::DeleteAllOutputFiles => {
-                                match state.delete_all_output_files() {
+                                ProcessorMessage::DeleteOutputFile(file) => {
+                                    match state.delete_output_file(file) {
+                                        Ok(()) => {}
+                                        Err(err) => {
+                                            println!("Error deleting output file: {}", err.to_string());
+                                            state.set_error(err.to_string());
+                                        }
+                                    }
+                                }
+                                ProcessorMessage::DeleteAllOutputFiles => {
+                                    match state.delete_all_output_files() {
+                                        Ok(()) => {}
+                                        Err(err) => {
+                                            println!("Error deleting all output files: {}", err.to_string());
+                                            state.set_error(err.to_string());
+                                        }
+                                    }
+                                }
+                                ProcessorMessage::ReverseFile(file) => match state.reverse_file(file) {
                                     Ok(()) => {}
                                     Err(err) => {
-                                        println!("Error deleting all output files: {}", err.to_string());
+                                        println!("Error reversing file: {}", err.to_string());
                                         state.set_error(err.to_string());
                                     }
+                                },
+                                ProcessorMessage::TrimFile(file) => match state.trim_file(file) {
+                                    Ok(()) => {}
+                                    Err(err) => {
+                                        println!("Error trimming file: {}", err.to_string());
+                                        state.set_error(err.to_string());
+                                    }
+                                },
+                                ProcessorMessage::AddProcessor(name) => {
+                                    state.add_processor(name);
                                 }
-                            }
-                            ProcessorMessage::ReverseFile(file) => match state.reverse_file(file) {
-                                Ok(()) => {}
-                                Err(err) => {
-                                    println!("Error reversing file: {}", err.to_string());
-                                    state.set_error(err.to_string());
+                                ProcessorMessage::RemoveProcessor(name) => {
+                                    state.remove_processor(name);
                                 }
-                            },
-                            ProcessorMessage::TrimFile(file) => match state.trim_file(file) {
-                                Ok(()) => {}
-                                Err(err) => {
-                                    println!("Error trimming file: {}", err.to_string());
-                                    state.set_error(err.to_string());
+                                ProcessorMessage::SetOutput(output) => {
+                                    state.set_output(output);
                                 }
-                            },
-                            ProcessorMessage::AddProcessor(name) => {
-                                state.add_processor(name);
-                            }
-                            ProcessorMessage::RemoveProcessor(name) => {
-                                state.remove_processor(name);
-                            }
-                            ProcessorMessage::SetOutput(output) => {
-                                state.set_output(output);
-                            }
-                            ProcessorMessage::SetInputTrail(trail) => {
-                                state.set_input_trail(trail);
-                            }
-                            ProcessorMessage::SetOutputTrail(trail) => {
-                                state.set_output_trail(trail);
-                            }
-                            ProcessorMessage::SetNormalised(normalised) => {
-                                state.set_normalised(normalised);
-                            }
-                            ProcessorMessage::SetTrimAll(trim_all) => {
-                                state.set_trim_all(trim_all);
-                            }
-                            ProcessorMessage::SetPermutations(permutations) => {
-                                state.set_permutations(permutations);
-                            }
-                            ProcessorMessage::SetPermutationDepth(depth) => {
-                                state.set_depth(depth);
-                            }
-                            ProcessorMessage::LoadSettingsFromJson(file) => {
-                                state.read_from_json(file).unwrap_or(())
-                            }
-                            ProcessorMessage::SaveSettingsToJson(file) => {
-                                state.write_to_json(file).unwrap_or(())
-                            }
-                            ProcessorMessage::SetCreateSubdirectories(create) => {
-                                state.set_create_subdirectories(create);
-                            }
-                            ProcessorMessage::SelectAllProcessors => {
-                                state.select_all_processors();
-                            }
-                            ProcessorMessage::DeselectAllProcessors => {
-                                state.deselect_all_processors();
-                            }
-                            ProcessorMessage::Cancel => {
-                                state.cancel();
+                                ProcessorMessage::SetInputTrail(trail) => {
+                                    state.set_input_trail(trail);
+                                }
+                                ProcessorMessage::SetOutputTrail(trail) => {
+                                    state.set_output_trail(trail);
+                                }
+                                ProcessorMessage::SetNormalised(normalised) => {
+                                    state.set_normalised(normalised);
+                                }
+                                ProcessorMessage::SetTrimAll(trim_all) => {
+                                    state.set_trim_all(trim_all);
+                                }
+                                ProcessorMessage::SetPermutations(permutations) => {
+                                    state.set_permutations(permutations);
+                                }
+                                ProcessorMessage::SetPermutationDepth(depth) => {
+                                    state.set_depth(depth);
+                                }
+                                ProcessorMessage::LoadSettingsFromJson(file) => {
+                                    state.read_from_json(file).unwrap_or(())
+                                }
+                                ProcessorMessage::SaveSettingsToJson(file) => {
+                                    state.write_to_json(file).unwrap_or(())
+                                }
+                                ProcessorMessage::SetCreateSubdirectories(create) => {
+                                    state.set_create_subdirectories(create);
+                                }
+                                ProcessorMessage::SelectAllProcessors => {
+                                    state.select_all_processors();
+                                }
+                                ProcessorMessage::DeselectAllProcessors => {
+                                    state.deselect_all_processors();
+                                }
+                                ProcessorMessage::Cancel => {
+                                    state.cancel();
+                                }
                             }
                         }
-                    }
-                });
-
-                // Handle any panics in the processing thread
-                if let Err(panic) = result {
-                    let mut state = js_state.lock().unwrap();
-                    state.set_error(format!("Processing thread panicked: {:?}", panic));
-                    state.set_finished().unwrap_or_else(|e| {
-                        println!("Error setting finished state after panic: {}", e);
                     });
-                }
-            })
-            .expect("Failed to spawn process thread");
+
+                    // Handle any panics in the processing thread
+                    if let Err(panic) = result {
+                        let mut state = worker_js_state.lock().unwrap();
+                        state.set_error(format!("Processing thread panicked: {:?}", panic));
+                        state.set_finished().unwrap_or_else(|e| {
+                            println!("Error setting finished state after panic: {}", e);
+                        });
+                    }
+                })
+                .expect("Failed to spawn process thread");
+        }
 
         // Spawn the update handling thread with proper cleanup
         let _update_handle = thread::Builder::new()
@@ -237,7 +244,7 @@ impl Processor {
             })
             .expect("Failed to spawn update thread");
 
-        Ok(Self { tx })
+        Ok(Self { tx, worker_count })
     }
 
     fn set_state_callback(
