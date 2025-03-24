@@ -151,26 +151,74 @@ const Content = () => {
     window.Electron.ipcRenderer.trimFile(refreshState, onFinished, file);
   };
   const setDepth = async (depth: number) => {
+    // Update state immediately
+    setState(prevState => ({
+      permuteState: {
+        ...prevState.permuteState,
+        permutationDepth: depth
+      }
+    }));
+    // Let IPC update happen in background
     await window.Electron.ipcRenderer.setDepth(depth);
     refreshState();
   };
   const setPermutations = async (permutations: number) => {
+    // Update state immediately
+    setState(prevState => ({
+      permuteState: {
+        ...prevState.permuteState,
+        permutations
+      }
+    }));
+    // Let IPC update happen in background
     await window.Electron.ipcRenderer.setPermutations(permutations);
     refreshState();
   };
   const setNormalised = async (normaliseAtEnd: boolean) => {
+    // Update state immediately
+    setState(prevState => ({
+      permuteState: {
+        ...prevState.permuteState,
+        normaliseAtEnd
+      }
+    }));
+    // Let IPC update happen in background
     await window.Electron.ipcRenderer.setNormalised(normaliseAtEnd);
     refreshState();
   };
   const setTrimAll = async (trimAll: boolean) => {
+    // Update state immediately
+    setState(prevState => ({
+      permuteState: {
+        ...prevState.permuteState,
+        trimAll
+      }
+    }));
+    // Let IPC update happen in background
     await window.Electron.ipcRenderer.setTrimAll(trimAll);
     refreshState();
   };
   const setInputTrail = async (inputTrail: number) => {
+    // Update state immediately
+    setState(prevState => ({
+      permuteState: {
+        ...prevState.permuteState,
+        inputTrail
+      }
+    }));
+    // Let IPC update happen in background
     await window.Electron.ipcRenderer.setInputTrail(inputTrail);
     refreshState();
   };
   const setOutputTrail = async (outputTrail: number) => {
+    // Update state immediately
+    setState(prevState => ({
+      permuteState: {
+        ...prevState.permuteState,
+        outputTrail
+      }
+    }));
+    // Let IPC update happen in background
     await window.Electron.ipcRenderer.setOutputTrail(outputTrail);
     refreshState();
   };
