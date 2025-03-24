@@ -38,8 +38,8 @@ pub struct SharedState {
 
     pub update_sender: Arc<Sender<PermuteUpdate>>,
     pub processing: bool,
-    // Store outputs by (filename, permutation_index)
-    outputs: HashMap<(String, usize), OutputProgress>,
+    // Store outputs by (file_index, permutation_index)
+    outputs: HashMap<(usize, usize), OutputProgress>,
     pub files: Vec<AudioInfo>,
     pub cancel_sender: Sender<()>,
 }
@@ -104,9 +104,11 @@ impl SharedState {
         let mut audio_info = AudioInfo::default();
         audio_info.update_file(file.clone())?;
         
+        let file_index = self.files.len();
+        
         // Pre-create output progress entries for all permutations
         for i in 1..=self.permutations {
-            self.outputs.insert((file.clone(), i), OutputProgress {
+            self.outputs.insert((file_index, i), OutputProgress {
                 output: String::new(), // Will be set when actually processing
                 progress: 0,
                 permutation: Permutation {
@@ -122,6 +124,7 @@ impl SharedState {
                 processors: vec![],
                 audio_info: AudioInfo::default(),
                 deleted: false,
+                source_file: file.clone(),
             });
         }
 
@@ -154,17 +157,22 @@ impl SharedState {
     }
 
     pub fn get_ordered_outputs(&self) -> Vec<OutputProgress> {
-        let mut ordered = Vec::new();
-        // For each input file
-        for file in &self.files {
-            // For each permutation number
-            for i in 1..=self.permutations {
-                if let Some(output) = self.outputs.get(&(file.path.clone(), i)) {
-                    ordered.push(output.clone());
-                }
-            }
-        }
-        ordered
+        // Collect all keys and sort them by (file_index, permutation_index)
+        let mut keys: Vec<_> = self.outputs.keys().collect();
+        keys.sort_by_key(|k| *k);  // Natural ordering of tuples works here
+
+        // Use sorted keys to collect outputs in order, filtering out deleted ones
+        keys.iter()
+            .filter_map(|key| {
+                self.outputs.get(key).and_then(|output| {
+                    if !output.deleted {
+                        Some(output.clone())
+                    } else {
+                        None
+                    }
+                })
+            })
+            .collect()
     }
 
     pub fn add_output_progress(
@@ -172,25 +180,32 @@ impl SharedState {
         permutation: Permutation,
         processors: Vec<PermuteNodeName>,
     ) {
-        let key = (permutation.file.clone(), permutation.permutation_index);
-        self.outputs.insert(key, OutputProgress {
-            output: permutation.output.clone(),
-            permutation: permutation.clone(),
-            processors,
-            progress: 0,
-            audio_info: AudioInfo::default(),
-            deleted: false,
-        });
+        // Find file index
+        if let Some(file_index) = self.files.iter().position(|f| f.path == permutation.file) {
+            let key = (file_index, permutation.permutation_index);
+            self.outputs.insert(key, OutputProgress {
+                output: permutation.output.clone(),
+                permutation: permutation.clone(),
+                processors,
+                progress: 0,
+                audio_info: AudioInfo::default(),
+                deleted: false,
+                source_file: permutation.file.clone(),
+            });
+        }
     }
 
     pub fn update_output_progress(&mut self, permutation: Permutation) {
         let percentage_progress: f64 =
             ((permutation.node_index as f64 + 1.0) / permutation.processors.len() as f64) * 100.0;
 
-        let key = (permutation.file.clone(), permutation.permutation_index);
-        if let Some(output) = self.outputs.get_mut(&key) {
-            output.progress = percentage_progress as i32;
-            output.permutation = permutation.clone();
+        // Find file index
+        if let Some(file_index) = self.files.iter().position(|f| f.path == permutation.file) {
+            let key = (file_index, permutation.permutation_index);
+            if let Some(output) = self.outputs.get_mut(&key) {
+                output.progress = percentage_progress as i32;
+                output.permutation = permutation.clone();
+            }
         }
     }
 
@@ -238,9 +253,12 @@ impl SharedState {
         process_file(file.clone(), PermuteNodeName::Reverse, update_sender)?;
 
         self.processing = false;
-        if let Some(output) = self.outputs.get_mut(&(file, 1)) {
-            let mut ai = output.audio_info.clone();
-            ai.update_file(search_file).unwrap();
+        // Find file index and update audio info
+        if let Some(file_index) = self.files.iter().position(|f| f.path == file) {
+            if let Some(output) = self.outputs.get_mut(&(file_index, 1)) {
+                let mut ai = output.audio_info.clone();
+                ai.update_file(search_file).unwrap();
+            }
         }
         Ok(())
     }
@@ -253,9 +271,12 @@ impl SharedState {
         process_file(file.clone(), PermuteNodeName::Trim, update_sender)?;
         
         self.processing = false;
-        if let Some(output) = self.outputs.get_mut(&(file, 1)) {
-            let mut ai = output.audio_info.clone();
-            ai.update_file(search_file).unwrap();
+        // Find file index and update audio info
+        if let Some(file_index) = self.files.iter().position(|f| f.path == file) {
+            if let Some(output) = self.outputs.get_mut(&(file_index, 1)) {
+                let mut ai = output.audio_info.clone();
+                ai.update_file(search_file).unwrap();
+            }
         }
         Ok(())
     }
@@ -265,6 +286,8 @@ impl SharedState {
             return thread::spawn(|| {});
         }
         self.processing = true;
+        // Clear outputs when starting new process
+        self.outputs.clear();
         let params = self.to_permute_params();
         
         // Spawn a thread for the actual processing
@@ -291,28 +314,26 @@ impl SharedState {
 
     pub fn delete_output_file(&mut self, file: String) -> Result<(), std::io::Error> {
         fs::remove_file(&file)?;
-        if let Some(output) = self.outputs.get_mut(&(file.clone(), 1)) {
-            output.deleted = true;
+        // Find and mark as deleted any output that matches this file path
+        for output in self.outputs.values_mut() {
+            if output.output == file {
+                output.deleted = true;
+                break;
+            }
         }
         Ok(())
     }
 
     pub fn delete_all_output_files(&mut self) -> Result<(), std::io::Error> {
-        let mut to_delete = Vec::new();
         let mut last_output_path = String::new();
         
-        for ((file, _), output) in self.outputs.iter() {
+        // Mark all outputs as deleted and collect files to delete
+        for (_, output) in self.outputs.iter_mut() {
             if let Err(e) = fs::remove_file(&output.output) {
                 println!("Error deleting file {}: {}", output.output, e);
             }
             last_output_path = output.output.clone();
-            to_delete.push(file.clone());
-        }
-        
-        for file in to_delete {
-            for i in 1..=self.permutations {
-                self.outputs.get_mut(&(file.clone(), i)).map(|o| o.deleted = true);
-            }
+            output.deleted = true;
         }
 
         if self.create_subdirectories && !last_output_path.is_empty() {
@@ -363,6 +384,7 @@ pub struct OutputProgress {
     pub processors: Vec<PermuteNodeName>,
     pub audio_info: AudioInfo,
     pub deleted: bool,
+    pub source_file: String,
 }
 
 impl Finalize for OutputProgress {}
