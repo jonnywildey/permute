@@ -78,7 +78,7 @@ pub enum PermuteNodeName {
 }
 
 // Only processors we want to be visible to users
-pub const ALL_PROCESSORS: [PermuteNodeName; 23] = [
+pub const ALL_PROCESSORS: [PermuteNodeName; 22] = [
     PermuteNodeName::GranularTimeStretch,
     PermuteNodeName::Fuzz,
     PermuteNodeName::Saturate,
@@ -106,7 +106,8 @@ pub const ALL_PROCESSORS: [PermuteNodeName; 23] = [
     PermuteNodeName::LineFilter,
     PermuteNodeName::CrossGain,
     PermuteNodeName::CrossFilter,
-    PermuteNodeName::CrossDistort,
+    // Cross Distort doesn't seem to do much different to cross gain
+    // PermuteNodeName::CrossDistort,
 ];
 
 pub fn reverse(
@@ -1247,10 +1248,7 @@ pub fn distort(params: &ProcessorParams, factor: f64) -> Result<ProcessorParams,
     let new_samples = params
         .samples
         .iter()
-        .map(|f| {
-            let s = f.signum();
-            f.abs().powf(factor) * s
-        })
+        .map(|f| apply_distortion(*f, factor, DistortionAlgorithm::Power))
         .collect();
     Ok(ProcessorParams {
         samples: new_samples,
@@ -1262,10 +1260,7 @@ pub fn saturate(params: &ProcessorParams) -> Result<ProcessorParams, PermuteErro
     let new_samples = params
         .samples
         .iter()
-        .map(|f| {
-            let s = f.signum();
-            s * (1.0 - E.powf(-1.0 * f.abs()))
-        })
+        .map(|f| apply_distortion(*f, 1.0, DistortionAlgorithm::Saturate))
         .collect();
     Ok(ProcessorParams {
         samples: new_samples,
@@ -1805,12 +1800,51 @@ fn calculate_rms(samples: &[f64], window_size: usize) -> Vec<f64> {
     rms_values
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum DistortionAlgorithm {
+    Power,      // Original algorithm
+    Tanh,       // Hyperbolic tangent
+    Atan,       // Arctangent
+    Cubic,      // Soft clipping with cubic function
+    Saturate,   // 1 - e^-|x|
+}
+
 #[derive(Debug, Clone)]
 pub struct CrossDistortParams {
     pub sidechain_file: String,
     pub min_factor: f64,
     pub max_factor: f64,
     pub window_size_ms: f64,
+    pub algorithm: DistortionAlgorithm,
+    pub invert: bool,
+}
+
+fn apply_distortion(sample: f64, factor: f64, algorithm: DistortionAlgorithm) -> f64 {
+    let s = sample.signum();
+    let abs = sample.abs();
+    
+    match algorithm {
+        DistortionAlgorithm::Power => {
+            abs.powf(factor) * s
+        },
+        DistortionAlgorithm::Tanh => {
+            (abs * factor).tanh() * s
+        },
+        DistortionAlgorithm::Atan => {
+            (abs * factor).atan() * (PI/2.0).recip() * s
+        },
+        DistortionAlgorithm::Cubic => {
+            let x = abs * factor;
+            if x > 1.0 {
+                s
+            } else {
+                (1.5 * x - 0.5 * x.powi(3)) * s
+            }
+        },
+        DistortionAlgorithm::Saturate => {
+            s * (1.0 - E.powf(-1.0 * abs * factor))
+        },
+    }
 }
 
 pub fn cross_distort(params: &ProcessorParams, distort_params: &CrossDistortParams) -> Result<ProcessorParams, PermuteError> {
@@ -1826,14 +1860,17 @@ pub fn cross_distort(params: &ProcessorParams, distort_params: &CrossDistortPara
     
     // Process each sample
     for (i, sample) in new_samples.iter_mut().enumerate() {
-        let rms = rms_signal[i];
+        let rms = if distort_params.invert {
+            1.0 - rms_signal[i]
+        } else {
+            rms_signal[i]
+        };
         
         // Calculate the current distortion factor based on RMS
         let factor = distort_params.min_factor + (rms * (distort_params.max_factor - distort_params.min_factor));
         
-        // Apply distortion with varying factor
-        let s = sample.signum();
-        *sample = sample.abs().powf(factor) * s;
+        // Apply the selected distortion algorithm
+        *sample = apply_distortion(*sample, factor, distort_params.algorithm);
     }
 
     Ok(ProcessorParams {

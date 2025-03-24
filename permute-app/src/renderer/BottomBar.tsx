@@ -425,6 +425,16 @@ const Run: React.FC<IRunProps> = ({
     return "";
   };
 
+  const buttonHandler = () => {
+    if (isDisabled) {
+      return;
+    }
+    if (isLongRunning) {
+      cancelProcessing();
+    }
+  }
+
+
   return (
     <GridItem rowSpan={2} colSpan={3} display="flex" pl={6} pr={6} alignItems="center">
       <Tooltip
@@ -433,7 +443,7 @@ const Run: React.FC<IRunProps> = ({
         fontSize="md"
       >
         <Button
-          onClick={isLongRunning ? cancelProcessing : runProcessor}
+          onClick={buttonHandler}
           disabled={isDisabled}
           width="100%"
           bg={isDisabled ? "brand.210" : !processing ? buttonBg : undefined}

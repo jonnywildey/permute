@@ -41,6 +41,7 @@ export const processorDescriptions: Record<string, React.ReactNode> = {
   Modulating Audio file is stretched to the length of the original audio.
   Cross effects run quite slow. Be careful with high depth values or large numbers of files`,
   'Cross Distort': `Modulates the distortion amount based on the RMS energy of another audio file.
-  The distortion factor varies between two random values based on the modulating audio's amplitude.
+  Uses a variety of gentler distortion algorithms including hyperbolic tangent, arctangent, soft clipping, and saturation.
+  The distortion factor varies based on the modulating audio's amplitude.
   Cross effects run quite slow. Be careful with high depth values or large numbers of files`,
 };
