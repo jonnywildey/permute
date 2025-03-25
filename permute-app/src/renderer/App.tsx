@@ -11,7 +11,7 @@ import {
   useColorMode
 } from '@chakra-ui/react';
 import type { IPermuteState } from 'permute-node';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useMemo, memo } from 'react';
 import { Files } from './Files';
 import { TopBar } from './TopBar';
 import { Output } from './Output';
@@ -35,13 +35,18 @@ const defaultAppState: IAppState = {
   } as any,
 };
 
+const MemoizedFiles = memo(Files);
+const MemoizedTopBar = memo(TopBar);
+const MemoizedOutput = memo(Output);
+const MemoizedBottomBar = memo(BottomBar);
+const MemoizedProcessors = memo(Processors);
+
 const Content = () => {
   const toast = useToast();
   const { colorMode } = useColorMode();
+  const [state, setState] = useState<IAppState>(defaultAppState);
 
   const {
-    state,
-    setState,
     refreshState,
     addFiles,
     removeFile,
@@ -65,12 +70,11 @@ const Content = () => {
     handleLoadScene,
     setOutput,
     setCreateSubdirectories,
-  } = usePermuteActions();
+  } = usePermuteActions(state, setState);
 
   useEffect(() => {
     document.body.setAttribute('data-theme', colorMode);
   }, [colorMode]);
-
 
   // Cleanup the debounced function when component unmounts
   useEffect(() => {
@@ -98,12 +102,13 @@ const Content = () => {
       }
     };
     setup();
-  }, [toast]);
+  }, [toast, setState]);
 
   const { isOpen, onClose, onOpen } = useDisclosure({
     defaultIsOpen: false, // We'll control this after state loads
   });
 
+  // Memoize state values to prevent unnecessary re-renders
   const {
     allProcessors,
     permutationDepth,
@@ -117,39 +122,42 @@ const Content = () => {
     processorPool,
     permutationOutputs,
     createSubdirectories,
-  } = state.permuteState;
+  } = useMemo(() => state.permuteState, [state.permuteState]);
+
+  // Memoize the grid layout configuration
+  const gridConfig = useMemo(() => ({
+    templateRows: "repeat(26, 1fr)",
+    templateColumns: "repeat(12, 1fr)",
+    gap: 3,
+    padding: 2,
+    width: "100%",
+    height: "100vh"
+  }), []);
 
   return (
-    <Grid
-      templateRows="repeat(26, 1fr)"
-      templateColumns="repeat(12, 1fr)"
-      gap={3}
-      padding={2}
-      width="100%"
-      height="100vh"
-    >
+    <Grid {...gridConfig}>
       <Welcome isOpen={isOpen} onClose={onClose} />
-      <TopBar
+      <MemoizedTopBar
         openWelcome={onOpen}
         createSubdirectories={createSubdirectories}
         onCreateSubdirectoriesChange={setCreateSubdirectories}
         onSaveScene={handleSaveScene}
         onLoadScene={handleLoadScene}
       />
-      <Files
+      <MemoizedFiles
         files={files}
         addFiles={addFiles}
         removeFile={removeFile}
         showFile={showFile}
       />
-      <Processors
+      <MemoizedProcessors
         allProcessors={allProcessors}
         processorPool={processorPool}
         setProcessorEnabled={setProcessorEnabled}
         onSelectAll={selectAllProcessors}
         onDeselectAll={deselectAllProcessors}
       />
-      <Output
+      <MemoizedOutput
         output={output}
         setOutput={setOutput}
         showFile={showFile}
@@ -159,7 +167,7 @@ const Content = () => {
         deleteOutputFile={deleteOutputFile}
         deleteAllOutputFiles={deleteAllOutputFiles}
       />
-      <BottomBar
+      <MemoizedBottomBar
         permutationOutputs={permutationOutputs}
         runProcessor={runProcessor}
         processing={state.permuteState.processing}
