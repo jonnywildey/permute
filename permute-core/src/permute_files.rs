@@ -6,6 +6,7 @@ use std::thread::JoinHandle;
 use audio_info::AudioInfo;
 use rayon::prelude::*;
 use crossbeam_channel::{Sender, Receiver};
+use std::collections::HashMap;
 
 pub enum PermuteUpdate {
     Error(String),
@@ -144,12 +145,20 @@ fn permute_file(
             .map(|n| get_processor_function(*n))
             .collect();
 
+        // Create a map of existing processors and their attributes from the previous permutation
+        let existing_processors: HashMap<PermuteNodeName, Vec<ProcessorAttribute>> = HashMap::new();
+
+        let permutation_processors: Vec<PermutationProcessor> = processors.iter().map(|n| PermutationProcessor {
+            name: n.clone(),
+            attributes: existing_processors.get(n).cloned().unwrap_or_default(),
+        }).collect();
+
         let permutation = Permutation {
             file: file.clone(),
             permutation_index: i,
             output: output_i,
             processor_pool: params.processor_pool.clone(),
-            processors: processors.clone(),
+            processors: permutation_processors,
             original_sample_rate: sample_rate,
             node_index: 0,
             files: params.files.clone(),
@@ -236,7 +245,10 @@ pub fn process_file(
             output: file.clone(),
             permutation_index: 0,
             processor_pool: vec![process],
-            processors: vec![process],
+            processors: vec![PermutationProcessor {
+                name: process,
+                attributes: vec![],
+            }],
             files: vec![file.clone()],
         },
     })?;
@@ -276,6 +288,7 @@ pub fn run_processors(
             Ok(ProcessorParams {
                 permutation: Permutation {
                     node_index: new_params.permutation.node_index + 1,
+                    processors: new_params.permutation.processors.clone(),
                     ..new_params.permutation
                 },
                 ..new_params

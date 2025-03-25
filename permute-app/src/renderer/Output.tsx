@@ -17,9 +17,14 @@ import {
   MenuList,
   MenuItem,
   Portal,
+  Accordion,
+  AccordionItem,
+  AccordionButton,
+  AccordionPanel,
+  AccordionIcon,
 } from '@chakra-ui/react';
 import { ViewIcon, DeleteIcon } from '@chakra-ui/icons';
-import type { IPermutationOutput } from 'permute-node';
+import type { IPermutationOutput, IProcessor, IProcessorAttribute } from 'permute-node';
 import { useContext, useCallback, memo } from 'react';
 import { PlayIcon } from './icons/PlayIcon';
 import { AudioContext } from './AudioContext';
@@ -63,7 +68,6 @@ const OutputFile = memo(({ file, onDelete, onShow, onReverse, onTrim, onPlay }: 
   };
   const ext = file.path.split(".").pop()?.toLowerCase();
   const isAiff = ext === "aif" || ext === "aiff"
-
   return (
     <Box key={file.path} {...props}>
       <Box
@@ -198,11 +202,29 @@ const OutputFile = memo(({ file, onDelete, onShow, onReverse, onTrim, onPlay }: 
             />
           </Tooltip>
           <Portal>
-            <MenuList pl={4} pr={4} pt={2} pb={2}>
+            <MenuList pl={4} pr={4} pt={2} pb={2} maxH="250px" width="300px" overflowY="auto">
               <List spacing={1}>
-                {file.processors.map((p: string, i: number) => (
-                  <ListItem key={`${p}${i}`} fontSize="sm">
-                    {i + 1}: {p}
+                {file.processors.map((p: IProcessor, i: number) => (
+                  <ListItem key={`${p.name}${i}`} fontSize="md">
+                    <Accordion allowToggle={p.attributes.length > 0}>
+                      <AccordionItem border="none">
+                        <AccordionButton p={1} _hover={{ bg: 'brand.50' }}>
+                          <Box flex="1" textAlign="left">
+                            {i + 1}: {p.name}
+                          </Box>
+                          <AccordionIcon />
+                        </AccordionButton>
+                        {p.attributes.length > 0 && (
+                          <AccordionPanel pb={2} pl={4}>
+                            {p.attributes.map((a: IProcessorAttribute) => (
+                              <Text key={a.key} fontSize="md" color="brand.5600">
+                                {a.key}: {a.value}
+                              </Text>
+                            ))}
+                          </AccordionPanel>
+                        )}
+                      </AccordionItem>
+                    </Accordion>
                   </ListItem>
                 ))}
               </List>

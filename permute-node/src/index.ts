@@ -55,11 +55,21 @@ export interface IPermutationInput {
   image: string;
 }
 
+export interface IProcessorAttribute {
+  key: string;
+  value: string;
+}
+
+export interface IProcessor {
+  name: string;
+  attributes: IProcessorAttribute[];
+}
+
 export interface IPermutationOutput {
   path: string;
   progress: number;
   image: string;
-  processors: string[];
+  processors: IProcessor[];
   name: string;
   durationSec: number;
   deleted: boolean;

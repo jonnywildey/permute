@@ -351,14 +351,26 @@ impl Processor {
                         let deleted = cx.boolean(output.deleted);
                         output_obj.set(&mut cx, "deleted", deleted)?;
 
-                        let node_names = cx.empty_array();
-                        for j in 0..output.processors.len() {
-                            let display_name = cx.string(get_processor_display_name(
-                                output.processors[j],
-                            ));
-                            node_names.set(&mut cx, j as u32, display_name)?;
+                        let processors_array = cx.empty_array();
+                        for (j, processor) in output.permutation.processors.iter().enumerate() {
+                            let processor_obj = cx.empty_object();
+                            let display_name = cx.string(get_processor_display_name(processor.name));
+                            processor_obj.set(&mut cx, "name", display_name)?;
+                            
+                            let attributes = cx.empty_array();
+                            for (k, attr) in processor.attributes.iter().enumerate() {
+                                let attr_obj = cx.empty_object();
+                                let key = cx.string(attr.key.clone());
+                                let value = cx.string(attr.value.clone());
+                                attr_obj.set(&mut cx, "key", key)?;
+                                attr_obj.set(&mut cx, "value", value)?;
+                                attributes.set(&mut cx, k as u32, attr_obj)?;
+                            }
+                            processor_obj.set(&mut cx, "attributes", attributes)?;
+                            
+                            processors_array.set(&mut cx, j as u32, processor_obj)?;
                         }
-                        output_obj.set(&mut cx, "processors", node_names)?;
+                        output_obj.set(&mut cx, "processors", processors_array)?;
                         permutation_outputs.set(&mut cx, i as u32, output_obj)?;
                     }
 

@@ -29,16 +29,38 @@ pub struct ProcessorParams {
     pub update_sender: Arc<Sender<PermuteUpdate>>,
 }
 
+impl ProcessorParams {
+    pub fn update_processor_attributes(&mut self, processor_name: PermuteNodeName, attributes: Vec<ProcessorAttribute>) {
+        if let Some(processor) = self.permutation.processors.iter_mut()
+            .find(|p| p.name == processor_name) {
+            processor.attributes = attributes;
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Permutation {
     pub file: String,
     pub permutation_index: usize,
     pub output: String,
     pub processor_pool: Vec<PermuteNodeName>,
-    pub processors: Vec<PermuteNodeName>,
+    pub processors: Vec<PermutationProcessor>,
     pub original_sample_rate: usize,
     pub node_index: usize,
     pub files: Vec<String>,
+}
+
+
+#[derive(Debug, Clone)]
+pub struct PermutationProcessor {
+    pub name: PermuteNodeName,
+    pub attributes: Vec<ProcessorAttribute>,
+}       
+
+#[derive(Debug, Clone)]
+pub struct ProcessorAttribute {
+    pub key: String,
+    pub value: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, EnumIter, Serialize, Deserialize)]
@@ -770,7 +792,7 @@ pub fn tremolo_input_mod(
 
 pub type FilterType<T> = Type<T>;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum FilterForm {
     Form1,
     Form2,
@@ -1132,7 +1154,7 @@ pub fn multi_line_filter(
     })
 }
 
-#[derive(Clone, EnumIter)]
+#[derive(Clone, EnumIter, Debug)]
 pub enum PhaserStages {
     One = 1,
     Two = 2,
@@ -1879,5 +1901,33 @@ pub fn cross_distort(params: &ProcessorParams, distort_params: &CrossDistortPara
     Ok(ProcessorParams {
         samples: new_samples,
         ..params.clone()
+    })
+}
+
+#[derive(Clone)]
+pub struct FuzzParams {
+    pub gain: f64,
+    pub output_gain: f64,
+}
+
+pub fn fuzz(params: ProcessorParams, FuzzParams { gain, output_gain }: FuzzParams) -> Result<ProcessorParams, PermuteError> {
+    let new_samples = params
+        .samples
+        .iter()
+        .map(|f| {
+            let distorted = f * gain;
+            let clipped = if distorted > 1.0 {
+                1.0
+            } else if distorted < -1.0 {
+                -1.0
+            } else {
+                distorted
+            };
+            clipped * output_gain
+        })
+        .collect();
+    Ok(ProcessorParams {
+        samples: new_samples,
+        ..params
     })
 }
