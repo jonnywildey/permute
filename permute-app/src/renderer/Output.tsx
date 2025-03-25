@@ -12,6 +12,11 @@ import {
   Tooltip,
   useColorMode,
   Link,
+  Menu,
+  MenuButton,
+  MenuList,
+  MenuItem,
+  Portal,
 } from '@chakra-ui/react';
 import { ViewIcon, DeleteIcon } from '@chakra-ui/icons';
 import type { IPermutationOutput } from 'permute-node';
@@ -23,6 +28,7 @@ import { ReverseIcon } from './icons/ReverseIcon';
 import { TrimIcon } from './icons/TrimIcon';
 import { LargeFolderIcon } from './icons/FolderIcon';
 import { LargeTrashIcon } from './icons/TrashIcon';
+import { InfoIcon } from './icons/InfoIcon';
 
 export interface IOutputProps {
   output: string;
@@ -38,6 +44,8 @@ export interface IOutputProps {
 const buttonBg = 'brand.175';
 const bg = 'brand.25';
 const fileBorderColour = 'brand.150';
+
+const tooltipDelay = 600;
 
 const OutputFile = memo(({ file, onDelete, onShow, onReverse, onTrim, onPlay }: {
   file: IPermutationOutput;
@@ -83,7 +91,7 @@ const OutputFile = memo(({ file, onDelete, onShow, onReverse, onTrim, onPlay }: 
           </Heading>
         </Tooltip>
         <Tooltip
-          openDelay={200}
+          openDelay={tooltipDelay}
           label="Delete file"
         >
           <IconButton
@@ -102,31 +110,18 @@ const OutputFile = memo(({ file, onDelete, onShow, onReverse, onTrim, onPlay }: 
           />
         </Tooltip>
       </Box>
-      <Tooltip
-        openDelay={200}
-        label={
-          <List>
-            {file.processors.map((p: string, i: number) => (
-              <ListItem key={`${p}${i}`}>
-                {i + 1}: {p}
-              </ListItem>
-            ))}
-          </List>
-        }
-      >
-        <Box
-          width="100%"
-          className="output-image"
-          pl={2}
-          pr={2}
-          mt="-4px"
-          mb="-8px"
-          dangerouslySetInnerHTML={{ __html: file.image }}
-        />
-      </Tooltip>
+      <Box
+        width="100%"
+        className="output-image"
+        pl={2}
+        pr={2}
+        mt="-4px"
+        mb="-8px"
+        dangerouslySetInnerHTML={{ __html: file.image }}
+      />
       <Box display="flex" alignItems="baseline" width="100%" pos="relative" marginTop={2}>
         <Tooltip
-          openDelay={200}
+          openDelay={tooltipDelay}
           label="Preview"
         >
           <IconButton
@@ -142,7 +137,7 @@ const OutputFile = memo(({ file, onDelete, onShow, onReverse, onTrim, onPlay }: 
           />
         </Tooltip>
         <Tooltip
-          openDelay={200}
+          openDelay={tooltipDelay}
           label="Open directory"
         >
           <IconButton
@@ -158,7 +153,7 @@ const OutputFile = memo(({ file, onDelete, onShow, onReverse, onTrim, onPlay }: 
           />
         </Tooltip>
         <Tooltip
-          openDelay={200}
+          openDelay={tooltipDelay}
           label="Reverse"
         >
           <IconButton
@@ -174,7 +169,7 @@ const OutputFile = memo(({ file, onDelete, onShow, onReverse, onTrim, onPlay }: 
           />
         </Tooltip>
         <Tooltip
-          openDelay={200}
+          openDelay={tooltipDelay}
           label="Auto-trim"
         >
           <IconButton
@@ -189,6 +184,31 @@ const OutputFile = memo(({ file, onDelete, onShow, onReverse, onTrim, onPlay }: 
             _hover={{ bg: 'brand.50' }}
           />
         </Tooltip>
+        <Menu>
+          <Tooltip label="Show processors" openDelay={tooltipDelay}>
+            <MenuButton
+              as={IconButton}
+              aria-label="Show processors"
+              icon={<InfoIcon />}
+              variant="ghost"
+              rounded="full"
+              size="xs"
+              color="brand.525"
+              _hover={{ bg: 'brand.50' }}
+            />
+          </Tooltip>
+          <Portal>
+            <MenuList pl={4} pr={4} pt={2} pb={2}>
+              <List spacing={1}>
+                {file.processors.map((p: string, i: number) => (
+                  <ListItem key={`${p}${i}`} fontSize="sm">
+                    {i + 1}: {p}
+                  </ListItem>
+                ))}
+              </List>
+            </MenuList>
+          </Portal>
+        </Menu>
         <Text
           pr={2}
           width="100%"
