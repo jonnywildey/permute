@@ -15,7 +15,6 @@ import {
   Menu,
   MenuButton,
   MenuList,
-  MenuItem,
   Portal,
   Accordion,
   AccordionItem,
@@ -34,6 +33,7 @@ import { TrimIcon } from './icons/TrimIcon';
 import { LargeFolderIcon } from './icons/FolderIcon';
 import { LargeTrashIcon } from './icons/TrashIcon';
 import { InfoIcon } from './icons/InfoIcon';
+import { ProcessorSummary } from './ProcessorSummary';
 
 export interface IOutputProps {
   output: string;
@@ -188,49 +188,7 @@ const OutputFile = memo(({ file, onDelete, onShow, onReverse, onTrim, onPlay }: 
             _hover={{ bg: 'brand.50' }}
           />
         </Tooltip>
-        <Menu>
-          <Tooltip label="Show processors" openDelay={tooltipDelay}>
-            <MenuButton
-              as={IconButton}
-              aria-label="Show processors"
-              icon={<InfoIcon />}
-              variant="ghost"
-              rounded="full"
-              size="xs"
-              color="brand.525"
-              _hover={{ bg: 'brand.50' }}
-            />
-          </Tooltip>
-          <Portal>
-            <MenuList pl={4} pr={4} pt={2} pb={2} maxH="250px" width="300px" overflowY="auto">
-              <List spacing={1}>
-                {file.processors.map((p: IProcessor, i: number) => (
-                  <ListItem key={`${p.name}${i}`} fontSize="md">
-                    <Accordion allowToggle={p.attributes.length > 0}>
-                      <AccordionItem border="none">
-                        <AccordionButton p={1} _hover={{ bg: 'brand.50' }}>
-                          <Box flex="1" textAlign="left">
-                            {i + 1}: {p.name}
-                          </Box>
-                          <AccordionIcon />
-                        </AccordionButton>
-                        {p.attributes.length > 0 && (
-                          <AccordionPanel pb={2} pl={4}>
-                            {p.attributes.map((a: IProcessorAttribute) => (
-                              <Text key={a.key} fontSize="md" color="brand.5600">
-                                {a.key}: {a.value}
-                              </Text>
-                            ))}
-                          </AccordionPanel>
-                        )}
-                      </AccordionItem>
-                    </Accordion>
-                  </ListItem>
-                ))}
-              </List>
-            </MenuList>
-          </Portal>
-        </Menu>
+        <ProcessorSummary processors={file.processors} tooltipDelay={tooltipDelay} />
         <Text
           pr={2}
           width="100%"

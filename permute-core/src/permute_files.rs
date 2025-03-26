@@ -5,6 +5,7 @@ use std::thread;
 use std::thread::JoinHandle;
 use audio_info::AudioInfo;
 use rayon::prelude::*;
+use rand::Rng;
 use crossbeam_channel::{Sender, Receiver};
 use std::collections::HashMap;
 
@@ -80,7 +81,7 @@ fn permute_file(
     params: &PermuteFilesParams,
     file: String,
 ) -> Result<(), PermuteError> {
-    let mut snd = sndfile::OpenOptions::ReadOnly(ReadOptions::Auto).from_path(file.clone())?;
+    let snd = sndfile::OpenOptions::ReadOnly(ReadOptions::Auto).from_path(file.clone())?;
     let sample_rate = snd.get_samplerate();
     let channels = snd.get_channels();
     let sub_format = snd.get_subtype_format();
@@ -112,16 +113,23 @@ fn permute_file(
 
     for i in 1..=params.permutations {
         let output_i = generate_file_name(file.clone(), output.clone(), i, params.output_file_as_wav);
-        let mut processors = generate_processor_sequence(GetProcessorNodeParams {
-            depth: params.permutation_depth,
-            normalise_at_end: params.normalise_at_end,
-            trim_at_end: params.trim_all,
-            high_sample_rate: params.high_sample_rate,
-            processor_pool: params.processor_pool.clone(),
-            processor_count: params.processor_count,
-            constrain_length: params.constrain_length,
-        });
-        // if we are permuting more than once, we need to generate a new processor sequence for each permutation
+
+        let mut processors = match params.permutation_depth {
+            0 => vec![
+                // select a random processor from the processor pool
+                params.processor_pool[rand::thread_rng().gen_range(0..params.processor_pool.len())],
+            ],    
+            _ => generate_processor_sequence(GetProcessorNodeParams {
+                depth: params.permutation_depth,
+                normalise_at_end: params.normalise_at_end,
+                trim_at_end: params.trim_all,
+                processor_pool: params.processor_pool.clone(),
+                high_sample_rate: params.high_sample_rate,
+                processor_count: params.processor_count,
+                constrain_length: params.constrain_length,
+            }),
+        };
+            // if we are permuting more than once, we need to generate a new processor sequence for each permutation
         if params.permutation_depth > 1 {
             let depth = params.permutation_depth - 1;
             let processor_count = params.processor_count.unwrap_or(0);

@@ -30,11 +30,8 @@ pub struct ProcessorParams {
 }
 
 impl ProcessorParams {
-    pub fn update_processor_attributes(&mut self, processor_name: PermuteNodeName, attributes: Vec<ProcessorAttribute>) {
-        if let Some(processor) = self.permutation.processors.iter_mut()
-            .find(|p| p.name == processor_name) {
-            processor.attributes = attributes;
-        }
+    pub fn update_processor_attributes(&mut self, permutation: Permutation, attributes: Vec<ProcessorAttribute>) {
+        self.permutation.processors[permutation.node_index].attributes = attributes;
     }
 }
 
@@ -1824,7 +1821,6 @@ fn calculate_rms(samples: &[f64], window_size: usize) -> Vec<f64> {
 
     rms_values
 }
-
 #[derive(Debug, Clone, Copy)]
 pub enum DistortionAlgorithm {
     Power,      // Original algorithm

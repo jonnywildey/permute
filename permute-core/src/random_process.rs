@@ -177,19 +177,19 @@ pub fn random_metallic_delay(params: &ProcessorParams) -> Result<ProcessorParams
 
     // Update processor attributes
     new_params.update_processor_attributes(
-        PermuteNodeName::MetallicDelay,
+        new_params.permutation.clone(),
         vec![
             ProcessorAttribute {
-                key: "feedback_factor".to_string(),
-                value: feedback_factor.to_string(),
+                key: "Feedback".to_string(),
+                value: format_float_percent(feedback_factor * 100.0),
             },
             ProcessorAttribute {
-                key: "delay_sample_length".to_string(),
-                value: delay_sample_length.to_string(),
+                key: "Delay".to_string(),
+                value: format_samples_as_ms(delay_sample_length, params.sample_rate),
             },
             ProcessorAttribute {
-                key: "wet_gain_factor".to_string(),
-                value: wet_gain_factor.to_string(),
+                key: "Wet".to_string(),
+                value: format_float_percent(wet_gain_factor * 100.0),
             },
         ],
     );
@@ -202,7 +202,7 @@ pub fn random_fuzz(params: &ProcessorParams) -> Result<ProcessorParams, PermuteE
     start_event!(PermuteNodeName::Fuzz, params);
     let mut rng = thread_rng();
 
-    let gain = rng.gen_range(1.0_f64..10.0_f64);
+    let gain = rng.gen_range(0.5_f64..3.0_f64);
     let output_gain = rng.gen_range(0.1_f64..1.0_f64);
 
     let mut new_params = fuzz(
@@ -215,15 +215,15 @@ pub fn random_fuzz(params: &ProcessorParams) -> Result<ProcessorParams, PermuteE
 
     // Update processor attributes
     new_params.update_processor_attributes(
-        PermuteNodeName::Fuzz,
+        new_params.permutation.clone(),
         vec![
             ProcessorAttribute {
-                key: "gain".to_string(),
-                value: gain.to_string(),
+                key: "Gain".to_string(),
+                value: format_float(gain),
             },
             ProcessorAttribute {
-                key: "output_gain".to_string(),
-                value: output_gain.to_string(),
+                key: "Output Gain".to_string(),
+                value: format_float(output_gain),
             },
         ],
     );
@@ -249,7 +249,17 @@ pub fn random_pitch(params: &ProcessorParams) -> Result<ProcessorParams, Permute
 
     let speed = speeds[rng.gen_range(0..speeds.len())];
 
-    let new_params = change_speed(params.clone(), speed);
+    let mut new_params = change_speed(params.clone(), speed);
+    // Update processor attributes
+    new_params.update_processor_attributes(
+        new_params.permutation.clone(),
+        vec![
+            ProcessorAttribute {
+                key: "Pitch".to_string(),
+                value: format_factor_to_pitch(speed),
+            },
+        ],
+    );
     complete_event!(PermuteNodeName::RandomPitch, new_params);
 
     Ok(new_params)
@@ -283,19 +293,19 @@ pub fn random_granular_time_stretch(
 
     // Update processor attributes
     new_params.update_processor_attributes(
-        PermuteNodeName::GranularTimeStretch,
+        new_params.permutation.clone(),
         vec![
             ProcessorAttribute {
-                key: "grain_samples".to_string(),
-                value: grain_samples.to_string(),
+                key: "Grain".to_string(),
+                value: format_samples_as_ms(grain_samples, params.sample_rate),
             },
             ProcessorAttribute {
-                key: "stretch_factor".to_string(),
-                value: stretch_factor.to_string(),
+                key: "Stretch Factor".to_string(),
+                value: format!("{}X", stretch_factor.to_string()),
             },
             ProcessorAttribute {
-                key: "blend_samples".to_string(),
-                value: blend_samples.to_string(),
+                key: "Blend".to_string(),
+                value: format_samples_as_ms(blend_samples, params.sample_rate),
             },
         ],
     );
@@ -362,22 +372,22 @@ pub fn random_reverb(params: &ProcessorParams) -> Result<ProcessorParams, Permut
 
     // Update processor attributes
     new_params.update_processor_attributes(
-        PermuteNodeName::Reverb,
+        new_params.permutation.clone(),
         vec![
             ProcessorAttribute {
-                key: "predelay_ms".to_string(),
-                value: predelay_ms.to_string(),
+                key: "Predelay".to_string(),
+                value:  format_float_ms(predelay_ms),
             },
             ProcessorAttribute {
-                key: "wet_mix".to_string(),
-                value: wet_mix.to_string(),
+                key: "Wet Mix".to_string(),
+                value: format_float_percent(wet_mix),
             },
             ProcessorAttribute {
-                key: "len_factor".to_string(),
+                key: "Length Factor".to_string(),
                 value: len_factor.to_string(),
             },
             ProcessorAttribute {
-                key: "decay_factor".to_string(),
+                key: "Decay Factor".to_string(),
                 value: decay_factor.to_string(),
             },
         ],
@@ -404,15 +414,15 @@ pub fn random_wow(params: &ProcessorParams) -> Result<ProcessorParams, PermuteEr
 
     // Update processor attributes
     new_params.update_processor_attributes(
-        PermuteNodeName::Wow,
+        new_params.permutation.clone(),
         vec![
             ProcessorAttribute {
-                key: "speed_hz".to_string(),
-                value: speed_hz.to_string(),
+                key: "Speed".to_string(),
+                value: format_hz(speed_hz),
             },
             ProcessorAttribute {
-                key: "depth".to_string(),
-                value: depth.to_string(),
+                key: "Depth".to_string(),
+                value: format_float_percent(depth),
             },
         ],
     );
@@ -445,15 +455,15 @@ pub fn random_tremolo(params: &ProcessorParams) -> Result<ProcessorParams, Permu
 
     // Update processor attributes
     new_params.update_processor_attributes(
-        PermuteNodeName::Tremolo,
+        new_params.permutation.clone(),
         vec![
             ProcessorAttribute {
-                key: "speed_hz".to_string(),
-                value: speed_hz.to_string(),
+                key: "Speed".to_string(),
+                value: format_hz(speed_hz),
             },
             ProcessorAttribute {
-                key: "depth".to_string(),
-                value: depth.to_string(),
+                key: "Depth".to_string(),
+                value: format_float_percent(depth),
             },
         ],
     );
@@ -510,23 +520,23 @@ pub fn random_lazer(params: &ProcessorParams) -> Result<ProcessorParams, Permute
 
     // Update processor attributes
     new_params.update_processor_attributes(
-        PermuteNodeName::Lazer,
+        new_params.permutation.clone(),
         vec![
             ProcessorAttribute {
-                key: "min_speed_hz".to_string(),
-                value: min_speed_hz.to_string(),
+                key: "Min Speed".to_string(),
+                value: format_hz(min_speed_hz),
             },
             ProcessorAttribute {
-                key: "max_speed_hz".to_string(),
-                value: max_speed_hz.to_string(),
+                key: "Max Speed".to_string(),
+                value: format_hz(max_speed_hz),
             },
             ProcessorAttribute {
-                key: "depth".to_string(),
-                value: depth.to_string(),
+                key: "Depth".to_string(),
+                value: format_float_percent(depth),
             },
             ProcessorAttribute {
-                key: "frame_ms".to_string(),
-                value: frame_ms.to_string(),
+                key: "Frame".to_string(),
+                value: format_samples_as_ms(frame_ms, params.sample_rate),
             },
         ],
     );
@@ -552,15 +562,15 @@ pub fn random_flutter(params: &ProcessorParams) -> Result<ProcessorParams, Permu
 
     // Update processor attributes
     new_params.update_processor_attributes(
-        PermuteNodeName::Flutter,
+        new_params.permutation.clone(),
         vec![
             ProcessorAttribute {
-                key: "speed_hz".to_string(),
-                value: speed_hz.to_string(),
+                key: "Speed".to_string(),
+                value: format_hz(speed_hz),
             },
             ProcessorAttribute {
-                key: "depth".to_string(),
-                value: depth.to_string(),
+                key: "Depth".to_string(),
+                value: format_float_percent(depth),
             },
         ],
     );
@@ -597,25 +607,26 @@ pub fn random_chorus(params: &ProcessorParams) -> Result<ProcessorParams, Permut
         },
     )?;
 
+
     // Update processor attributes
     new_params.update_processor_attributes(
-        PermuteNodeName::Chorus,
+        new_params.permutation.clone(),
         vec![
             ProcessorAttribute {
-                key: "feedback_factor".to_string(),
-                value: feedback_factor.to_string(),
+                key: "Feedback".to_string(),
+                value: format_float_percent(feedback_factor),
             },
             ProcessorAttribute {
-                key: "delay_sample_length".to_string(),
-                value: delay_sample_length.to_string(),
+                key: "Delay".to_string(),
+                value: format_samples_as_ms(delay_sample_length, params.sample_rate),
             },
             ProcessorAttribute {
-                key: "speed_hz".to_string(),
-                value: speed_hz.to_string(),
+                key: "Speed".to_string(),
+                value: format_hz(speed_hz),
             },
             ProcessorAttribute {
-                key: "depth".to_string(),
-                value: depth.to_string(),
+                key: "Depth".to_string(),
+                value: format_float_percent(depth),
             },
         ],
     );
@@ -649,27 +660,27 @@ pub fn random_phaser(params: &ProcessorParams) -> Result<ProcessorParams, Permut
 
     // Update processor attributes
     new_params.update_processor_attributes(
-        PermuteNodeName::Phaser,
+        new_params.permutation.clone(),
         vec![
             ProcessorAttribute {
-                key: "stages".to_string(),
+                key: "Stages".to_string(),
                 value: format!("{:?}", stages),
             },
             ProcessorAttribute {
-                key: "base_freq".to_string(),
-                value: base_freq.to_string(),
+                key: "Base Frequency".to_string(),
+                value: format_hz(base_freq),
             },
             ProcessorAttribute {
-                key: "lfo_rate".to_string(),
-                value: lfo_rate.to_string(),
+                key: "LFO Rate".to_string(),
+                value: format_hz(lfo_rate),
             },
             ProcessorAttribute {
-                key: "q".to_string(),
-                value: q.to_string(),
+                key: "Q".to_string(),
+                    value: format_float(q),
             },
             ProcessorAttribute {
-                key: "lfo_depth".to_string(),
-                value: lfo_depth.to_string(),
+                key: "LFO Depth".to_string(),
+                value: format_float_percent(lfo_depth),
             },
         ],
     );
@@ -722,23 +733,23 @@ pub fn random_zero_flange(params: &ProcessorParams) -> Result<ProcessorParams, P
 
     // Update processor attributes
     flanged.update_processor_attributes(
-        PermuteNodeName::Flange,
+        flanged.permutation.clone(),
         vec![
             ProcessorAttribute {
-                key: "speed_hz".to_string(),
-                value: speed_hz.to_string(),
+                key: "Speed".to_string(),
+                value: format_hz(speed_hz),
             },
             ProcessorAttribute {
-                key: "depth".to_string(),
-                value: depth.to_string(),
+                key: "Depth".to_string(),
+                value: format_float_percent(depth),
             },
             ProcessorAttribute {
-                key: "delay_sample_length".to_string(),
-                value: delay_sample_length.to_string(),
+                key: "Delay".to_string(),
+                value: format_samples_as_ms(delay_sample_length as usize, params.sample_rate),
             },
             ProcessorAttribute {
-                key: "wet".to_string(),
-                value: wet.to_string(),
+                key: "Wet".to_string(),
+                value: format_float_percent(wet),
             },
         ],
     );
@@ -777,22 +788,22 @@ pub fn random_filter(params: &ProcessorParams) -> Result<ProcessorParams, Permut
 
     // Update processor attributes
     new_params.update_processor_attributes(
-        PermuteNodeName::Filter,
+        new_params.permutation.clone(),
         vec![
             ProcessorAttribute {
-                key: "filter_type".to_string(),
+                key: "Filter Type".to_string(),
                 value: format!("{:?}", filter_type),
             },
             ProcessorAttribute {
-                key: "frequency".to_string(),
-                value: frequency.to_string(),
+                key: "Frequency".to_string(),
+                value: format_hz(frequency),
             },
             ProcessorAttribute {
-                key: "q".to_string(),
-                value: q.to_string(),
+                key: "Q".to_string(),
+                value: format_float(q),
             },
             ProcessorAttribute {
-                key: "form".to_string(),
+                key: "Form".to_string(),
                 value: format!("{:?}", form),
             },
         ],
@@ -844,30 +855,30 @@ pub fn random_oscillating_filter(
 
     // Update processor attributes
     new_params.update_processor_attributes(
-        PermuteNodeName::OscillatingFilter,
+        new_params.permutation.clone(),
         vec![
             ProcessorAttribute {
-                key: "filter_type".to_string(),
+                key: "Filter Type".to_string(),
                 value: format!("{:?}", filter_type),
             },
             ProcessorAttribute {
-                key: "frequency".to_string(),
-                value: frequency.to_string(),
+                key: "Frequency".to_string(),
+                value: format_hz(frequency),
             },
             ProcessorAttribute {
-                key: "lfo_rate".to_string(),
-                value: lfo_rate.to_string(),
+                key: "LFO Rate".to_string(),
+                value: format_hz(lfo_rate),
             },
             ProcessorAttribute {
-                key: "lfo_factor".to_string(),
-                value: lfo_factor.to_string(),
+                key: "LFO Factor".to_string(),
+                value: format_float_percent(lfo_factor),
             },
             ProcessorAttribute {
-                key: "q".to_string(),
-                value: q.to_string(),
+                key: "Q".to_string(),
+                value: format_float(q),
             },
             ProcessorAttribute {
-                key: "form".to_string(),
+                key: "Form".to_string(),
                 value: format!("{:?}", form),
             },
         ],
@@ -913,26 +924,26 @@ pub fn random_line_filter(params: &ProcessorParams) -> Result<ProcessorParams, P
 
     // Update processor attributes
     new_params.update_processor_attributes(
-        PermuteNodeName::LineFilter,
+        new_params.permutation.clone(),
         vec![
             ProcessorAttribute {
-                key: "filter_type".to_string(),
+                key: "Filter Type".to_string(),
                 value: format!("{:?}", filter_type),
             },
             ProcessorAttribute {
-                key: "hz_from".to_string(),
-                value: hz_from.to_string(),
+                key: "From".to_string(),
+                value: format_hz(hz_from),
             },
             ProcessorAttribute {
-                key: "hz_to".to_string(),
-                value: hz_to.to_string(),
+                key: "To".to_string(),
+                value: format_hz(hz_to),
             },
             ProcessorAttribute {
-                key: "q".to_string(),
-                value: q.to_string(),
+                key: "Q".to_string(),
+                        value: format_float(q),
             },
             ProcessorAttribute {
-                key: "form".to_string(),
+                key: "Form".to_string(),
                 value: format!("{:?}", form),
             },
         ],
@@ -979,23 +990,23 @@ pub fn random_cross_gain(params: &ProcessorParams) -> Result<ProcessorParams, Pe
 
     // Update processor attributes
     new_params.update_processor_attributes(
-        PermuteNodeName::CrossGain,
+        new_params.permutation.clone(),
         vec![
             ProcessorAttribute {
-                key: "sidechain_file".to_string(),
-                value: sidechain_file,
+                key: "Sidechain File".to_string(),
+                value: get_filename(&sidechain_file),
             },
             ProcessorAttribute {
-                key: "depth".to_string(),
-                value: depth.to_string(),
+                key: "Depth".to_string(),
+                value: format_float_percent(depth),
             },
             ProcessorAttribute {
-                key: "invert".to_string(),
+                key: "Invert".to_string(),
                 value: invert.to_string(),
             },
             ProcessorAttribute {
-                key: "window_size_ms".to_string(),
-                value: window_size_ms.to_string(),
+                key: "Window Size".to_string(),
+                value: format_float_ms(window_size_ms),
             },
         ],
     );
@@ -1006,7 +1017,7 @@ pub fn random_cross_gain(params: &ProcessorParams) -> Result<ProcessorParams, Pe
 
 pub fn random_cross_filter(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
     start_event!(PermuteNodeName::CrossFilter, params);
-    let mut rng = rand::thread_rng();
+    let mut rng = thread_rng();
     
     // Get a random file from the files list
     let sidechain_file = match select_sidechain_file(&params.permutation.file, &params.permutation.files) {
@@ -1027,15 +1038,15 @@ pub fn random_cross_filter(params: &ProcessorParams) -> Result<ProcessorParams, 
     ];
     let filter_type = types[rng.gen_range(0..types.len())];
 
-    // Base frequency between 200Hz and 2000Hz
+    // Base frequency between 200hz and 2000hz
     let base_freq = rng.gen_range(50.0..800.0);
-    // Maximum frequency between base_freq and 10000Hz
+    // Maximum frequency between base_freq and 10000hz
     let max_freq = rng.gen_range(base_freq..10000.0);
     // Q factor between 0.5 and 1.35 (similar to random_line_filter)
     let q = rng.gen_range(0.5..1.35);
     let window_size_ms = 100.0; // Fixed 10ms window for RMS calculation
     let invert = rng.gen_bool(0.5);
-    
+
     let cross_params = CrossFilterParams {
         sidechain_file: sidechain_file.clone(),
         filter_type,
@@ -1050,34 +1061,34 @@ pub fn random_cross_filter(params: &ProcessorParams) -> Result<ProcessorParams, 
 
     // Update processor attributes
     new_params.update_processor_attributes(
-        PermuteNodeName::CrossFilter,
+        new_params.permutation.clone(),
         vec![
             ProcessorAttribute {
-                key: "sidechain_file".to_string(),
-                value: sidechain_file,
+                key: "Sidechain File".to_string(),
+                value: get_filename(&sidechain_file),
             },
             ProcessorAttribute {
-                key: "filter_type".to_string(),
+                key: "Filter Type".to_string(),
                 value: format!("{:?}", filter_type),
             },
             ProcessorAttribute {
-                key: "base_freq".to_string(),
-                value: base_freq.to_string(),
+                key: "Base Frequency".to_string(),
+                value: format_hz(base_freq),
             },
             ProcessorAttribute {
-                key: "max_freq".to_string(),
-                value: max_freq.to_string(),
+                key: "Max Frequency".to_string(),
+                value: format_hz(max_freq),
             },
             ProcessorAttribute {
-                key: "q".to_string(),
-                value: q.to_string(),
+                key: "Q".to_string(),
+                value: format_float(q),
             },
             ProcessorAttribute {
-                key: "window_size_ms".to_string(),
-                value: window_size_ms.to_string(),
+                key: "Window Size".to_string(),
+                value: format_float_ms(window_size_ms),
             },
             ProcessorAttribute {
-                key: "invert".to_string(),
+                key: "Invert".to_string(),
                 value: invert.to_string(),
             },
         ],
@@ -1185,4 +1196,33 @@ pub fn select_sidechain_file(current_file: &str, available_files: &[String]) -> 
     } else {
         Some(filtered_files[rng.gen_range(0..filtered_files.len())].clone())
     }
+}
+
+pub fn format_float(value: f64) -> String {
+    format!("{:.2}", value)
+}
+
+pub fn format_hz(value: f64) -> String {
+    format!("{:.2} hz", value)
+}
+
+pub fn format_float_percent(value: f64) -> String {
+    format!("{:.2}%", value * 100.0)
+}
+
+pub fn format_float_ms(value: f64) -> String {
+    format!("{:.2} ms", value)
+}
+
+pub fn format_samples_as_ms(samples: usize, sample_rate: usize) -> String {
+    format!("{:.2} ms", (samples as f64 / sample_rate as f64) * 1000.0)
+}
+
+pub fn get_filename(path: &str) -> String {
+    path.split('/').last().unwrap_or(path).to_string()
+}
+
+pub fn format_factor_to_pitch(factor: f64) -> String {
+    let pitch = 12.0 * (factor / 2.0).log2();
+    format!("{:.2} semitones", pitch)
 }
