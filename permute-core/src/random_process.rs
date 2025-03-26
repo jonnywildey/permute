@@ -1226,3 +1226,8 @@ pub fn format_factor_to_pitch(factor: f64) -> String {
     let pitch = 12.0 * (factor / 2.0).log2();
     format!("{:.2} semitones", pitch)
 }
+
+/// Select a random processor from the processor pool
+pub fn select_random_processor(processor_pool: &[PermuteNodeName]) -> PermuteNodeName {
+    processor_pool[rand::thread_rng().gen_range(0..processor_pool.len())]
+}

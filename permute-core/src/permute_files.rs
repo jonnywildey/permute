@@ -5,7 +5,6 @@ use std::thread;
 use std::thread::JoinHandle;
 use audio_info::AudioInfo;
 use rayon::prelude::*;
-use rand::Rng;
 use crossbeam_channel::{Sender, Receiver};
 use std::collections::HashMap;
 
@@ -117,7 +116,7 @@ fn permute_file(
         let mut processors = match params.permutation_depth {
             0 => vec![
                 // select a random processor from the processor pool
-                params.processor_pool[rand::thread_rng().gen_range(0..params.processor_pool.len())],
+                select_random_processor(&params.processor_pool),
             ],    
             _ => generate_processor_sequence(GetProcessorNodeParams {
                 depth: params.permutation_depth,
