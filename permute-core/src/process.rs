@@ -3,12 +3,14 @@ use serde::{Deserialize, Serialize};
 use sndfile::{Endian, MajorFormat, SubtypeFormat};
 use std::{
     f64::consts::{E, PI},
-    sync::mpsc,
+    sync::Arc,
 };
+use crossbeam_channel::Sender;
 use strum::EnumIter;
 
 use crate::osc::*;
 use crate::{permute_error::PermuteError, permute_files::PermuteUpdate};
+use crate::{ audio_cache::AUDIO_CACHE, rms_cache::{get_cached_rms, cache_rms}};
 
 pub type ProcessorFn = fn(&ProcessorParams) -> Result<ProcessorParams, PermuteError>;
 
@@ -24,7 +26,13 @@ pub struct ProcessorParams {
     pub file_format: MajorFormat,
     pub endian: Endian,
 
-    pub update_sender: mpsc::Sender<PermuteUpdate>,
+    pub update_sender: Arc<Sender<PermuteUpdate>>,
+}
+
+impl ProcessorParams {
+    pub fn update_processor_attributes(&mut self, permutation: Permutation, attributes: Vec<ProcessorAttribute>) {
+        self.permutation.processors[permutation.node_index].attributes = attributes;
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -33,73 +41,93 @@ pub struct Permutation {
     pub permutation_index: usize,
     pub output: String,
     pub processor_pool: Vec<PermuteNodeName>,
-    pub processors: Vec<PermuteNodeName>,
+    pub processors: Vec<PermutationProcessor>,
     pub original_sample_rate: usize,
     pub node_index: usize,
+    pub files: Vec<String>,
 }
 
+
 #[derive(Debug, Clone)]
+pub struct PermutationProcessor {
+    pub name: PermuteNodeName,
+    pub attributes: Vec<ProcessorAttribute>,
+}       
+
+#[derive(Debug, Clone)]
+pub struct ProcessorAttribute {
+    pub key: String,
+    pub value: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, EnumIter, Serialize, Deserialize)]
 pub enum PermuteNodeEvent {
     NodeProcessStarted,
     NodeProcessComplete,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, EnumIter)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, EnumIter, Serialize, Deserialize)]
 pub enum PermuteNodeName {
-    Reverse,
-    RhythmicDelay,
-    MetallicDelay,
-
     GranularTimeStretch,
-    Reverb,
-
     Fuzz,
     Saturate,
-
-    HalfSpeed,
-    DoubleSpeed,
-    RandomPitch,
-
-    Filter,
-    LineFilter,
-    Tremolo,
-    Lazer,
-    OscillatingFilter,
-
-    Wow,
-    Flutter,
-    Flange,
+    Reverse,
     Chorus,
     Phaser,
+    DoubleSpeed,
+    RandomPitch,
+    Flutter,
+    Flange,
+    HalfSpeed,
+    MetallicDelay,
+    RhythmicDelay,
+    Reverb,
+    Wow,
+    Tremolo,
+    Lazer,
     Normalise,
     Trim,
     SampleRateConversionHigh,
     SampleRateConversionOriginal,
+    Filter,
+    OscillatingFilter,
+    LineFilter,
+    CrossGain,
+    CrossFilter,
+    CrossDistort,
 }
 
 // Only processors we want to be visible to users
-#[allow(dead_code)]
-pub const ALL_PROCESSORS: [PermuteNodeName; 20] = [
-    PermuteNodeName::Reverse,
+pub const ALL_PROCESSORS: [PermuteNodeName; 22] = [
     PermuteNodeName::GranularTimeStretch,
-    PermuteNodeName::Reverb,
-    PermuteNodeName::Saturate,
     PermuteNodeName::Fuzz,
-    PermuteNodeName::MetallicDelay,
-    PermuteNodeName::RhythmicDelay,
-    PermuteNodeName::HalfSpeed,
+    PermuteNodeName::Saturate,
+    PermuteNodeName::Reverse,
+    PermuteNodeName::Chorus,
+    PermuteNodeName::Phaser,
     PermuteNodeName::DoubleSpeed,
     PermuteNodeName::RandomPitch,
-    PermuteNodeName::Wow,
     PermuteNodeName::Flutter,
-    PermuteNodeName::Chorus,
     PermuteNodeName::Flange,
-    PermuteNodeName::Phaser,
-    PermuteNodeName::Filter,
-    PermuteNodeName::LineFilter,
+    PermuteNodeName::HalfSpeed,
+    PermuteNodeName::MetallicDelay,
+    PermuteNodeName::RhythmicDelay,
+    PermuteNodeName::Reverb,
+    PermuteNodeName::Wow,
     PermuteNodeName::Tremolo,
     PermuteNodeName::Lazer,
+    // Do not expose these to users
+    // PermuteNodeName::Normalise,
+    // PermuteNodeName::Trim,
+    // PermuteNodeName::SampleRateConversionHigh,
+    // PermuteNodeName::SampleRateConversionOriginal,
+    PermuteNodeName::Filter,
     PermuteNodeName::OscillatingFilter,
+    PermuteNodeName::LineFilter,
+    PermuteNodeName::CrossGain,
+    PermuteNodeName::CrossFilter,
+    // Cross Distort doesn't seem to do much different to cross gain
+    // PermuteNodeName::CrossDistort,
 ];
 
 pub fn reverse(
@@ -124,9 +152,11 @@ pub fn reverse(
     let channels = *channels as i32;
 
     for i in 0..*sample_length {
-        let channel_offset: i32 = (channels * -1 + 1) + 2 * (i as i32 % channels);
-        let sample_i: i32 = *sample_length as i32 - 1 - i as i32 + channel_offset;
-        new_samples[i] = samples[sample_i as usize];
+        let channel_idx = i as i32 % channels;
+        let sample_group = i as i32 / channels;
+        let reversed_group = (*sample_length as i32 / channels) - 1 - sample_group;
+        let sample_i = (reversed_group * channels + channel_idx) as usize;
+        new_samples[i] = samples[sample_i];
     }
 
     update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
@@ -431,7 +461,11 @@ pub fn change_speed(
             let frac = offset_f - offset as f64;
 
             v1 = cs[offset];
-            v2 = cs[offset + 1];
+            v2 = if offset + 1 < cs.len() {
+                cs[offset + 1]
+            } else {
+                cs[offset]
+            };
 
             ns[i] = v1 + (v2 - v1) * frac;
         }
@@ -755,7 +789,7 @@ pub fn tremolo_input_mod(
 
 pub type FilterType<T> = Type<T>;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum FilterForm {
     Form1,
     Form2,
@@ -1117,7 +1151,7 @@ pub fn multi_line_filter(
     })
 }
 
-#[derive(Clone, EnumIter)]
+#[derive(Clone, EnumIter, Debug)]
 pub enum PhaserStages {
     One = 1,
     Two = 2,
@@ -1236,10 +1270,7 @@ pub fn distort(params: &ProcessorParams, factor: f64) -> Result<ProcessorParams,
     let new_samples = params
         .samples
         .iter()
-        .map(|f| {
-            let s = f.signum();
-            f.abs().powf(factor) * s
-        })
+        .map(|f| apply_distortion(*f, factor, DistortionAlgorithm::Power))
         .collect();
     Ok(ProcessorParams {
         samples: new_samples,
@@ -1251,10 +1282,7 @@ pub fn saturate(params: &ProcessorParams) -> Result<ProcessorParams, PermuteErro
     let new_samples = params
         .samples
         .iter()
-        .map(|f| {
-            let s = f.signum();
-            s * (1.0 - E.powf(-1.0 * f.abs()))
-        })
+        .map(|f| apply_distortion(*f, 1.0, DistortionAlgorithm::Saturate))
         .collect();
     Ok(ProcessorParams {
         samples: new_samples,
@@ -1264,6 +1292,13 @@ pub fn saturate(params: &ProcessorParams) -> Result<ProcessorParams, PermuteErro
 
 pub fn trim(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
     let threshold = 0.001;
+    params
+        .update_sender
+        .send(PermuteUpdate::UpdatePermuteNodeStarted(
+            params.permutation.clone(),
+            PermuteNodeName::Trim,
+            PermuteNodeEvent::NodeProcessStarted,
+        ))?;
 
     let mut start: usize = 0;
     let mut end: usize = params.sample_length;
@@ -1615,4 +1650,287 @@ fn all_pass(samples: &Vec<f64>, delay_ms: f64, decay_factor: f64, sample_rate: u
         all_passed[i] += decay_factor * all_passed[i];
     }
     all_passed
+}
+
+#[derive(Debug, Clone)]
+pub struct CrossGainParams {
+    pub sidechain_file: String,
+    pub depth: f64,
+    pub invert: bool,
+    pub window_size_ms: f64,
+}
+
+#[derive(Debug, Clone)]
+pub struct CrossFilterParams {
+    pub sidechain_file: String,
+    pub filter_type: biquad::Type<f64>,
+    pub base_freq: f64,
+    pub max_freq: f64,
+    pub q: f64,
+    pub window_size_ms: f64,
+    pub invert: bool,
+}
+
+pub fn cross_gain(params: &ProcessorParams, gain_params: &CrossGainParams) -> Result<ProcessorParams, PermuteError> {
+    // Get the RMS signal from the sidechain file
+    let rms_signal = get_sidechain_rms_signal(
+        &gain_params.sidechain_file,
+        gain_params.window_size_ms,
+        params.samples.len(),
+        params.sample_rate,
+    )?;
+
+    // Apply gain modulation
+    let mut new_samples = params.samples.clone();
+    for (i, sample) in new_samples.iter_mut().enumerate() {
+        let rms = if gain_params.invert {
+            1.0 - rms_signal[i]
+        } else {
+            rms_signal[i]
+        };
+        *sample *= 1.0 - (gain_params.depth * rms);
+    }
+
+    Ok(ProcessorParams {
+        samples: new_samples,
+        ..params.clone()
+    })
+}
+
+pub fn cross_filter(params: &ProcessorParams, filter_params: &CrossFilterParams) -> Result<ProcessorParams, PermuteError> {
+    // Get the RMS signal from the sidechain file
+    let rms_signal = get_sidechain_rms_signal(
+        &filter_params.sidechain_file,
+        filter_params.window_size_ms,
+        params.samples.len(),
+        params.sample_rate,
+    )?;
+
+    let mut new_samples = params.samples.clone();
+    
+    // Create initial coefficients
+    let initial_coeffs = Coefficients::<f64>::from_params(
+        filter_params.filter_type,
+        (params.sample_rate as u32).hz(),
+        filter_params.base_freq.hz(),
+        filter_params.q,
+    )?;
+    let mut filter = DirectForm2Transposed::<f64>::new(initial_coeffs);
+    
+    // Process each sample
+    for (i, sample) in new_samples.iter_mut().enumerate() {
+        let rms = if filter_params.invert {
+            1.0 - rms_signal[i]
+        } else {
+            rms_signal[i]
+        };
+        
+        // Calculate the current frequency based on RMS
+        let freq = filter_params.base_freq + (rms * (filter_params.max_freq - filter_params.base_freq));
+        
+        // Update filter coefficients
+        let coeffs = Coefficients::<f64>::from_params(
+            filter_params.filter_type,
+            (params.sample_rate as u32).hz(),
+            freq.hz(),
+            filter_params.q,
+        )?;
+        filter.update_coefficients(coeffs);
+        
+        // Process the sample
+        *sample = filter.run(*sample);
+    }
+
+    Ok(ProcessorParams {
+        samples: new_samples,
+        ..params.clone()
+    })
+}
+
+pub fn get_sidechain_rms_signal(
+    sidechain_file: &str,
+    window_size_ms: f64,
+    target_length: usize,
+    target_sample_rate: usize,
+) -> Result<Vec<f64>, PermuteError> {
+    // Check if RMS values are in cache
+    if let Some(cached_rms) = get_cached_rms(sidechain_file, window_size_ms, target_length, target_sample_rate) {
+        return Ok(cached_rms);
+    }
+    
+    // If not in cache, calculate RMS values
+    let samples = AUDIO_CACHE.get_samples(sidechain_file)?;
+    
+    // Convert window size from ms to samples
+    let window_size = ((window_size_ms / 1000.0) * target_sample_rate as f64) as usize;
+    
+    // Calculate RMS values
+    let rms_values = calculate_rms(&samples, window_size);
+    
+    // Resample to match target length if necessary
+    let final_rms = if rms_values.len() != target_length {
+        let mut resampled = Vec::with_capacity(target_length);
+        for i in 0..target_length {
+            let idx = (i as f64 * (rms_values.len() as f64 - 1.0) / (target_length as f64 - 1.0)) as usize;
+            resampled.push(rms_values[idx]);
+        }
+        resampled
+    } else {
+        rms_values
+    };
+
+    // Cache the calculated RMS values
+    cache_rms(
+        sidechain_file.to_string(),
+        window_size_ms,
+        target_length,
+        target_sample_rate,
+        final_rms.clone()
+    );
+
+    Ok(final_rms)
+}
+
+fn calculate_rms(samples: &[f64], window_size: usize) -> Vec<f64> {
+    if window_size == 0 {
+        return vec![0.0; samples.len()];
+    }
+
+    let mut rms_values = Vec::with_capacity(samples.len());
+    let half_window = window_size / 2;
+
+    // First pass: calculate all RMS values
+    for i in 0..samples.len() {
+        let start = if i < half_window { 0 } else { i - half_window };
+        let end = if i + half_window >= samples.len() {
+            samples.len()
+        } else {
+            i + half_window
+        };
+
+        let sum_squares: f64 = samples[start..end]
+            .iter()
+            .map(|&x| x * x)
+            .sum();
+        let rms = (sum_squares / (end - start) as f64).sqrt();
+        rms_values.push(rms);
+    }
+
+    // Find the maximum RMS value for normalization
+    let max_rms = rms_values.iter().fold(0.0_f64, |max, &val| max.max(val));
+    
+    // Normalize all values if max_rms is greater than 0
+    if max_rms > 0.0 {
+        for rms in rms_values.iter_mut() {
+            *rms /= max_rms;
+        }
+    }
+
+    rms_values
+}
+#[derive(Debug, Clone, Copy)]
+pub enum DistortionAlgorithm {
+    Power,      // Original algorithm
+    Tanh,       // Hyperbolic tangent
+    Atan,       // Arctangent
+    Cubic,      // Soft clipping with cubic function
+    Saturate,   // 1 - e^-|x|
+}
+
+#[derive(Debug, Clone)]
+pub struct CrossDistortParams {
+    pub sidechain_file: String,
+    pub min_factor: f64,
+    pub max_factor: f64,
+    pub window_size_ms: f64,
+    pub algorithm: DistortionAlgorithm,
+    pub invert: bool,
+}
+
+fn apply_distortion(sample: f64, factor: f64, algorithm: DistortionAlgorithm) -> f64 {
+    let s = sample.signum();
+    let abs = sample.abs();
+    
+    match algorithm {
+        DistortionAlgorithm::Power => {
+            abs.powf(factor) * s
+        },
+        DistortionAlgorithm::Tanh => {
+            (abs * factor).tanh() * s
+        },
+        DistortionAlgorithm::Atan => {
+            (abs * factor).atan() * (PI/2.0).recip() * s
+        },
+        DistortionAlgorithm::Cubic => {
+            let x = abs * factor;
+            if x > 1.0 {
+                s
+            } else {
+                (1.5 * x - 0.5 * x.powi(3)) * s
+            }
+        },
+        DistortionAlgorithm::Saturate => {
+            s * (1.0 - E.powf(-1.0 * abs * factor))
+        },
+    }
+}
+
+pub fn cross_distort(params: &ProcessorParams, distort_params: &CrossDistortParams) -> Result<ProcessorParams, PermuteError> {
+    // Get the RMS signal from the sidechain file
+    let rms_signal = get_sidechain_rms_signal(
+        &distort_params.sidechain_file,
+        distort_params.window_size_ms,
+        params.samples.len(),
+        params.sample_rate,
+    )?;
+
+    let mut new_samples = params.samples.clone();
+    
+    // Process each sample
+    for (i, sample) in new_samples.iter_mut().enumerate() {
+        let rms = if distort_params.invert {
+            1.0 - rms_signal[i]
+        } else {
+            rms_signal[i]
+        };
+        
+        // Calculate the current distortion factor based on RMS
+        let factor = distort_params.min_factor + (rms * (distort_params.max_factor - distort_params.min_factor));
+        
+        // Apply the selected distortion algorithm
+        *sample = apply_distortion(*sample, factor, distort_params.algorithm);
+    }
+
+    Ok(ProcessorParams {
+        samples: new_samples,
+        ..params.clone()
+    })
+}
+
+#[derive(Clone)]
+pub struct FuzzParams {
+    pub gain: f64,
+    pub output_gain: f64,
+}
+
+pub fn fuzz(params: ProcessorParams, FuzzParams { gain, output_gain }: FuzzParams) -> Result<ProcessorParams, PermuteError> {
+    let new_samples = params
+        .samples
+        .iter()
+        .map(|f| {
+            let distorted = f * gain;
+            let clipped = if distorted > 1.0 {
+                1.0
+            } else if distorted < -1.0 {
+                -1.0
+            } else {
+                distorted
+            };
+            clipped * output_gain
+        })
+        .collect();
+    Ok(ProcessorParams {
+        samples: new_samples,
+        ..params
+    })
 }

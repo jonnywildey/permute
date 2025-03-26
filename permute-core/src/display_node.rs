@@ -26,6 +26,9 @@ pub fn get_processor_display_name(name: PermuteNodeName) -> String {
         PermuteNodeName::Filter => String::from("Filter"),
         PermuteNodeName::OscillatingFilter => String::from("LFO Filter"),
         PermuteNodeName::LineFilter => String::from("Line Filter"),
+        PermuteNodeName::CrossGain => String::from("Cross Gain"),
+        PermuteNodeName::CrossFilter => String::from("Cross Filter"),
+        PermuteNodeName::CrossDistort => String::from("Cross Distort"),
     }
 }
 
@@ -55,6 +58,9 @@ pub fn get_processor_from_display_name(name: &str) -> Result<PermuteNodeName, St
         "Filter" => Ok(PermuteNodeName::Filter),
         "LFO Filter" => Ok(PermuteNodeName::OscillatingFilter),
         "Line Filter" => Ok(PermuteNodeName::LineFilter),
+        "Cross Gain" => Ok(PermuteNodeName::CrossGain),
+        "Cross Filter" => Ok(PermuteNodeName::CrossFilter),
+        "Cross Distort" => Ok(PermuteNodeName::CrossDistort),
         _ => Err(format!("{} not found", name)),
     }
 }

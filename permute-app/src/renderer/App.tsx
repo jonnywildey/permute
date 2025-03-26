@@ -11,7 +11,7 @@ import {
   useColorMode
 } from '@chakra-ui/react';
 import type { IPermuteState } from 'permute-node';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo, memo, useCallback } from 'react';
 import { Files } from './Files';
 import { TopBar } from './TopBar';
 import { Output } from './Output';
@@ -20,6 +20,7 @@ import { theme } from './theme';
 import { Processors } from './Processors';
 import { Welcome } from './Welcome';
 import { CreateAudioContext } from './AudioContext';
+import { debounce } from 'lodash';
 
 export interface IAppState {
   permuteState: IPermuteState;
@@ -31,10 +32,17 @@ const defaultAppState: IAppState = {
     files: [],
     permutationOutputs: [],
     processorPool: [],
+    viewedWelcome: false,
   } as any,
 };
 
-const Content = ({ onOpen }: { onOpen: () => void }) => {
+const MemoizedFiles = memo(Files);
+const MemoizedTopBar = memo(TopBar);
+const MemoizedOutput = memo(Output);
+const MemoizedBottomBar = memo(BottomBar);
+const MemoizedProcessors = memo(Processors);
+
+const Content = () => {
   const [state, setState] = useState<IAppState>(defaultAppState);
   const toast = useToast();
   const { colorMode } = useColorMode();
@@ -43,20 +51,33 @@ const Content = ({ onOpen }: { onOpen: () => void }) => {
     document.body.setAttribute('data-theme', colorMode);
   }, [colorMode]);
 
-  const refreshState = async () => {
-    try {
-      const permuteState = await window.Electron.ipcRenderer.getState();
-      setState({ ...state, permuteState });
-    } catch (error) {
-      console.error('Failed to refresh state:', error);
-      toast({
-        description: 'Failed to refresh application state',
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-      });
-    }
-  };
+  // Create a debounced version of the state refresh
+  const refreshState = useCallback(
+    debounce(async () => {
+      try {
+        const permuteState = await window.Electron.ipcRenderer.getState();
+        setState(prevState => ({ ...prevState, permuteState }));
+      } catch (error) {
+        console.error('Failed to refresh state:', error);
+        toast({
+          description: 'Failed to refresh application state',
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+        });
+      }
+    }, 100),
+    [toast]
+  );
+
+  // Cleanup the debounced function when component unmounts
+  useEffect(() => {
+    return () => {
+      refreshState.cancel();
+    };
+  }, [refreshState]);
+
+
 
   useEffect(() => {
     const setup = async () => {
@@ -77,8 +98,13 @@ const Content = ({ onOpen }: { onOpen: () => void }) => {
       }
     };
     setup();
-  }, [toast]);
+  }, [toast, setState]);
 
+  const { isOpen, onClose, onOpen } = useDisclosure({
+    defaultIsOpen: false, // We'll control this after state loads
+  });
+
+  // Memoize state values to prevent unnecessary re-renders
   const {
     allProcessors,
     permutationDepth,
@@ -92,7 +118,17 @@ const Content = ({ onOpen }: { onOpen: () => void }) => {
     processorPool,
     permutationOutputs,
     createSubdirectories,
-  } = state.permuteState;
+  } = useMemo(() => state.permuteState, [state.permuteState]);
+
+  // Memoize the grid layout configuration
+  const gridConfig = useMemo(() => ({
+    templateRows: "repeat(26, 1fr)",
+    templateColumns: "repeat(12, 1fr)",
+    gap: 3,
+    padding: 2,
+    width: "100%",
+    height: "100vh"
+  }), []);
 
   const runProcessor = async () => {
     const onFinished = (pState: IPermuteState) => {
@@ -132,27 +168,75 @@ const Content = ({ onOpen }: { onOpen: () => void }) => {
     window.Electron.ipcRenderer.trimFile(refreshState, onFinished, file);
   };
   const setDepth = async (depth: number) => {
-    window.Electron.ipcRenderer.setDepth(depth);
+    // Update state immediately
+    setState(prevState => ({
+      permuteState: {
+        ...prevState.permuteState,
+        permutationDepth: depth
+      }
+    }));
+    // Let IPC update happen in background
+    await window.Electron.ipcRenderer.setDepth(depth);
     refreshState();
   };
   const setPermutations = async (permutations: number) => {
-    window.Electron.ipcRenderer.setPermutations(permutations);
+    // Update state immediately
+    setState(prevState => ({
+      permuteState: {
+        ...prevState.permuteState,
+        permutations
+      }
+    }));
+    // Let IPC update happen in background
+    await window.Electron.ipcRenderer.setPermutations(permutations);
     refreshState();
   };
   const setNormalised = async (normaliseAtEnd: boolean) => {
-    window.Electron.ipcRenderer.setNormalised(normaliseAtEnd);
+    // Update state immediately
+    setState(prevState => ({
+      permuteState: {
+        ...prevState.permuteState,
+        normaliseAtEnd
+      }
+    }));
+    // Let IPC update happen in background
+    await window.Electron.ipcRenderer.setNormalised(normaliseAtEnd);
     refreshState();
   };
   const setTrimAll = async (trimAll: boolean) => {
-    window.Electron.ipcRenderer.setTrimAll(trimAll);
+    // Update state immediately
+    setState(prevState => ({
+      permuteState: {
+        ...prevState.permuteState,
+        trimAll
+      }
+    }));
+    // Let IPC update happen in background
+    await window.Electron.ipcRenderer.setTrimAll(trimAll);
     refreshState();
   };
   const setInputTrail = async (inputTrail: number) => {
-    window.Electron.ipcRenderer.setInputTrail(inputTrail);
+    // Update state immediately
+    setState(prevState => ({
+      permuteState: {
+        ...prevState.permuteState,
+        inputTrail
+      }
+    }));
+    // Let IPC update happen in background
+    await window.Electron.ipcRenderer.setInputTrail(inputTrail);
     refreshState();
   };
   const setOutputTrail = async (outputTrail: number) => {
-    window.Electron.ipcRenderer.setOutputTrail(outputTrail);
+    // Update state immediately
+    setState(prevState => ({
+      permuteState: {
+        ...prevState.permuteState,
+        outputTrail
+      }
+    }));
+    // Let IPC update happen in background
+    await window.Electron.ipcRenderer.setOutputTrail(outputTrail);
     refreshState();
   };
   const addFiles = async (files: string[]) => {
@@ -194,6 +278,16 @@ const Content = ({ onOpen }: { onOpen: () => void }) => {
     refreshState();
   };
 
+  const selectAllProcessors = async () => {
+    await window.Electron.ipcRenderer.selectAllProcessors();
+    refreshState();
+  };
+
+  const deselectAllProcessors = async () => {
+    await window.Electron.ipcRenderer.deselectAllProcessors();
+    refreshState();
+  };
+
   const cancelProcessing = async () => {
     window.Electron.ipcRenderer.cancel();
     refreshState();
@@ -205,33 +299,66 @@ const Content = ({ onOpen }: { onOpen: () => void }) => {
     setState({ permuteState });
   };
 
+  const handleSaveScene = () => {
+    window.Electron.ipcRenderer.saveScene((filePath) => {
+      if (filePath) {
+        toast({
+          description: 'Scene saved successfully',
+          status: 'success',
+          duration: 3000,
+          isClosable: true,
+        });
+        refreshState();
+      }
+    });
+  };
+
+  const handleLoadScene = () => {
+    window.Electron.ipcRenderer.loadScene(async (response) => {
+      if (response.success) {
+        const permuteState = await window.Electron.ipcRenderer.getState();
+        setState({ permuteState });
+        toast({
+          description: 'Scene loaded successfully',
+          status: 'success',
+          duration: 3000,
+          isClosable: true,
+        });
+      } else {
+        toast({
+          description: 'Error loading scene',
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+        });
+      }
+    });
+  };
 
   return (
-    <Grid
-      templateRows="repeat(24, 1fr)"
-      templateColumns="repeat(12, 1fr)"
-      gap={3}
-      padding={2}
-      width="100%"
-      height="100vh"
-    >
-      <TopBar
+    <Grid {...gridConfig}>
+      <Welcome isOpen={isOpen} onClose={onClose} />
+      <MemoizedTopBar
         openWelcome={onOpen}
         createSubdirectories={createSubdirectories}
         onCreateSubdirectoriesChange={setCreateSubdirectories}
+        onSaveScene={handleSaveScene}
+        onLoadScene={handleLoadScene}
       />
-      <Files
+      <MemoizedFiles
         files={files}
         addFiles={addFiles}
         removeFile={removeFile}
         showFile={showFile}
       />
-      <Processors
+      <MemoizedProcessors
         allProcessors={allProcessors}
         processorPool={processorPool}
         setProcessorEnabled={setProcessorEnabled}
+        onSelectAll={selectAllProcessors}
+        onDeselectAll={deselectAllProcessors}
       />
-      <Output
+      <MemoizedOutput
         output={output}
         setOutput={setOutput}
         showFile={showFile}
@@ -241,7 +368,7 @@ const Content = ({ onOpen }: { onOpen: () => void }) => {
         deleteOutputFile={deleteOutputFile}
         deleteAllOutputFiles={deleteAllOutputFiles}
       />
-      <BottomBar
+      <MemoizedBottomBar
         permutationOutputs={permutationOutputs}
         runProcessor={runProcessor}
         processing={state.permuteState.processing}
@@ -269,33 +396,50 @@ const Content = ({ onOpen }: { onOpen: () => void }) => {
 export default function App() {
   const [loading, setLoading] = useState(true);
   const [showContent, setShowContent] = useState(false);
-  const { isOpen, onClose, onOpen } = useDisclosure({
-    defaultIsOpen: true,
+  const [state, setState] = useState<IAppState>(defaultAppState);
+  const { isOpen, onClose } = useDisclosure({
+    defaultIsOpen: true, // We'll control this after state loads
   });
 
-  useEffect(() => {
-    // Preload the background image
-    const img = new Image();
-    img.src = require('../img/bg2.png');
+  const handleWelcomeClose = () => {
+    window.Electron.ipcRenderer.setViewedWelcome(true);
+    onClose();
+  };
 
-    // Wait for both the timeout and image load
+  useEffect(() => {
+    // Load initial state and preload images in parallel
     Promise.all([
-      new Promise(resolve => setTimeout(resolve, 1500)),
+      window.Electron.ipcRenderer.getState().then(permuteState => {
+        setState({ permuteState });
+        return permuteState;
+      }),
       new Promise(resolve => {
+        const img = new Image();
+        img.src = require('../img/bg2.png');
         if (img.complete) {
           resolve(null);
         } else {
           img.onload = () => resolve(null);
         }
-      })
-    ]).then(() => {
+      }),
+      // Add minimum loading time for smoother UX
+      new Promise(resolve => setTimeout(resolve, 1500))
+    ]).then(([permuteState]) => {
       setLoading(false);
       // Add a small delay before showing the main content
       setTimeout(() => {
         setShowContent(true);
       }, 500);
+
+      // Set initial welcome screen state based on loaded state
+      if (permuteState.viewedWelcome) {
+        onClose();
+      }
     });
-  }, []);
+  }, [onClose]);
+
+  // Don't render welcome screen until we have state
+  const shouldShowWelcome = !loading && isOpen && !state.permuteState.viewedWelcome;
 
   return (
     <ChakraProvider theme={theme}>
@@ -325,7 +469,7 @@ export default function App() {
           </>
         ) : (
           <>
-            <Welcome isOpen={isOpen} onClose={onClose} />
+            {shouldShowWelcome && <Welcome isOpen={true} onClose={handleWelcomeClose} />}
             <Box
               opacity={showContent ? 1 : 0}
               transform={showContent ? "translateY(0)" : "translateY(20px)"}
@@ -333,7 +477,7 @@ export default function App() {
               width="100%"
               height="100%"
             >
-              {showContent && <Content onOpen={onOpen} />}
+              {showContent && <Content />}
             </Box>
           </>
         )}

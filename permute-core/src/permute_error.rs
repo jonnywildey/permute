@@ -2,7 +2,8 @@ use biquad::Errors as FilterErrors;
 use sndfile::SndFileError;
 use std::fmt::Display;
 use std::io;
-use std::sync::mpsc::SendError;
+use crossbeam_channel::SendError;
+use audio_info::AudioFileError;
 
 use crate::permute_files::PermuteUpdate;
 
@@ -42,6 +43,12 @@ impl From<FilterErrors> for PermuteError {
 impl From<()> for PermuteError {
     fn from(error: ()) -> Self {
         PermuteError::Unknown(error)
+    }
+}
+
+impl From<AudioFileError> for PermuteError {
+    fn from(error: AudioFileError) -> Self {
+        PermuteError::IO(std::io::Error::new(std::io::ErrorKind::Other, error.to_string()))
     }
 }
 

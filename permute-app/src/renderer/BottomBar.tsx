@@ -71,26 +71,25 @@ export const BottomBar: React.FC<IBottomBarProps> = ({
       rowSpan={6}
       colSpan={12}
       bg={colorMode === 'dark' ? 'brand.160' : 'brand.150'}
-      // borderTop="0.5px solid"
-      // borderTopColor={borderColour}
       color="brand.5700"
       borderRadius={20}
       shadow="md"
-      minHeight="100%"
+      height="100%"
+      display="flex"
+      flexDirection="column"
     >
       <Grid
-        mt={3}
-        mb={3}
-        overflowY="auto"
+        flex={1}
         templateRows="repeat(2, 1fr)"
         templateColumns="repeat(12, 1fr)"
         width="100%"
-        height="100%"
+        overflowY="scroll"
+        gap={3}
+        p={3}
       >
         <AudioPlayer />
         {InputTrail(inputTrail, setInputTrail)}
         {Depth(depth, setDepth)}
-
         {Normalise(normaliseAtEnd, setNormalised)}
         <Run
           files={files}
@@ -425,6 +424,17 @@ const Run: React.FC<IRunProps> = ({
     return "";
   };
 
+  const buttonHandler = () => {
+    if (isDisabled) {
+      return;
+    }
+    if (isLongRunning) {
+      return cancelProcessing();
+    }
+    return runProcessor();
+  }
+
+
   return (
     <GridItem rowSpan={2} colSpan={3} display="flex" pl={6} pr={6} alignItems="center">
       <Tooltip
@@ -433,7 +443,7 @@ const Run: React.FC<IRunProps> = ({
         fontSize="md"
       >
         <Button
-          onClick={isLongRunning ? cancelProcessing : runProcessor}
+          onClick={buttonHandler}
           disabled={isDisabled}
           width="100%"
           bg={isDisabled ? "brand.210" : !processing ? buttonBg : undefined}

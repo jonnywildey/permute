@@ -1,31 +1,49 @@
+import { IpcRenderer } from 'electron';
 import { IPermuteState } from 'permute-node';
 
 declare global {
   interface Window {
     Electron: {
       ipcRenderer: {
+        addFile(file: string): void;
+        addProcessor(name: string): void;
+        cancel(): void;
+        deleteAllOutputFiles(): void;
+        deleteOutputFile(file: string): void;
+        deselectAllProcessors(): void;
+        getFileStats(files: string[]): Promise<any>;
         getState(): Promise<IPermuteState>;
         openOutputDialog(callback: (args: [string]) => void): void;
-        runProcessor(updateFn: (state: IPermuteState) => void, completeFn: (state: IPermuteState) => void): void;
-        reverseFile(updateFn: (state: IPermuteState) => void, completeFn: (state: IPermuteState) => void, file: string): void;
-        trimFile(updateFn: (state: IPermuteState) => void, completeFn: (state: IPermuteState) => void, file: string): void;
-        addFile(file: string): void;
         removeFile(file: string): void;
-        addProcessor(name: string): void;
         removeProcessor(name: string): void;
-        setOutput(output: string): void;
-        setDepth(depth: number): void;
-        setPermutations(permutations: number): void;
-        setNormalised(normalised: boolean): void;
-        setTrimAll(trimAll: boolean): void;
-        setInputTrail(trail: number): void;
-        setOutputTrail(trail: number): void;
-        showFile(file: string): void;
-        deleteOutputFile(file: string): void;
-        deleteAllOutputFiles(): void;
-        cancel(): void;
+        saveScene(callback: (filePath: string) => void): void;
+        loadScene(callback: (filePath: string) => void): void;
+        reverseFile(
+          updateFn: (state: IPermuteState) => void,
+          completeFn: (state: IPermuteState) => void,
+          file: string
+        ): void;
+        runProcessor(
+          updateFn: (state: IPermuteState) => void,
+          completeFn: (state: IPermuteState) => void
+        ): void;
+        selectAllProcessors(): void;
         setCreateSubdirectories(createSubfolders: boolean): void;
-      };
+        setDepth(depth: number): void;
+        setInputTrail(trail: number): void;
+        setNormalised(normalised: boolean): void;
+        setOutput(output: string): void;
+        setOutputTrail(trail: number): void;
+        setPermutations(permutations: number): void;
+        setTrimAll(trimAll: boolean): void;
+        showFile(file: string): void;
+        trimFile(
+          updateFn: (state: IPermuteState) => void,
+          completeFn: (state: IPermuteState) => void,
+          file: string
+        ): void;
+        setViewedWelcome(viewed: boolean): void;
+      } & IpcRenderer;
     };
   }
 }

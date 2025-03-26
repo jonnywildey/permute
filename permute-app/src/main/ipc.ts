@@ -14,6 +14,48 @@ ipcMain.on('open-output-dialog', async (event) => {
   event.reply('open-output-dialog', result.filePaths);
 });
 
+ipcMain.on('save-scene-dialog', async (event) => {
+  const result = await dialog.showSaveDialog({
+    filters: [{ name: 'Scene Files', extensions: ['json'] }],
+    defaultPath: 'scene.json'
+  });
+  if (!result.canceled && result.filePath) {
+    processor.saveSettings(result.filePath);
+    event.reply('save-scene-dialog', result.filePath);
+  }
+});
+
+ipcMain.on('load-scene-dialog', async (event) => {
+  const result = await dialog.showOpenDialog({
+    filters: [{ name: 'Scene Files', extensions: ['json'] }],
+    properties: ['openFile']
+  });
+  if (!result.canceled && result.filePaths.length > 0) {
+    try {
+      processor.loadSettings(result.filePaths[0]);
+      // Get state to check for errors
+      const state = await processor.getState();
+      if (state.error) {
+        event.reply('load-scene-dialog', {
+          success: false,
+          error: state.error
+        });
+      } else {
+        event.reply('load-scene-dialog', {
+          success: true,
+          filePath: result.filePaths[0]
+        });
+      }
+    } catch (error: any) {
+      console.error(error);
+      event.reply('load-scene-dialog', {
+        success: false,
+        error: `failed to load scene`
+      });
+    }
+  }
+});
+
 ipcMain.on('run-processor', async (event) => {
   processor.runProcess(
     (state: IPermuteState) => {
@@ -103,6 +145,18 @@ ipcMain.on('delete-all-output-files', async () => {
 
 ipcMain.on('set-create-subdirectories', async (_, param) => {
   processor.setCreateSubdirectories(param);
+});
+
+ipcMain.on('select-all-processors', async () => {
+  processor.selectAllProcessors();
+});
+
+ipcMain.on('deselect-all-processors', async () => {
+  processor.deselectAllProcessors();
+});
+
+ipcMain.on('set-viewed-welcome', async (_, param) => {
+  processor.setViewedWelcome(param);
 });
 
 app.on('before-quit', () => {

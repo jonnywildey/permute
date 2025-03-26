@@ -26,7 +26,7 @@ export const Processor = memo(({
       width="100%"
       shadow="sm"
       borderRadius={20}
-      fontSize="xl"
+      fontSize="lg"
     >
       {name}
     </Button>

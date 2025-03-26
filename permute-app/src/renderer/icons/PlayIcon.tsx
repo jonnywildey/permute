@@ -1,5 +1,3 @@
-import play from '../../img/icons/play-button.svg';
-
 const playContent = <g fill="currentColor">
   <g>
     <path d="M204.11,0C91.388,0,0,91.388,0,204.111c0,112.725,91.388,204.11,204.11,204.11c112.729,0,204.11-91.385,204.11-204.11

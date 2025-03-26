@@ -7,8 +7,6 @@ import {
   IconButton,
   PropsOf,
   Text,
-  List,
-  ListItem,
   Tooltip,
   useColorMode,
   Link,
@@ -23,6 +21,7 @@ import { ReverseIcon } from './icons/ReverseIcon';
 import { TrimIcon } from './icons/TrimIcon';
 import { LargeFolderIcon } from './icons/FolderIcon';
 import { LargeTrashIcon } from './icons/TrashIcon';
+import { ProcessorSummary } from './ProcessorSummary';
 
 export interface IOutputProps {
   output: string;
@@ -38,6 +37,8 @@ export interface IOutputProps {
 const buttonBg = 'brand.175';
 const bg = 'brand.25';
 const fileBorderColour = 'brand.150';
+
+const tooltipDelay = 600;
 
 const OutputFile = memo(({ file, onDelete, onShow, onReverse, onTrim, onPlay }: {
   file: IPermutationOutput;
@@ -55,7 +56,6 @@ const OutputFile = memo(({ file, onDelete, onShow, onReverse, onTrim, onPlay }: 
   };
   const ext = file.path.split(".").pop()?.toLowerCase();
   const isAiff = ext === "aif" || ext === "aiff"
-
   return (
     <Box key={file.path} {...props}>
       <Box
@@ -83,7 +83,7 @@ const OutputFile = memo(({ file, onDelete, onShow, onReverse, onTrim, onPlay }: 
           </Heading>
         </Tooltip>
         <Tooltip
-          openDelay={200}
+          openDelay={tooltipDelay}
           label="Delete file"
         >
           <IconButton
@@ -102,31 +102,18 @@ const OutputFile = memo(({ file, onDelete, onShow, onReverse, onTrim, onPlay }: 
           />
         </Tooltip>
       </Box>
-      <Tooltip
-        openDelay={200}
-        label={
-          <List>
-            {file.processors.map((p: string, i: number) => (
-              <ListItem key={`${p}${i}`}>
-                {i + 1}: {p}
-              </ListItem>
-            ))}
-          </List>
-        }
-      >
-        <Box
-          width="100%"
-          className="output-image"
-          pl={2}
-          pr={2}
-          mt="-4px"
-          mb="-8px"
-          dangerouslySetInnerHTML={{ __html: file.image }}
-        />
-      </Tooltip>
+      <Box
+        width="100%"
+        className="output-image"
+        pl={2}
+        pr={2}
+        mt="-4px"
+        mb="-8px"
+        dangerouslySetInnerHTML={{ __html: file.image }}
+      />
       <Box display="flex" alignItems="baseline" width="100%" pos="relative" marginTop={2}>
         <Tooltip
-          openDelay={200}
+          openDelay={tooltipDelay}
           label="Preview"
         >
           <IconButton
@@ -142,7 +129,7 @@ const OutputFile = memo(({ file, onDelete, onShow, onReverse, onTrim, onPlay }: 
           />
         </Tooltip>
         <Tooltip
-          openDelay={200}
+          openDelay={tooltipDelay}
           label="Open directory"
         >
           <IconButton
@@ -158,7 +145,7 @@ const OutputFile = memo(({ file, onDelete, onShow, onReverse, onTrim, onPlay }: 
           />
         </Tooltip>
         <Tooltip
-          openDelay={200}
+          openDelay={tooltipDelay}
           label="Reverse"
         >
           <IconButton
@@ -174,7 +161,7 @@ const OutputFile = memo(({ file, onDelete, onShow, onReverse, onTrim, onPlay }: 
           />
         </Tooltip>
         <Tooltip
-          openDelay={200}
+          openDelay={tooltipDelay}
           label="Auto-trim"
         >
           <IconButton
@@ -189,13 +176,14 @@ const OutputFile = memo(({ file, onDelete, onShow, onReverse, onTrim, onPlay }: 
             _hover={{ bg: 'brand.50' }}
           />
         </Tooltip>
+        <ProcessorSummary processors={file.processors} tooltipDelay={tooltipDelay} />
         <Text
           pr={2}
           width="100%"
           textAlign="right"
           fontSize="sm"
           lineHeight={1}
-          color={colorMode === 'dark' ? 'brand.5600' : 'grey.500'}
+          color={colorMode === 'dark' ? 'brand.5600' : 'gray.500'}
         >
           {displayTime(file.durationSec)}
         </Text>
@@ -237,7 +225,7 @@ export const Output = memo(({
   }, [playFile]);
 
   const outputBoxes = permutationOutputs
-    .filter((f) => f.progress === 100 && f.image)
+    .filter((f) => f.progress === 100 && f.image && !f.deleted)
     .map((file) => (
       <OutputFile
         key={file.path}
@@ -297,7 +285,7 @@ export const Output = memo(({
       </Link>
     </Box>
   );
-  const completeFiles = permutationOutputs.filter((f) => f.progress === 100 && f.image);
+  const completeFiles = permutationOutputs.filter((f) => f.progress === 100 && f.image && !f.deleted);
   const deleteAll = output && permutationOutputs.length > 0 && (
     <Box
       display="flex"
@@ -311,7 +299,7 @@ export const Output = memo(({
       color="brand.5600"
     >
       <Text justifyContent="start" mr={2} flex={1} fontSize="sm">
-        {permutationOutputs.length} files
+        {completeFiles.length} files
       </Text>
       <Tooltip openDelay={1000}
         label="Delete all permuted files">
@@ -332,7 +320,7 @@ export const Output = memo(({
 
   return (
     <GridItem
-      rowSpan={17}
+      rowSpan={19}
       colSpan={3}
       bg={bg}
       pt={4}
