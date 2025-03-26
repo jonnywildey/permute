@@ -1292,6 +1292,13 @@ pub fn saturate(params: &ProcessorParams) -> Result<ProcessorParams, PermuteErro
 
 pub fn trim(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
     let threshold = 0.001;
+    params
+        .update_sender
+        .send(PermuteUpdate::UpdatePermuteNodeStarted(
+            params.permutation.clone(),
+            PermuteNodeName::Trim,
+            PermuteNodeEvent::NodeProcessStarted,
+        ))?;
 
     let mut start: usize = 0;
     let mut end: usize = params.sample_length;

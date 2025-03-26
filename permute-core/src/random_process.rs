@@ -181,7 +181,7 @@ pub fn random_metallic_delay(params: &ProcessorParams) -> Result<ProcessorParams
         vec![
             ProcessorAttribute {
                 key: "Feedback".to_string(),
-                value: format_float_percent(feedback_factor * 100.0),
+                value: format_float_percent(feedback_factor),
             },
             ProcessorAttribute {
                 key: "Delay".to_string(),
@@ -189,7 +189,7 @@ pub fn random_metallic_delay(params: &ProcessorParams) -> Result<ProcessorParams
             },
             ProcessorAttribute {
                 key: "Wet".to_string(),
-                value: format_float_percent(wet_gain_factor * 100.0),
+                value: format_float_percent(wet_gain_factor),
             },
         ],
     );

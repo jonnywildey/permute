@@ -7,23 +7,12 @@ import {
   IconButton,
   PropsOf,
   Text,
-  List,
-  ListItem,
   Tooltip,
   useColorMode,
   Link,
-  Menu,
-  MenuButton,
-  MenuList,
-  Portal,
-  Accordion,
-  AccordionItem,
-  AccordionButton,
-  AccordionPanel,
-  AccordionIcon,
 } from '@chakra-ui/react';
 import { ViewIcon, DeleteIcon } from '@chakra-ui/icons';
-import type { IPermutationOutput, IProcessor, IProcessorAttribute } from 'permute-node';
+import type { IPermutationOutput } from 'permute-node';
 import { useContext, useCallback, memo } from 'react';
 import { PlayIcon } from './icons/PlayIcon';
 import { AudioContext } from './AudioContext';
@@ -32,7 +21,6 @@ import { ReverseIcon } from './icons/ReverseIcon';
 import { TrimIcon } from './icons/TrimIcon';
 import { LargeFolderIcon } from './icons/FolderIcon';
 import { LargeTrashIcon } from './icons/TrashIcon';
-import { InfoIcon } from './icons/InfoIcon';
 import { ProcessorSummary } from './ProcessorSummary';
 
 export interface IOutputProps {
