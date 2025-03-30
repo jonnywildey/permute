@@ -4,7 +4,6 @@ import {
   Heading,
   Input,
   IconButton,
-  CloseButton,
   PropsOf,
   Button,
   Center,
@@ -19,7 +18,7 @@ import { AudioContext } from './AudioContext';
 import { PlayIcon } from './icons/PlayIcon';
 import { displayTime } from './displayTime';
 import { useDropzone } from 'react-dropzone'
-import { CloseIcon, LargeCloseIcon } from './icons/CloseIcon';
+import { LargeCloseIcon } from './icons/CloseIcon';
 
 export interface IFilesProps {
   files: IPermutationInput[];
@@ -64,6 +63,7 @@ const FileBox = memo(({ file, onRemove, onShow, onPlay }: {
           width="80%"
           display="inline"
           color="brand.5600"
+          className="filename-ellipsis"
           pl={2}
         >
           {file.name}
@@ -125,7 +125,7 @@ const FileBox = memo(({ file, onRemove, onShow, onPlay }: {
           pr={2}
           width="100%"
           textAlign="right"
-          color={colorMode === 'dark' ? 'brand.5600' : 'grey.500'}
+          color={colorMode === 'dark' ? 'brand.5600' : 'gray.500'}
           fontSize="sm"
           lineHeight={1}
         >
@@ -184,7 +184,7 @@ export const Files = memo(({
 
   return (
     <GridItem
-      rowSpan={17}
+      rowSpan={19}
       colSpan={3}
       bg={bg}
       pt={4}

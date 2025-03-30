@@ -20,6 +20,7 @@ const colors = {
     300: { light: '#52B74D', dark: '#A66FB8' },
     400: { light: '#6D7D99', dark: '#6D7D99' },
     500: { light: '#CBA7DA', dark: '#CBA7DA' },
+    525: { light: '#a293d6', dark: '#CBA7DA' },
     550: { light: '#A66FB8', dark: '#A66FB8' },
     600: { light: '#3EE8C5', dark: '#0fd7e3' },
     650: { light: '#3ee9c44d', dark: '#3ee9c44d' },
@@ -88,6 +89,10 @@ const semanticTokens = {
     'brand.500': {
       default: colors.brand[500].light,
       _dark: colors.brand[500].dark,
+    },
+    'brand.525': {
+      default: colors.brand[525].light,
+      _dark: colors.brand[525].dark,
     },
     'brand.550': {
       default: colors.brand[550].light,

@@ -21,6 +21,9 @@ const {
   setPermutations,
   setTrimAll,
   trimFile,
+  selectAllProcessors,
+  deselectAllProcessors,
+  setViewedWelcome,
 } = require("../permute-library");
 
 const PERMUTE_POLL_LATENCY = 100;
@@ -41,7 +44,8 @@ export interface IPermuteState {
   normaliseAtEnd: boolean,
   trimAll: boolean,
   createSubdirectories: boolean,
-  permutationOutputs: IPermutationOutput[];
+  permutationOutputs: IPermutationOutput[],
+  viewedWelcome: boolean,
 };
 
 export interface IPermutationInput {
@@ -51,13 +55,24 @@ export interface IPermutationInput {
   image: string;
 }
 
+export interface IProcessorAttribute {
+  key: string;
+  value: string;
+}
+
+export interface IProcessor {
+  name: string;
+  attributes: IProcessorAttribute[];
+}
+
 export interface IPermutationOutput {
   path: string;
   progress: number;
   image: string;
-  processors: string[];
+  processors: IProcessor[];
   name: string;
   durationSec: number;
+  deleted: boolean;
 }
 
 export type GetStateCallback = (state: IPermuteState) => void;
@@ -161,6 +176,15 @@ export function createPermuteProcessor() {
     },
     setCreateSubdirectories(createSubfolders: boolean) {
       return setCreateSubdirectories.call(permuteLibrary, createSubfolders);
+    },
+    selectAllProcessors() {
+      return selectAllProcessors.call(permuteLibrary);
+    },
+    deselectAllProcessors() {
+      return deselectAllProcessors.call(permuteLibrary);
+    },
+    setViewedWelcome(viewed: boolean) {
+      return setViewedWelcome.call(permuteLibrary, viewed);
     },
     getStateCallback,
     async getState(): Promise<IPermuteState> {

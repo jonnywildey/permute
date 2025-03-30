@@ -8,7 +8,7 @@ body {
   font-family: Dongle, sans-serif;
   font-display: swap;
   opacity: 0;
-  animation: fade-in 0.5s ease-out forwards, background-move 100s ease-in-out 2s 4 alternate;
+  animation: fade-in 0.5s ease-out forwards, background-move 5000s ease-in-out 2s 4 alternate;
 }
 
 body[data-theme="dark"] {
@@ -153,8 +153,12 @@ body[data-theme="light"] {
   background-size: 400% !important;
 }
 
+.chakra-alert[data-status="error"] {
+  background-color: #ed91b2 !important;
+}
+
 .chakra-alert {
-  background-color: var(--chakra-colors-brand-200) !important;
+  background-color: #49bd90 !important;
 }
 
 .filename-ellipsis {

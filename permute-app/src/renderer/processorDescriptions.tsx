@@ -1,3 +1,11 @@
+export const processorCategories = {
+  'Time/Pitch': ['Half speed', 'Double speed', 'Random pitch', 'Granular stretch', 'Reverse'],
+  'Modulation': ['Wow', 'Flutter', 'Chorus', 'Flange', 'Phaser', 'Tremolo', 'Lazer'],
+  'Filter/Drive': ['Fuzz', 'Saturate', 'LFO Filter', 'Line Filter'],
+  'Delay/Reverb': ['Metallic delay', 'Rhythmic delay', 'Reverb'],
+  'Cross Processing': ['Cross Gain', 'Cross Filter', 'Cross Distort']
+};
+
 export const processorDescriptions: Record<string, React.ReactNode> = {
   Fuzz: `A distortion that ranges from gentle overdrive to fuzz to "running low on battery" sounds`,
   Saturate: `A gentle, smooth overdrive. This only has one setting, it has no randomised parameters`,
@@ -26,4 +34,14 @@ export const processorDescriptions: Record<string, React.ReactNode> = {
   Good for robot sounds and adding high frequency elements to a sound`,
   'LFO Filter': `A low-frequency oscillator that controls the cutoff frequency of a filter.`,
   'Line Filter': `Filter frequency increases (or decreases) over the length of the audio.`,
+  'Cross Gain': `Modulates the gain of the audio based on the RMS energy of another audio file. 
+    Modulating Audio file is stretched to the length of the original audio.
+    Cross effects run quite slow. Be careful with high depth values or large numbers of files`,
+  'Cross Filter': `Modulates a filter's frequency based on the RMS energy of another audio file. 
+  Modulating Audio file is stretched to the length of the original audio.
+  Cross effects run quite slow. Be careful with high depth values or large numbers of files`,
+  'Cross Distort': `Modulates the distortion amount based on the RMS energy of another audio file.
+  Uses a variety of gentler distortion algorithms including hyperbolic tangent, arctangent, soft clipping, and saturation.
+  The distortion factor varies based on the modulating audio's amplitude.
+  Cross effects run quite slow. Be careful with high depth values or large numbers of files`,
 };
