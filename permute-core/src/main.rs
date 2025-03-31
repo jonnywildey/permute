@@ -153,10 +153,12 @@ fn main() {
                     );
             }
             PermuteUpdate::Error(err) => {
-                    panic!("{}", err);
+                    eprintln!("Error: {}", err);
+                    break;
             }
             PermuteUpdate::ProcessComplete => {
                     println!("Processing complete");
+                    break;
             }
             PermuteUpdate::AudioInfoGenerated(file, _) => {
                     println!("Generated audio info for {}", file);

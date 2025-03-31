@@ -35,6 +35,15 @@ impl AudioCache {
         }
     }
 
+    pub fn clear_file(&self, path: &str) {
+        let path = PathBuf::from(path);
+        let mut cache = self.cache.write().unwrap();
+        if let Some(entry) = cache.remove(&path) {
+            let mut current_memory = self.current_memory.write().unwrap();
+            *current_memory -= entry.size_bytes;
+        }
+    }
+
     pub fn get_samples(&self, path: &str) -> Result<Arc<Vec<f64>>, PermuteError> {
         let path = PathBuf::from(path);
         
@@ -101,5 +110,5 @@ impl AudioCache {
 
 // Global singleton instance
 lazy_static::lazy_static! {
-    pub(crate) static ref AUDIO_CACHE: AudioCache = AudioCache::default();
+    pub static ref AUDIO_CACHE: AudioCache = AudioCache::default();
 } 
