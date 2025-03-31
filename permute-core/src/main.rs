@@ -1,12 +1,13 @@
 mod display_node;
 mod files;
-mod osc;
 mod permute_error;
 mod permute_files;
 mod audio_cache;
 mod rms_cache;
 mod process;
 mod random_process;
+mod processors;
+mod random_processors;
 
 use std::{sync::Arc, thread};
 use display_node::*;
