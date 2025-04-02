@@ -175,9 +175,9 @@ fn print_processor_attributes(perms: &Vec<Permutation>) {
     println!("\nProcessor Attributes:");
     for permutation in perms {
         println!("\nFile: {}", permutation.output);
-        println!("┌─────┬────────────────────┬─────────────────────┐");
-        println!("│ Node│ Processor          │ Attributes          │");
-        println!("├─────┼────────────────────┼─────────────────────┤");
+        println!("┌─────┬────────────────────┬───────────────────────────┐");
+        println!("│ Node│ Processor          │ Attributes                │");
+        println!("├─────┼────────────────────┼───────────────────────────┤");
         
         for (i, processor) in permutation.processors.iter().enumerate() {
             let processor_name = get_processor_display_name(processor.name);
@@ -185,25 +185,25 @@ fn print_processor_attributes(perms: &Vec<Permutation>) {
             
             for attr in &processor.attributes {
                 if first_attr {
-                    println!("│ {:3} │ {:18} │ {:19} │", 
+                    println!("│ {:3} │ {:18} │ {:25} │", 
                         i, processor_name, format!("{}: {}", attr.key, attr.value));
                     first_attr = false;
                 } else {
-                    println!("│ {:3} │ {:18} │ {:19} │", 
+                    println!("│ {:3} │ {:18} │ {:25} │", 
                         "", "", format!("{}: {}", attr.key, attr.value));
                 }
             }
             
             if first_attr {
-                println!("│ {:3} │ {:18} │ {:19} │", 
+                println!("│ {:3} │ {:18} │ {:25} │", 
                     i, processor_name, "");
             }
             
             if i < permutation.processors.len() - 1 {
-                println!("├─────┼────────────────────┼─────────────────────┤");
+                println!("├─────┼────────────────────┼───────────────────────────┤");
             }
         }
         
-        println!("└─────┴────────────────────┴─────────────────────┘");
+        println!("└─────┴────────────────────┴───────────────────────────┘");
     }
 }
