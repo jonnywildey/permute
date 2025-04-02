@@ -2,7 +2,6 @@ use audio_info::AudioFileError;
 use audio_info::AudioInfo;
 use neon::prelude::*;
 use permute::display_node::*;
-use permute::permute_error::PermuteError;
 use permute::permute_files::*;
 use permute::process::*;
 use serde::{Deserialize, Serialize};
@@ -13,10 +12,17 @@ use std::path::Path;
 use std::sync::Arc;
 use std::thread::JoinHandle;
 use std::fs;
-use crossbeam_channel::{Sender, Receiver};
+use crossbeam_channel::Sender;
 use std::sync::Mutex;
 use std::thread;
 use std::collections::HashMap;
+use permute::{
+    process::PermuteNodeName,
+    permute_files::{process_file, PermuteUpdate},
+    audio_cache::AUDIO_CACHE,
+    rms_cache::clear_file_from_rms_cache,
+    permute_error::PermuteError,
+};
 
 #[derive(Debug, Clone)]
 pub struct SharedState {
@@ -272,6 +278,11 @@ impl SharedState {
                 break;
             }
         }
+
+        // Clear audio cache. We may need to run the reverse process again.
+        AUDIO_CACHE.clear_file(&file);
+        clear_file_from_rms_cache(&file);
+
         Ok(())
     }
 
@@ -291,6 +302,10 @@ impl SharedState {
                 break;
             }
         }
+
+        // Clear audio cache. We may need to run the reverse process again.
+        AUDIO_CACHE.clear_file(&file);
+        clear_file_from_rms_cache(&file);
         Ok(())
     }
 

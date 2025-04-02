@@ -57,6 +57,21 @@ impl RmsCache {
         }
     }
 
+    fn clear_file(&mut self, file: &str) {
+        // Remove all entries for this file
+        let keys_to_remove: Vec<CacheKey> = self.entries
+            .keys()
+            .filter(|key| key.file == file)
+            .cloned()
+            .collect();
+        
+        for key in keys_to_remove {
+            if let Some(entry) = self.entries.remove(&key) {
+                self.current_size -= entry.size_in_bytes();
+            }
+        }
+    }
+
     fn get_rms(&mut self, key: &CacheKey) -> Option<Vec<f64>> {
         if let Some(entry) = self.entries.get_mut(key) {
             entry.last_accessed = std::time::Instant::now();
@@ -137,4 +152,8 @@ pub fn cache_rms(
         target_sample_rate,
         rms_values,
     );
+}
+
+pub fn clear_file_from_rms_cache(file: &str) {
+    RMS_CACHE.lock().unwrap().clear_file(file);
 } 

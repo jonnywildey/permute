@@ -7,7 +7,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-sndfile = "0.0.4"
+sndfile = "0.1.1"
 structopt = "0.3.13"
 hound = "3.4.0"
 rand = "0.8.4"
@@ -18,3 +18,4 @@ lazy_static = "1.4.0"
 audio-info = { path = "../audio-info" }
 rayon = "1.8.1"
 crossbeam-channel = "0.5"
+rustfft = "6.1"
