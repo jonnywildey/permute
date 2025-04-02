@@ -1,8 +1,8 @@
 export const processorCategories = {
-  'Time/Pitch': ['Half speed', 'Double speed', 'Random pitch', 'Granular stretch', 'Reverse'],
+  'Time/Pitch': ['Half Speed', 'Double Speed', 'Random Pitch', 'Granular Stretch', 'Blur Stretch', 'Reverse'],
   'Modulation': ['Wow', 'Flutter', 'Chorus', 'Flange', 'Phaser', 'Tremolo', 'Lazer'],
   'Filter/Drive': ['Fuzz', 'Saturate', 'LFO Filter', 'Line Filter'],
-  'Delay/Reverb': ['Metallic delay', 'Rhythmic delay', 'Reverb'],
+  'Delay/Reverb': ['Metallic Delay', 'Rhythmic Delay', 'Reverb'],
   'Cross Processing': ['Cross Gain', 'Cross Filter', 'Cross Distort']
 };
 
@@ -10,17 +10,18 @@ export const processorDescriptions: Record<string, React.ReactNode> = {
   Fuzz: `A distortion that ranges from gentle overdrive to fuzz to "running low on battery" sounds`,
   Saturate: `A gentle, smooth overdrive. This only has one setting, it has no randomised parameters`,
   Reverse: `Reverses the audio. Best used in conjunction with other effects like delay`,
-  'Granular stretch': `Inspired by what the audio guesses is how vintage samplers' time stretching works, 
+  'Granular Stretch': `Inspired by what the audio guesses is how vintage samplers' time stretching works, 
   applies a granular time stretch. 
   Cycle length, crossfade and stretch amount are randomised. 
   Be careful when using this with high depths, it can create very long files`,
-  'Metallic delay': `A delay with low duration (less than 100ms) and high feedbacks to create metallic sounds.`,
-  'Rhythmic delay': `A delay between 100ms and 1 second.`,
+  'Blur Stretch': `A time stretch that uses a blurring algorithm to stretch the audio.`,
+  'Metallic Delay': `A delay with low duration (less than 100ms) and high feedbacks to create metallic sounds.`,
+  'Rhythmic Delay': `A delay between 100ms and 1 second.`,
   Reverb: `A very 80s sounding reverb. Reverb length and mix are randomised`,
   'Half-Speed': `Converts the audio to half speed, lowering the pitch by an octave. The duration of the audio will change. There are no randomised parameters`,
-  'Double speed':
+  'Double Speed':
     'Converts the audio to double speed, increasing the pitch by an octave. The duration of the audio will change. There are no randomised parameters',
-  'Random pitch':
+  'Random Pitch':
     'Shifts the pitch of the audio by a random interval. The duration of the audio will change',
   Wow: 'A low speed vibrato, high depth effect similar to a warped record. Depth, speed and mix levels are randomised',
   Flutter: `A high speed vibrato effect, giving a warbley or fluttery sound.

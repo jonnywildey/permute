@@ -136,6 +136,10 @@ pub fn random_blur_stretch(
                 key: "Stretch Factor".to_string(),
                 value: stretch_factor.to_string(),
             },
+            ProcessorAttribute {
+                key: "Window Type".to_string(),
+                value: format!("{:?}", window_type),
+            },
         ],
     );
     let result = stft_time_stretch(

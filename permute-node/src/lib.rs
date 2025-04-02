@@ -220,7 +220,7 @@ impl Processor {
                             PermuteUpdate::AudioInfoGenerated(file, audio_info) => {
                                 state.update_output_audioinfo(file, audio_info);
                             }
-                            PermuteUpdate::ProcessComplete => {
+                            PermuteUpdate::ProcessComplete(_) => {
                                 match state.set_finished() {
                                     Ok(()) => {}
                                     Err(err) => {

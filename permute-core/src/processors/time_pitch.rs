@@ -277,6 +277,7 @@ pub fn time_stretch_cross(
     })
 }
 
+#[derive(Debug, Clone, Copy)    ]
 pub enum WindowType { 
     Hamming,
     Blackman,

@@ -22,6 +22,7 @@ export const Processors = memo(({
   const handleProcessorClick = useCallback((processor: string, enabled: boolean) => {
     setProcessorEnabled(processor, !enabled);
   }, [setProcessorEnabled]);
+  debugger;
 
   const renderProcessorGroup = (category: string, processors: string[]) => {
     const categoryProcessors = processors.filter(p => allProcessors.includes(p)).map((ap) => {
