@@ -6,6 +6,10 @@ use crate::{
     processors::{filter::{FilterType, FilterForm, FilterParams, multi_channel_filter}, 
     gain_distortion::{split_channels, interleave_channels}},
 };
+use std::f64::consts::PI;
+use rand::{rngs::ThreadRng, Rng};
+use rustfft::FftPlanner;
+use rustfft::num_complex::Complex;
 
 pub fn reverse(
     ProcessorParams {
@@ -18,7 +22,7 @@ pub fn reverse(
         file_format,
         sub_format,
         sample_rate,
-    }: &ProcessorParams,
+    }: &mut ProcessorParams,
 ) -> Result<ProcessorParams, PermuteError> {
     update_sender.send(PermuteUpdate::UpdatePermuteNodeStarted(
         permutation.clone(),
@@ -81,7 +85,7 @@ pub fn change_sample_rate(
     Ok(resampled)
 }
 
-pub fn change_sample_rate_high(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
+pub fn change_sample_rate_high(params: &mut ProcessorParams) -> Result<ProcessorParams, PermuteError> {
     let new_params = params.clone();
     let update_sender = params.update_sender.to_owned();
     let permutation = params.permutation.to_owned();
@@ -110,7 +114,7 @@ pub fn change_sample_rate_high(params: &ProcessorParams) -> Result<ProcessorPara
 }
 
 pub fn change_sample_rate_original(
-    params: &ProcessorParams,
+    params: &mut ProcessorParams,
 ) -> Result<ProcessorParams, PermuteError> {
     let new_params = params.clone();
     let update_sender = params.update_sender.to_owned();
@@ -237,17 +241,10 @@ pub fn time_stretch_cross(
     let chunk_tuples: Vec<(usize, usize)> = chunks
         .windows(2)
         .enumerate()
-        .map(|(i, d)| {
+        .map(|(_, d)| {
             let a = d[0];
             let b = d[1];
             return (a, b);
-            // if i == 0 {
-            //     return (a, b);
-            // } else if i + 2 == chunks.len() {
-            //     return (a, b);
-            // } else {
-            //     return (a, b);
-            // }
         })
         .collect();
 
@@ -259,13 +256,9 @@ pub fn time_stretch_cross(
                     if i == 0 && s == 0 {
                         new_samples.push(params.samples[j]);
                     } else {
-                        let len = new_samples.len() - 1;
                         let f = (pos as f64 / (half_blend) as f64);
 
                         new_samples.push(params.samples[j] * f);
-                        // new_samples[len - pos] = params.samples[j];
-                        // new_samples[len - half_blend - pos] =
-                        //     (params.samples[j] * f) + new_samples[len - half_blend - pos];
                     }
                 } else if end - j < half_blend {
                     let f1 = ((end - j) as f64 / (half_blend) as f64);
@@ -283,3 +276,136 @@ pub fn time_stretch_cross(
         ..params.clone()
     })
 }
+
+pub enum WindowType { 
+    Hamming,
+    Blackman,
+}
+
+pub struct StftTimeStretchParams {
+    pub window_size: usize,
+    pub hop_size: usize,
+    pub stretch_factor: f64,
+    pub rng: ThreadRng,
+    pub window_type: WindowType,
+}
+
+fn hamming_window(window_size: usize) -> Vec<f64> {
+    (0..window_size).map(|i| 0.54 - 0.46 * (2.0 * PI * i as f64 / 
+        (window_size - 1) as f64).cos()).collect()
+}
+
+fn blackman_window(window_size: usize) -> Vec<f64> {
+    (0..window_size).map(|i| 0.42 - 0.5 * (2.0 * PI * i as f64 / 
+        (window_size - 1) as f64).cos() + 0.08 * (4.0 * PI * i as f64 / 
+            (window_size - 1) as f64).cos()).collect()
+}
+
+pub fn stft_time_stretch(
+    params: &ProcessorParams,
+    StftTimeStretchParams {
+        window_size,
+        hop_size,
+        stretch_factor,
+        window_type,
+        mut rng
+    }: StftTimeStretchParams,
+) -> Result<ProcessorParams, PermuteError> {
+    // Split into channels
+    let channel_samples = split_channels(params.samples.clone(), params.channels);
+    let mut new_channel_samples: Vec<Result<Vec<f64>, PermuteError>> = vec![];
+
+    // Create FFT planner and plan forward/backward FFTs
+    let mut planner = FftPlanner::new();
+    let fft = planner.plan_fft_forward(window_size);
+    let ifft = planner.plan_fft_inverse(window_size);
+
+    for channel in channel_samples {
+        let samples = channel;
+
+        // Create Blackman window
+        let window = match window_type {   
+            WindowType::Hamming => hamming_window(window_size),
+            WindowType::Blackman => blackman_window(window_size),
+        };
+
+
+        // Calculate number of frames
+        // let num_frames = (padded_len - window_size) / hop_size + 1;
+        let num_frames =  ((samples.len() as f64 / hop_size as f64) * stretch_factor) as usize;
+        // println!("num_frames: {:?}, frame length sec: {}, hop size: {}, stretch factor: {}", num_frames, window_size as f64 / params.sample_rate as f64, hop_size as f64 / params.sample_rate as f64, stretch_factor);
+   
+        // Buffer for FFT processing
+        let mut fft_buffer = vec![Complex::new(0.0, 0.0); window_size];
+        
+        let mut all_frames: Vec<Vec<f64>> = vec![];
+        // Process each frame
+        let mut current_pos = 0;
+        for _frame in 0..num_frames {
+            let mut frame_buffer: Vec<f64> = vec![];
+            // Calculate frame positions with proper stretching
+            let analysis_pos = current_pos;
+            
+            // Extract and window the frame
+            for i in 0..window_size {
+                if analysis_pos + i < samples.len() {
+                    fft_buffer[i] = Complex::new(
+                        samples[analysis_pos + i] * window[i],
+                        0.0
+                    );
+                } else {
+                    fft_buffer[i] = Complex::new(0.0, 0.0);
+                }
+            }
+            current_pos = current_pos + (hop_size as f64 / stretch_factor) as usize;
+            
+            // Forward FFT
+            fft.process(&mut fft_buffer);
+            
+            // Phase vocoder processing
+            for i in 0..fft_buffer.len() {                    
+                let magnitude = fft_buffer[i].norm();
+                let random_phase = rng.gen_range(0.0..2.0 * PI);
+                let new_phase =  fft_buffer[i].arg() + random_phase;
+                fft_buffer[i] = Complex::from_polar(magnitude, new_phase);
+            }
+                        
+            // Inverse FFT
+            ifft.process(&mut fft_buffer);
+            for i in 0..window_size {
+                frame_buffer.push(fft_buffer[i].re * window[i]);
+            }
+            all_frames.push(frame_buffer);
+        }
+        // Overlap-add with window
+        let output_len = ((samples.len() as f64 * stretch_factor) as usize);
+        let mut pos: usize = 0;
+        let mut output_buffer: Vec<f64> = vec![0.0; output_len];
+        for frame in all_frames {
+            let current_pos = pos;
+            for i in 0..window_size {
+                if pos < output_len {
+                    output_buffer[pos] += frame[i];
+                    pos += 1;
+                }
+            }
+            pos = current_pos + hop_size;
+            // println!("pos: {}, sec {},", pos, pos as f64 / params.sample_rate as f64);
+        }
+        
+        new_channel_samples.push(Ok(output_buffer));
+    }
+
+    // Interleave channels back together
+    let new_channel_samples = new_channel_samples.into_iter().collect();
+
+    let interleave_samples = interleave_channels(new_channel_samples).unwrap();
+    let interleave_sample_length = interleave_samples.len();
+    
+    Ok(ProcessorParams {
+        samples: interleave_samples,
+        sample_length: interleave_sample_length,
+        ..params.clone()
+    })
+}
+
