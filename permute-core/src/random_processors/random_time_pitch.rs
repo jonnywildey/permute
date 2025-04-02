@@ -3,15 +3,9 @@ use rand::{thread_rng, Rng};
 
 // Internal modules
 use crate::{
-    processors::time_pitch::{
-        TimeStretchParams, time_stretch_cross, change_speed, 
-        stft_time_stretch, StftTimeStretchParams, WindowType
-    },
-    random_processors::utils::{format_samples_as_ms, format_factor_to_pitch},
-    process::{ProcessorParams, PermuteNodeName, ProcessorAttribute, PermuteNodeEvent},
-    random_process::{start_event, complete_event},
-    permute_files::PermuteUpdate,
-    permute_error::PermuteError,
+    permute_error::PermuteError, permute_files::PermuteUpdate, process::{PermuteNodeEvent, PermuteNodeName, ProcessorAttribute, ProcessorParams}, processors::time_pitch::{
+        change_speed, stft_time_stretch, time_stretch_cross, StftTimeStretchParams, TimeStretchParams, WindowType
+    }, random_process::{complete_event, start_event}, random_processors::utils::{format_factor_to_pitch, format_samples_as_ms, DistributionRng}
 };
 
 pub fn random_pitch(params: &mut ProcessorParams) -> Result<ProcessorParams, PermuteError> {
@@ -45,33 +39,74 @@ pub fn random_granular_time_stretch(
     start_event!(PermuteNodeName::GranularTimeStretch, params);
 
     let mut rng = thread_rng();
-    let grain = [
-        200, 400, 600, 1000, 1600, 2000, 2200, 2400, 2600, 2800, 3000, 4000, 10000, 20000,
+    let grain_distributions = vec![
+        (5.0, 0.1),    // 5ms
+        (10.0, 0.1),   // 10ms
+        (15.0, 0.1),   // 15ms
+        (25.0, 0.2),   // 25ms
+        (40.0, 0.2),   // 40ms
+        (50.0, 0.3),   // 50ms
+        (55.0, 0.3),   // 55ms
+        (60.0, 0.3),   // 60ms
+        (65.0, 0.2),   // 65ms
+        (70.0, 0.2),   // 70ms
+        (75.0, 0.2),   // 75ms
+        (100.0, 0.1),  // 100ms
+        (250.0, 0.1),  // 250ms
+        (500.0, 0.1),  // 500ms
     ];
-    let stretch = [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 4];
-    let blend = [
-        20, 40, 80, 100, 140, 160, 180, 200, 220, 240, 300, 340, 400, 500, 1200, 2000, 4000,
+    let mut grain_ms = rng.gen_distribution(grain_distributions);
+    let grain_samples = ((grain_ms / 1000.0) * params.sample_rate as f64) as usize;
+    
+    let stretch_distributions = vec![
+        (2, 1.0),
+        (3, 0.1),
+        (4, 0.1),
+        (5, 0.1),
+        (6, 0.1),
     ];
-
-    let grain_samples = grain[rng.gen_range(0..grain.len())];
-    let stretch_factor = stretch[rng.gen_range(0..stretch.len())];
-    let blend_samples = blend[rng.gen_range(0..blend.len())];
+    let stretch_factor = rng.gen_distribution(stretch_distributions);
+    
+    let blend_distributions = vec![
+        (0.5, 1.0),
+        (1.0, 0.1),
+        (2.0, 0.1),
+        (3.5, 0.1),
+        (4.0, 0.1),
+        (4.5, 0.1),
+        (5.0, 0.1),
+        (5.5, 0.1),
+        (8.5, 0.1),
+        (10.0, 0.3),
+        (12.5, 0.3),
+        (20.5, 0.3),   
+        (25.5, 0.3),   
+        (30.0, 0.1),
+        (35.0, 0.1),
+        (50.0, 0.1),
+        (73.0, 0.1),
+        (80.0, 0.1),
+        (90.0, 0.1),
+        (100.0, 0.1),
+    ];
+    let blend_ms = rng.gen_distribution(blend_distributions);
+    if blend_ms > grain_ms {
+        grain_ms = blend_ms + grain_ms;
+    }
+    let blend_samples = ((blend_ms / 1000.0) * params.sample_rate as f64) as usize;
 
     let time_stretch_params = TimeStretchParams {
         grain_samples,
         stretch_factor,
         blend_samples,
     };
-
-    let mut new_params = time_stretch_cross(&params, time_stretch_params)?;
-
     // Update processor attributes
-    new_params.update_processor_attributes(
-        new_params.permutation.clone(),
+    params.update_processor_attributes(
+        params.permutation.clone(),
         vec![
             ProcessorAttribute {
                 key: "Grain".to_string(),
-                value: format_samples_as_ms(grain_samples, params.sample_rate),
+                value: format!("{:.1} ms", grain_ms),
             },
             ProcessorAttribute {
                 key: "Stretch Factor".to_string(),
@@ -79,10 +114,12 @@ pub fn random_granular_time_stretch(
             },
             ProcessorAttribute {
                 key: "Blend".to_string(),
-                value: format_samples_as_ms(blend_samples, params.sample_rate),
+                value: format!("{:.1} ms", blend_ms),
             },
         ],
     );
+
+    let new_params = time_stretch_cross(&params, time_stretch_params)?;
 
     complete_event!(PermuteNodeName::GranularTimeStretch, new_params);
     Ok(new_params)
@@ -108,14 +145,37 @@ pub fn random_blur_stretch(
 
     let mut rng = rand::thread_rng();
     // Randomize window size between 1024 and 4096 samples
-    let window_options = [4096, 5000, 6000, 8192, 10000, 10240, 12288, 16384, 32768, 64000, 128000];
-    let window_size = window_options[rng.gen_range(0..window_options.len())];
+    let window_distributions = vec![
+        (4096, 0.1),
+        (5000, 0.1),
+        (6000, 0.2),
+        (8192, 0.3),
+        (10000, 0.2),
+        (10240, 0.2),
+        (12288, 0.2),
+        (16384, 0.1),
+        (32768, 0.1),
+        (64000, 0.1),
+        (128000, 0.1),
+    ];
+    let window_size = rng.gen_distribution(window_distributions);
     // Randomize hop size between 1/4 and 1/2 of window size
     let hop_options = [window_size/4, window_size/2, window_size/3, window_size/4];
     let hop_size = hop_options[rng.gen_range(0..hop_options.len())];
     // Randomize stretch factor between 0.5 and 2.0
-    let stretch_options = [0.25, 0.5, 0.75, 1.5, 2.0, 2.0, 2.0, 3.0, 3.0, 4.0, 4.0, 6.0, 8.0, 16.0];
-    let stretch_factor = stretch_options[rng.gen_range(0..stretch_options.len())];
+    let stretch_distributions = vec![
+        (0.25, 0.1),
+        (0.5, 0.1),
+        (0.75, 0.1),
+        (1.5, 0.1),
+        (2.0, 0.2),
+        (3.0, 0.2),
+        (4.0, 0.2),
+        (6.0, 0.1),
+        (8.0, 0.1),
+        (16.0, 0.025),
+    ];
+    let stretch_factor = rng.gen_distribution(stretch_distributions);
     let window_type = match rng.gen_range(0..2) {
         0 => WindowType::Hamming,
         1 => WindowType::Blackman,

@@ -1,4 +1,23 @@
+use rand::{rngs::ThreadRng, Rng};
 
+pub trait DistributionRng {
+    fn gen_distribution<T: Copy>(&mut self, distribution: Vec<(T, f64)>) -> T;
+}
+
+impl DistributionRng for ThreadRng {
+    fn gen_distribution<T: Clone>(&mut self, distribution: Vec<(T, f64)>) -> T {
+        let total_probability = distribution.iter().map(|(_, p)| p).sum::<f64>();
+        let random_value = self.gen_range(0.0..total_probability);
+        // create a cumulative distribution
+        let cumulative_distribution = distribution.iter().scan(0.0, |acc, (_, p)| {
+            *acc += p;
+            Some(*acc)
+        }).collect::<Vec<f64>>();
+        // find the index of the cumulative distribution that is greater than the random value
+        let index = cumulative_distribution.iter().position(|p| *p > random_value).unwrap_or(distribution.len() - 1);
+        distribution[index].0.clone()
+    }
+}
 
 pub fn format_float(value: f64) -> String {
     format!("{:.2}", value)

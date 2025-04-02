@@ -1,5 +1,5 @@
 // External dependencies
-use rand::{thread_rng, Rng};
+use rand::{rngs::ThreadRng, thread_rng, Rng};
 
 // Internal modules
 use crate::{
@@ -45,7 +45,7 @@ pub(crate) use complete_event;
 
 const MAX_LENGTH_INCREASING: usize = 3;
 
-pub struct GetProcessorNodeParams {
+pub struct GetProcessorNodeParams  {
     pub normalise_at_end: bool,
     pub trim_at_end: bool,
     pub high_sample_rate: bool,
@@ -53,6 +53,8 @@ pub struct GetProcessorNodeParams {
     pub processor_pool: Vec<PermuteNodeName>,
     pub processor_count: Option<i32>,
     pub constrain_length: bool,
+    pub rng: ThreadRng,
+    pub original_depth: usize,
 }
 
 /// Select a random processor from the processor pool
@@ -61,7 +63,9 @@ pub fn select_random_processor(processor_pool: &[PermuteNodeName]) -> PermuteNod
 }
 
 pub fn generate_processor_sequence(
-    GetProcessorNodeParams {
+    params: GetProcessorNodeParams,
+) -> Vec<PermuteNodeName> {
+    let GetProcessorNodeParams {
         normalise_at_end,
         trim_at_end,
         high_sample_rate,
@@ -69,11 +73,28 @@ pub fn generate_processor_sequence(
         processor_pool,
         processor_count,
         constrain_length,
-    }: GetProcessorNodeParams,
-) -> Vec<PermuteNodeName> {
-    let mut rng = thread_rng();
-    let processor_count = processor_count.unwrap_or(rng.gen_range(2..5));
+        mut rng,
+        original_depth,
+    } = params;
     let mut processors: Vec<PermuteNodeName> = vec![];
+    if depth == 0 {
+        if original_depth == depth {
+            processors.push(select_random_processor(&processor_pool));
+        }
+        if high_sample_rate {
+            processors.insert(0, PermuteNodeName::SampleRateConversionHigh);
+            processors.push(PermuteNodeName::SampleRateConversionOriginal);
+        }
+        if normalise_at_end {
+            processors.push(PermuteNodeName::Normalise);
+        }
+        if trim_at_end {
+            processors.push(PermuteNodeName::Trim);
+        }
+        return processors;
+    };
+
+    let processor_count = processor_count.unwrap_or(rng.gen_range(2..5));
 
     for _ in 0..processor_count {
         let available_processors: Vec<PermuteNodeName> = if constrain_length && count_length_increasing(&processors) >= MAX_LENGTH_INCREASING {
@@ -92,32 +113,21 @@ pub fn generate_processor_sequence(
         }
     }
 
-    if depth > 1 {
-        processors = [
-            generate_processor_sequence(GetProcessorNodeParams {
-                depth: depth - 1,
-                normalise_at_end: false,
-                trim_at_end: false,
-                processor_pool,
-                high_sample_rate: false,
-                processor_count: Some(processor_count),
-                constrain_length,
-            }),
-            processors,
-        ]
-        .concat();
-    }
-
-    if high_sample_rate {
-        processors.insert(0, PermuteNodeName::SampleRateConversionHigh);
-        processors.push(PermuteNodeName::SampleRateConversionOriginal);
-    }
-    if normalise_at_end {
-        processors.push(PermuteNodeName::Normalise);
-    }
-    if trim_at_end {
-        processors.push(PermuteNodeName::Trim);
-    }
+    processors = [
+        processors,
+        generate_processor_sequence(GetProcessorNodeParams {
+            depth: depth - 1,
+            normalise_at_end: normalise_at_end,
+            trim_at_end: trim_at_end,
+            processor_pool,
+            high_sample_rate: high_sample_rate,
+            processor_count: Some(processor_count),
+            constrain_length,
+            rng,
+            original_depth: original_depth,
+        }),
+    ]
+    .concat();
 
     processors
 }
@@ -125,7 +135,10 @@ pub fn generate_processor_sequence(
 fn is_length_increasing(processor: &PermuteNodeName) -> bool {
     matches!(
         processor,
-        PermuteNodeName::GranularTimeStretch | PermuteNodeName::HalfSpeed
+        PermuteNodeName::GranularTimeStretch | 
+        PermuteNodeName::HalfSpeed | 
+        PermuteNodeName::BlurStretch |
+        PermuteNodeName::RandomPitch
     )
 }
 

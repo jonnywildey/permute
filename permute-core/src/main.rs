@@ -176,7 +176,7 @@ fn print_processor_attributes(perms: &Vec<Permutation>) {
     for permutation in perms {
         println!("\nFile: {}", permutation.output);
         println!("┌─────┬────────────────────┬─────────────────────┐");
-        println!("│ Node│ Processor          │ Attributes           │");
+        println!("│ Node│ Processor          │ Attributes          │");
         println!("├─────┼────────────────────┼─────────────────────┤");
         
         for (i, processor) in permutation.processors.iter().enumerate() {

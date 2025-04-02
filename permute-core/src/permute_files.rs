@@ -1,4 +1,10 @@
-use crate::{files::*, permute_error::PermuteError, process::*, random_process::*, audio_cache::AUDIO_CACHE};
+use crate::{
+    files::*, permute_error::PermuteError, 
+    process::*, 
+    random_process::*, 
+    audio_cache::AUDIO_CACHE
+};
+use rand::thread_rng;
 use sndfile::*;
 use std::sync::Arc;
 use std::thread;
@@ -81,6 +87,7 @@ pub fn permute_files(mut params: PermuteFilesParams) -> JoinHandle<()> {
     .expect("Error creating thread")
 }
 
+
 fn permute_file(
     params: &PermuteFilesParams,
     file: String,
@@ -118,39 +125,17 @@ fn permute_file(
     for i in 1..=params.permutations {
         let output_i = generate_file_name(file.clone(), output.clone(), i, params.output_file_as_wav);
 
-        let mut processors = match params.permutation_depth {
-            0 => vec![
-                // select a random processor from the processor pool
-                select_random_processor(&params.processor_pool),
-            ],    
-            _ => generate_processor_sequence(GetProcessorNodeParams {
-                depth: params.permutation_depth,
-                normalise_at_end: params.normalise_at_end,
-                trim_at_end: params.trim_all,
-                processor_pool: params.processor_pool.clone(),
-                high_sample_rate: params.high_sample_rate,
-                processor_count: params.processor_count,
-                constrain_length: params.constrain_length,
-            }),
-        };
-            // if we are permuting more than once, we need to generate a new processor sequence for each permutation
-        if params.permutation_depth > 1 {
-            let depth = params.permutation_depth - 1;
-            let processor_count = params.processor_count.unwrap_or(0);
-            processors = [
-                generate_processor_sequence(GetProcessorNodeParams {
-                    depth: depth,
-                    normalise_at_end: false,
-                    trim_at_end: false,
-                    processor_pool: params.processor_pool.clone(),
-                    high_sample_rate: false,
-                    processor_count: Some(processor_count),
-                    constrain_length: params.constrain_length,
-                }),
-                processors.clone(),
-            ]
-            .concat();
-        }
+        let processors = generate_processor_sequence(GetProcessorNodeParams { 
+            depth: params.permutation_depth,
+            normalise_at_end: params.normalise_at_end,
+            trim_at_end: params.trim_all,
+            processor_pool: params.processor_pool.clone(),
+            high_sample_rate: params.high_sample_rate,
+            processor_count: params.processor_count,
+            constrain_length: params.constrain_length,
+            rng: thread_rng(),
+            original_depth: params.permutation_depth,
+        });
 
         let processor_fns = processors
             .iter()

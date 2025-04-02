@@ -1,7 +1,7 @@
 export const processorCategories = {
   'Time/Pitch': ['Half Speed', 'Double Speed', 'Random Pitch', 'Granular Stretch', 'Blur Stretch', 'Reverse'],
   'Modulation': ['Wow', 'Flutter', 'Chorus', 'Flange', 'Phaser', 'Tremolo', 'Lazer'],
-  'Filter/Drive': ['Fuzz', 'Saturate', 'LFO Filter', 'Line Filter'],
+  'Filter/Drive': ['Fuzz', 'Saturate', 'LFO Filter', 'Line Filter', 'Filter'],
   'Delay/Reverb': ['Metallic Delay', 'Rhythmic Delay', 'Reverb'],
   'Cross Processing': ['Cross Gain', 'Cross Filter', 'Cross Distort']
 };
@@ -17,6 +17,7 @@ export const processorDescriptions: Record<string, React.ReactNode> = {
   'Blur Stretch': `A time stretch that uses a blurring algorithm to stretch the audio.`,
   'Metallic Delay': `A delay with low duration (less than 100ms) and high feedbacks to create metallic sounds.`,
   'Rhythmic Delay': `A delay between 100ms and 1 second.`,
+  'Filter': `Filters.`,
   Reverb: `A very 80s sounding reverb. Reverb length and mix are randomised`,
   'Half-Speed': `Converts the audio to half speed, lowering the pitch by an octave. The duration of the audio will change. There are no randomised parameters`,
   'Double Speed':
