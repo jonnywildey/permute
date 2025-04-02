@@ -23,10 +23,8 @@ pub fn random_pitch(params: &mut ProcessorParams) -> Result<ProcessorParams, Per
 
     let speed = speeds[rng.gen_range(0..speeds.len())];
 
-    let mut new_params = change_speed(params.clone(), speed);
-    // Update processor attributes
-    new_params.update_processor_attributes(
-        new_params.permutation.clone(),
+    params.update_processor_attributes(
+        params.permutation.clone(),
         vec![
             ProcessorAttribute {
                 key: "Pitch".to_string(),
@@ -34,6 +32,8 @@ pub fn random_pitch(params: &mut ProcessorParams) -> Result<ProcessorParams, Per
             },
         ],
     );
+
+    let new_params = change_speed(params.clone(), speed);
     complete_event!(PermuteNodeName::RandomPitch, new_params);
 
     Ok(new_params)

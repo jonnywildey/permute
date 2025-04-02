@@ -13,24 +13,17 @@ use crate::{
     permute_files::PermuteUpdate,
 };
 
-pub fn random_wow(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
+pub fn random_wow(params: &mut ProcessorParams) -> Result<ProcessorParams, PermuteError> {
     start_event!(PermuteNodeName::Wow, params);
     let mut rng = thread_rng();
 
     let speed_hz = rng.gen_range(0.2_f64..1.6_f64);
     let depth = rng.gen_range(0.3_f64..0.7_f64);
 
-    let mut new_params = vibrato(
-        params.to_owned(),
-        VibratoParams {
-            speed_hz,
-            depth,
-        },
-    )?;
-
+    
     // Update processor attributes
-    new_params.update_processor_attributes(
-        new_params.permutation.clone(),
+    params.update_processor_attributes(
+        params.permutation.clone(),
         vec![
             ProcessorAttribute {
                 key: "Speed".to_string(),
@@ -40,14 +33,21 @@ pub fn random_wow(params: &ProcessorParams) -> Result<ProcessorParams, PermuteEr
                 key: "Depth".to_string(),
                 value: format_float_percent(depth),
             },
-        ],
-    );
+            ],
+        );
+    let new_params = vibrato(
+        params.to_owned(),
+        VibratoParams {
+            speed_hz,
+            depth,
+        },
+    )?;
 
     complete_event!(PermuteNodeName::Wow, new_params);
     Ok(new_params)
 }
 
-pub fn random_tremolo(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
+pub fn random_tremolo(params: &mut ProcessorParams) -> Result<ProcessorParams, PermuteError> {
     start_event!(PermuteNodeName::Tremolo, params);
     let mut rng = thread_rng();
 
@@ -61,17 +61,9 @@ pub fn random_tremolo(params: &ProcessorParams) -> Result<ProcessorParams, Permu
     let speed_hz = factors[rng.gen_range(0..factors.len())];
     let depth = rng.gen_range(0.3_f64..0.99_f64);
 
-    let mut new_params = tremolo(
-        params.to_owned(),
-        TremoloParams {
-            speed_hz,
-            depth,
-        },
-    )?;
-
     // Update processor attributes
-    new_params.update_processor_attributes(
-        new_params.permutation.clone(),
+    params.update_processor_attributes(
+        params.permutation.clone(),
         vec![
             ProcessorAttribute {
                 key: "Speed".to_string(),
@@ -83,12 +75,20 @@ pub fn random_tremolo(params: &ProcessorParams) -> Result<ProcessorParams, Permu
             },
         ],
     );
+    let new_params = tremolo(
+        params.to_owned(),
+        TremoloParams {
+            speed_hz,
+            depth,
+        },
+    )?;
+
 
     complete_event!(PermuteNodeName::Tremolo, new_params);
     Ok(new_params)
 }
 
-pub fn random_lazer(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
+pub fn random_lazer(params: &mut ProcessorParams) -> Result<ProcessorParams, PermuteError> {
     start_event!(PermuteNodeName::Lazer, params);
     let mut rng = thread_rng();
 
@@ -124,19 +124,10 @@ pub fn random_lazer(params: &ProcessorParams) -> Result<ProcessorParams, Permute
     let depth = rng.gen_range(0.5_f64..0.99_f64);
     let frame_ms = 10;
 
-    let mut new_params = tremolo_input_mod(
-        params.to_owned(),
-        TremoloInputModParams {
-            min_speed_hz,
-            max_speed_hz,
-            depth,
-            frame_ms,
-        },
-    )?;
-
+    
     // Update processor attributes
-    new_params.update_processor_attributes(
-        new_params.permutation.clone(),
+    params.update_processor_attributes(
+        params.permutation.clone(),
         vec![
             ProcessorAttribute {
                 key: "Min Speed".to_string(),
@@ -154,31 +145,32 @@ pub fn random_lazer(params: &ProcessorParams) -> Result<ProcessorParams, Permute
                 key: "Frame".to_string(),
                 value: format_samples_as_ms(frame_ms, params.sample_rate),
             },
-        ],
-    );
+            ],
+        );
+    let new_params = tremolo_input_mod(
+        params.to_owned(),
+        TremoloInputModParams {
+            min_speed_hz,
+            max_speed_hz,
+            depth,
+            frame_ms,
+        },
+    )?;
 
     complete_event!(PermuteNodeName::Lazer, new_params);
     Ok(new_params)
 }
 
-pub fn random_flutter(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
+pub fn random_flutter(params: &mut ProcessorParams) -> Result<ProcessorParams, PermuteError> {
     start_event!(PermuteNodeName::Flutter, params);
     let mut rng = thread_rng();
 
     let depth = rng.gen_range(0.1_f64..0.27_f64).powf(2.0); // try and push values towards lower values
     let speed_hz = rng.gen_range(5_f64..20_f64);
 
-    let mut new_params = vibrato(
-        params.to_owned(),
-        VibratoParams {
-            speed_hz,
-            depth,
-        },
-    )?;
-
     // Update processor attributes
-    new_params.update_processor_attributes(
-        new_params.permutation.clone(),
+    params.update_processor_attributes(
+        params.permutation.clone(),
         vec![
             ProcessorAttribute {
                 key: "Speed".to_string(),
@@ -190,12 +182,20 @@ pub fn random_flutter(params: &ProcessorParams) -> Result<ProcessorParams, Permu
             },
         ],
     );
+    let new_params = vibrato(
+        params.to_owned(),
+        VibratoParams {
+            speed_hz,
+            depth,
+        },
+    )?;
+
 
     complete_event!(PermuteNodeName::Flutter, new_params);
     Ok(new_params)
 }
 
-pub fn random_chorus(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
+pub fn random_chorus(params: &mut ProcessorParams) -> Result<ProcessorParams, PermuteError> {
     start_event!(PermuteNodeName::Chorus, params);
 
     let mut rng = thread_rng();
@@ -251,7 +251,7 @@ pub fn random_chorus(params: &ProcessorParams) -> Result<ProcessorParams, Permut
     Ok(new_params)
 }
 
-pub fn random_phaser(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
+pub fn random_phaser(params: &mut ProcessorParams) -> Result<ProcessorParams, PermuteError> {
     start_event!(PermuteNodeName::Phaser, params);
 
     let mut rng = thread_rng();
@@ -305,7 +305,7 @@ pub fn random_phaser(params: &ProcessorParams) -> Result<ProcessorParams, Permut
     Ok(new_params)
 }
 
-pub fn random_zero_flange(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
+pub fn random_zero_flange(params: &mut ProcessorParams) -> Result<ProcessorParams, PermuteError> {
     start_event!(PermuteNodeName::Flange, params);
     let mut rng = thread_rng();
 

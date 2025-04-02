@@ -10,7 +10,7 @@ use crate::{
         random_filter::{random_filter, random_line_filter, random_oscillating_filter},
         random_gain_distortion::{random_fuzz, random_saturate, normalise},
         random_modulation::{random_chorus, random_phaser, random_wow, random_tremolo, random_lazer, random_zero_flange, random_flutter},
-        random_time_pitch::{random_granular_time_stretch, random_pitch, half_speed, double_speed},
+        random_time_pitch::{random_granular_time_stretch, random_pitch, half_speed, double_speed, random_blur_stretch},
     },
     processors::time_pitch::{change_sample_rate_high, change_sample_rate_original, reverse},
     processors::gain_distortion::trim,
@@ -162,5 +162,6 @@ pub fn get_processor_function(name: PermuteNodeName) -> ProcessorFn {
         PermuteNodeName::CrossGain => random_cross_gain,
         PermuteNodeName::CrossFilter => random_cross_filter,
         PermuteNodeName::CrossDistort => random_cross_distort,
+        PermuteNodeName::BlurStretch => random_blur_stretch,
     }
 }

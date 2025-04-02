@@ -12,7 +12,7 @@ use crate::{
     permute_error::PermuteError,
 };
 
-pub fn random_cross_gain(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
+pub fn random_cross_gain(params: &mut ProcessorParams) -> Result<ProcessorParams, PermuteError> {
     start_event!(PermuteNodeName::CrossGain, params);
     let mut rng = thread_rng();
 
@@ -30,18 +30,8 @@ pub fn random_cross_gain(params: &ProcessorParams) -> Result<ProcessorParams, Pe
     let invert = rng.gen_bool(0.5);
     let window_size_ms = 100.0; // 100ms window size
 
-    let cross_params = CrossGainParams {
-        sidechain_file: sidechain_file.clone(),
-        depth,
-        invert,
-        window_size_ms,
-    };
-
-    let mut new_params = cross_gain(params, &cross_params)?;
-
-    // Update processor attributes
-    new_params.update_processor_attributes(
-        new_params.permutation.clone(),
+    params.update_processor_attributes(
+        params.permutation.clone(),
         vec![
             ProcessorAttribute {
                 key: "Sidechain File".to_string(),
@@ -62,11 +52,19 @@ pub fn random_cross_gain(params: &ProcessorParams) -> Result<ProcessorParams, Pe
         ],
     );
 
+    let cross_params = CrossGainParams {
+        sidechain_file: sidechain_file.clone(),
+        depth,
+        invert,
+        window_size_ms,
+    };
+
+    let new_params = cross_gain(params, &cross_params)?;
     complete_event!(PermuteNodeName::CrossGain, new_params);
     Ok(new_params)
 }
 
-pub fn random_cross_filter(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
+pub fn random_cross_filter(params: &mut ProcessorParams) -> Result<ProcessorParams, PermuteError> {
     start_event!(PermuteNodeName::CrossFilter, params);
     let mut rng = thread_rng();
     
@@ -98,21 +96,8 @@ pub fn random_cross_filter(params: &ProcessorParams) -> Result<ProcessorParams, 
     let window_size_ms = 100.0; // Fixed 10ms window for RMS calculation
     let invert = rng.gen_bool(0.5);
 
-    let cross_params = CrossFilterParams {
-        sidechain_file: sidechain_file.clone(),
-        filter_type,
-        base_freq,
-        max_freq,
-        q,
-        window_size_ms,
-        invert,
-    };
-
-    let mut new_params = cross_filter(params, &cross_params)?;
-
-    // Update processor attributes
-    new_params.update_processor_attributes(
-        new_params.permutation.clone(),
+    params.update_processor_attributes(
+        params.permutation.clone(),
         vec![
             ProcessorAttribute {
                 key: "Sidechain File".to_string(),
@@ -145,11 +130,22 @@ pub fn random_cross_filter(params: &ProcessorParams) -> Result<ProcessorParams, 
         ],
     );
 
+    let cross_params = CrossFilterParams {
+        sidechain_file: sidechain_file.clone(),
+        filter_type,
+        base_freq,
+        max_freq,
+        q,
+        window_size_ms,
+        invert,
+    };
+
+    let new_params = cross_filter(params, &cross_params)?;
     complete_event!(PermuteNodeName::CrossFilter, new_params);
     Ok(new_params)
 }
 
-pub fn random_cross_distort(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
+pub fn random_cross_distort(params: &mut ProcessorParams) -> Result<ProcessorParams, PermuteError> {
     start_event!(PermuteNodeName::CrossDistort, params);
     let mut rng = rand::thread_rng();
     
@@ -216,6 +212,36 @@ pub fn random_cross_distort(params: &ProcessorParams) -> Result<ProcessorParams,
             )
         }
     };
+
+    params.update_processor_attributes(
+        params.permutation.clone(),
+        vec![
+            ProcessorAttribute {
+                key: "Sidechain File".to_string(),
+                value: get_filename(&sidechain_file),
+            },
+            ProcessorAttribute {
+                key: "Algorithm".to_string(),
+                value: format!("{:?}", algorithm),
+            },
+            ProcessorAttribute {
+                key: "Min Factor".to_string(),
+                value: format_float(min_factor),
+            },
+            ProcessorAttribute {
+                key: "Max Factor".to_string(),
+                value: format_float(min_factor + increase),
+            },
+            ProcessorAttribute {
+                key: "Window Size".to_string(),
+                value: format_float_ms(100.0),
+            },
+            ProcessorAttribute {
+                key: "Invert".to_string(),
+                value: rng.gen_bool(0.5).to_string(),
+            },
+        ],
+    );
     
     let cross_params = CrossDistortParams {
         sidechain_file,

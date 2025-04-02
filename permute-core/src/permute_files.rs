@@ -7,13 +7,14 @@ use audio_info::AudioInfo;
 use rayon::prelude::*;
 use crossbeam_channel::{Sender, Receiver};
 use std::collections::HashMap;
+use std::sync::Mutex;
 
 pub enum PermuteUpdate {
     Error(String),
     UpdatePermuteNodeStarted(Permutation, PermuteNodeName, PermuteNodeEvent),
     UpdatePermuteNodeCompleted(Permutation, PermuteNodeName, PermuteNodeEvent),
     UpdateSetProcessors(Permutation, Vec<PermuteNodeName>),
-    ProcessComplete,
+    ProcessComplete(Option<Vec<Permutation>>),
     AudioInfoGenerated(String, AudioInfo),
 }
 
@@ -39,47 +40,51 @@ pub struct PermuteFilesParams {
 
 pub fn permute_files(mut params: PermuteFilesParams) -> JoinHandle<()> {
     thread::Builder::new()
-        .name("PermuteThread".to_string())
-        .spawn(move || {
-            let output = match params.create_subdirectories {
-                true => {
-                    let o = get_output_run(params.output.clone());
-                    o.expect("error creating subdirectory")
-                }
-                false => params.output.clone(),
-            };
-            params.output = output;
-            params.create_subdirectories = false;
+    .name("PermuteThread".to_string())
+    .spawn(move || {
+        let output = match params.create_subdirectories {
+            true => {
+                let o = get_output_run(params.output.clone());
+                o.expect("error creating subdirectory")
+            }
+            false => params.output.clone(),
+        };
+        params.output = output;
+        params.create_subdirectories = false;
+        let output_permutations = Arc::new(Mutex::new(Vec::new()));
+        
+        // Process files in parallel using rayon
+        params.files.par_iter().for_each(|file| {
+            if params.cancel_receiver.try_recv().is_ok() {
+                params.update_sender.send(PermuteUpdate::ProcessComplete(None))
+                    .expect("Error sending message");
+                return;
+            }
 
-            // Process files in parallel using rayon
-            params.files.par_iter().for_each(|file| {
-                if params.cancel_receiver.try_recv().is_ok() {
-                    params.update_sender.send(PermuteUpdate::ProcessComplete)
+            let result = permute_file(&params, file.clone());
+            match result {
+                Ok(permutations) => {
+                    output_permutations.lock().unwrap().extend(permutations);
+                }
+                Err(err) => {
+                    params.update_sender.send(PermuteUpdate::Error(err.to_string()))
                         .expect("Error sending message");
-                    return;
                 }
+            }
+        });
 
-                let result = permute_file(&params, file.clone());
-                if let Err(err) = result {
-                    params
-                        .update_sender
-                        .send(PermuteUpdate::Error(err.to_string()))
-                        .expect("Error sending message");
-                }
-            });
-
-            params
-                .update_sender
-                .send(PermuteUpdate::ProcessComplete)
-                .expect("Error sending message");
-        })
-        .expect("Error creating thread")
+        params
+            .update_sender
+            .send(PermuteUpdate::ProcessComplete(Some(output_permutations.lock().unwrap().clone())))
+            .expect("Error sending message");
+    })
+    .expect("Error creating thread")
 }
 
 fn permute_file(
     params: &PermuteFilesParams,
     file: String,
-) -> Result<(), PermuteError> {
+) -> Result<Vec<Permutation>, PermuteError> {
     let snd = sndfile::OpenOptions::ReadOnly(ReadOptions::Auto).from_path(file.clone())?;
     let sample_rate = snd.get_samplerate();
     let channels = snd.get_channels();
@@ -189,12 +194,13 @@ fn permute_file(
         generated_processors.push((processor_fns, processor_params));
     }
 
+    let mut output_permutations: Vec<Permutation> = vec![];
     for (processor_fns, processor_params) in generated_processors.iter() {
         let output_params = run_processors(RunProcessorsParams {
             processor_params: processor_params.clone(),
             processors: processor_fns.to_vec(),
         })?;
-
+        output_permutations.push(output_params.permutation.clone());
         let mut snd = sndfile::OpenOptions::WriteOnly(WriteOptions::new(
             output_params.file_format,
             output_params.sub_format,
@@ -215,7 +221,7 @@ fn permute_file(
             ))?;
         }
     }
-    Ok(())
+    Ok(output_permutations)
 }
 
 pub fn process_file(
@@ -236,7 +242,7 @@ pub fn process_file(
 
     let process_fn = get_processor_function(process);
 
-    let new_params = process_fn(&ProcessorParams {
+    let new_params = process_fn(&mut ProcessorParams {
         channels,
         endian,
         file_format,
@@ -260,10 +266,7 @@ pub fn process_file(
         },
     })?;
 
-    update_sender
-        .send(PermuteUpdate::ProcessComplete)
-        .expect("Error sending message");
-
+    
     let mut snd = sndfile::OpenOptions::WriteOnly(WriteOptions::new(
         file_format,
         sub_format,
@@ -273,7 +276,11 @@ pub fn process_file(
     ))
     .from_path(file)?;
 
-    snd.write_from_iter(new_params.samples.clone().into_iter())?;
+   snd.write_from_iter(new_params.samples.clone().into_iter())?;
+
+    update_sender
+        .send(PermuteUpdate::ProcessComplete(Some(vec![new_params.permutation])))
+        .expect("Error sending message");
     Ok(())
 }
 
@@ -291,7 +298,8 @@ pub fn run_processors(
     processors
         .iter()
         .fold(Ok(processor_params), |params, processor| {
-            let new_params = processor(&params?)?;
+            let new_params = processor(&mut params?)?;
+
             Ok(ProcessorParams {
                 permutation: Permutation {
                     node_index: new_params.permutation.node_index + 1,

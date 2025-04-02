@@ -15,7 +15,8 @@ use permute_files::*;
 use structopt::StructOpt;
 use crossbeam_channel;
 
-use crate::process::PermuteNodeName;
+use crate::process::{PermuteNodeName, Permutation, ProcessorAttribute};
+use crate::display_node::get_processor_display_name;
 
 /// Permute file
 #[derive(StructOpt, Clone)]
@@ -156,13 +157,53 @@ fn main() {
                     eprintln!("Error: {}", err);
                     break;
             }
-            PermuteUpdate::ProcessComplete => {
+            PermuteUpdate::ProcessComplete(permutations) => {
                     println!("Processing complete");
+                    if let Some(permutations) = permutations {
+                        print_processor_attributes(&permutations);
+                    }
                     break;
             }
             PermuteUpdate::AudioInfoGenerated(file, _) => {
                     println!("Generated audio info for {}", file);
             }
         }
+    }
+}
+
+fn print_processor_attributes(perms: &Vec<Permutation>) {
+    println!("\nProcessor Attributes:");
+    for permutation in perms {
+        println!("\nFile: {}", permutation.output);
+        println!("┌─────┬────────────────────┬─────────────────────┐");
+        println!("│ Node│ Processor          │ Attributes           │");
+        println!("├─────┼────────────────────┼─────────────────────┤");
+        
+        for (i, processor) in permutation.processors.iter().enumerate() {
+            let processor_name = get_processor_display_name(processor.name);
+            let mut first_attr = true;
+            
+            for attr in &processor.attributes {
+                if first_attr {
+                    println!("│ {:3} │ {:18} │ {:19} │", 
+                        i, processor_name, format!("{}: {}", attr.key, attr.value));
+                    first_attr = false;
+                } else {
+                    println!("│ {:3} │ {:18} │ {:19} │", 
+                        "", "", format!("{}: {}", attr.key, attr.value));
+                }
+            }
+            
+            if first_attr {
+                println!("│ {:3} │ {:18} │ {:19} │", 
+                    i, processor_name, "");
+            }
+            
+            if i < permutation.processors.len() - 1 {
+                println!("├─────┼────────────────────┼─────────────────────┤");
+            }
+        }
+        
+        println!("└─────┴────────────────────┴─────────────────────┘");
     }
 }

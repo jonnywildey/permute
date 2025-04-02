@@ -13,7 +13,7 @@ use crate::{
     permute_files::PermuteUpdate,
 };
 
-pub type ProcessorFn = fn(&ProcessorParams) -> Result<ProcessorParams, PermuteError>;
+pub type ProcessorFn = fn(&mut ProcessorParams) -> Result<ProcessorParams, PermuteError>;
 
 #[derive(Debug, Clone)]
 pub struct ProcessorParams {
@@ -96,10 +96,11 @@ pub enum PermuteNodeName {
     CrossGain,
     CrossFilter,
     CrossDistort,
+    BlurStretch,
 }
 
 // Only processors we want to be visible to users
-pub const ALL_PROCESSORS: [PermuteNodeName; 22] = [
+pub const ALL_PROCESSORS: [PermuteNodeName; 23] = [
     PermuteNodeName::GranularTimeStretch,
     PermuteNodeName::Fuzz,
     PermuteNodeName::Saturate,
@@ -129,4 +130,5 @@ pub const ALL_PROCESSORS: [PermuteNodeName; 22] = [
     PermuteNodeName::CrossFilter,
     // Cross Distort doesn't seem to do much different to cross gain
     // PermuteNodeName::CrossDistort,
+    PermuteNodeName::BlurStretch,
 ];

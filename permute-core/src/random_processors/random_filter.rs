@@ -11,7 +11,7 @@ use crate::{
     permute_error::PermuteError,
 };
 
-pub fn random_filter(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
+pub fn random_filter(params: &mut ProcessorParams) -> Result<ProcessorParams, PermuteError> {
     start_event!(PermuteNodeName::Filter, params);
     let mut rng = thread_rng();
 
@@ -30,18 +30,9 @@ pub fn random_filter(params: &ProcessorParams) -> Result<ProcessorParams, Permut
     let q = rng.gen_range(0.15_f64..1.2_f64);
     let form = FilterForm::Form2;
 
-    let filter_params = FilterParams {
-        filter_type,
-        frequency,
-        q: Some(q),
-        form: form.clone(),
-    };
-
-    let mut new_params = filter(params, &filter_params)?;
-
-    // Update processor attributes
-    new_params.update_processor_attributes(
-        new_params.permutation.clone(),
+    // Update processor attributes before processing
+    params.update_processor_attributes(
+        params.permutation.clone(),
         vec![
             ProcessorAttribute {
                 key: "Filter Type".to_string(),
@@ -62,12 +53,20 @@ pub fn random_filter(params: &ProcessorParams) -> Result<ProcessorParams, Permut
         ],
     );
 
+    let filter_params = FilterParams {
+        filter_type,
+        frequency,
+        q: Some(q),
+        form: form.clone(),
+    };
+
+    let new_params = filter(params, &filter_params)?;
     complete_event!(PermuteNodeName::Filter, new_params);
     Ok(new_params)
 }
 
 pub fn random_oscillating_filter(
-    params: &ProcessorParams,
+    params: &mut ProcessorParams,
 ) -> Result<ProcessorParams, PermuteError> {
     start_event!(PermuteNodeName::OscillatingFilter, params);
 
@@ -95,20 +94,9 @@ pub fn random_oscillating_filter(
     let q = rng.gen_range(0.5_f64..1.3_f64);
     let form = FilterForm::Form2;
 
-    let filter_params = OscillatingFilterParams {
-        filter_type,
-        frequency,
-        q: Some(q),
-        form: form.clone(),
-        lfo_rate,
-        lfo_factor,
-    };
-
-    let mut new_params = oscillating_filter(params, &filter_params)?;
-
-    // Update processor attributes
-    new_params.update_processor_attributes(
-        new_params.permutation.clone(),
+    // Update processor attributes before processing
+    params.update_processor_attributes(
+        params.permutation.clone(),
         vec![
             ProcessorAttribute {
                 key: "Filter Type".to_string(),
@@ -137,11 +125,21 @@ pub fn random_oscillating_filter(
         ],
     );
 
+    let filter_params = OscillatingFilterParams {
+        filter_type,
+        frequency,
+        q: Some(q),
+        form: form.clone(),
+        lfo_rate,
+        lfo_factor,
+    };
+
+    let new_params = oscillating_filter(params, &filter_params)?;
     complete_event!(PermuteNodeName::OscillatingFilter, new_params);
     Ok(new_params)
 }
 
-pub fn random_line_filter(params: &ProcessorParams) -> Result<ProcessorParams, PermuteError> {
+pub fn random_line_filter(params: &mut ProcessorParams) -> Result<ProcessorParams, PermuteError> {
     start_event!(PermuteNodeName::LineFilter, params);
 
     let mut rng = thread_rng();
@@ -165,19 +163,9 @@ pub fn random_line_filter(params: &ProcessorParams) -> Result<ProcessorParams, P
     let q = rng.gen_range(0.5_f64..1.35_f64);
     let form = FilterForm::Form2;
 
-    let filter_params = LineFilterParams {
-        filter_type,
-        form: form.clone(),
-        hz_from,
-        hz_to,
-        q: Some(q),
-    };
-
-    let mut new_params = multi_line_filter(&params.to_owned(), &filter_params)?;
-
-    // Update processor attributes
-    new_params.update_processor_attributes(
-        new_params.permutation.clone(),
+    // Update processor attributes before processing
+    params.update_processor_attributes(
+        params.permutation.clone(),
         vec![
             ProcessorAttribute {
                 key: "Filter Type".to_string(),
@@ -193,7 +181,7 @@ pub fn random_line_filter(params: &ProcessorParams) -> Result<ProcessorParams, P
             },
             ProcessorAttribute {
                 key: "Q".to_string(),
-                        value: format_float(q),
+                value: format_float(q),
             },
             ProcessorAttribute {
                 key: "Form".to_string(),
@@ -202,6 +190,15 @@ pub fn random_line_filter(params: &ProcessorParams) -> Result<ProcessorParams, P
         ],
     );
 
+    let filter_params = LineFilterParams {
+        filter_type,
+        form: form.clone(),
+        hz_from,
+        hz_to,
+        q: Some(q),
+    };
+
+    let new_params = multi_line_filter(&params.to_owned(), &filter_params)?;
     complete_event!(PermuteNodeName::LineFilter, new_params);
     Ok(new_params)
 }
