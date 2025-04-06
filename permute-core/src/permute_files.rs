@@ -186,7 +186,7 @@ fn permute_file(
         }  
 
         // It is quite easy to get a list of processors that will increase the length of the audio way too much
-        // let (processor_plans, last_params) = filter_long_processes(processor_plans, last_params, params.max_stretch);
+        let (processor_plans, last_params) = filter_long_processes(processor_plans, last_params, params.max_stretch);
 
         params.update_sender.send(PermuteUpdate::UpdateSetProcessors(
             last_params.permutation.clone(),
@@ -318,51 +318,44 @@ pub fn run_processors(params: RunProcessorsParams) -> Result<ProcessorParams, Pe
 }
 
 
-fn filter_long_processes(mut processors: Vec<ProcessorPlan>, mut last_params: ProcessorParams, max_stretch: f64) -> (Vec<ProcessorPlan>, ProcessorParams) {
-    let mut permute_length_factor = 0.0;
-    // get a list of filtered node indexes
-    let mut filtered_node_indexes: Vec<usize> = vec![];
-    let mut node_index = 0;
-    for processor in processors.iter() {
-        let (_name, attributes, _closure) = processor;
-        for attribute in attributes.iter() {
-            match attribute.key.as_str() {
+fn filter_long_processes(processors: Vec<ProcessorPlan>, mut last_params: ProcessorParams, max_stretch: f64) -> (Vec<ProcessorPlan>, ProcessorParams) {
+    // First pass: calculate length factors and mark processors to keep
+    let mut filtered_processors = Vec::new();
+    let mut filtered_processor_info = Vec::new();
+    let mut cumulative_stretch = 1.0; // Start at 1 since it's multiplicative
+
+    for (i, (name, attributes, closure)) in processors.into_iter().enumerate() {
+        let mut processor_stretch = 1.0;
+        
+        // Find stretch/length factor in attributes
+        for attr in &attributes {
+            match attr.key.as_str() {
                 "Length Factor" | "Stretch Factor" => {
-                    if let Ok(length_factor) = attribute.value.parse::<f64>() {
-                        permute_length_factor += length_factor;
-                        if permute_length_factor > max_stretch {
-                            println!("Skipping processor: {:?}. Length factor {} is greater than max stretch {}", _name, permute_length_factor, max_stretch);
-                            filtered_node_indexes.push(node_index);
-                        }
+                    if let Ok(factor) = attr.value.parse::<f64>() {
+                        processor_stretch = factor;
+                        break;
                     }
                 },
                 _ => {}
             }
         }
-        node_index += 1;
-    }
 
-    // remove the processors from the list
-    let mut filtered_processors = vec![];
-    for (index, processor) in processors.into_iter().enumerate() {
-        if !filtered_node_indexes.contains(&index) {
-            filtered_processors.push(processor);
+        // Calculate new cumulative stretch
+        let new_cumulative = cumulative_stretch * processor_stretch;
+        
+        // Only keep processor if it doesn't exceed max_stretch
+        if new_cumulative <= max_stretch {
+            cumulative_stretch = new_cumulative;
+            filtered_processors.push((name, attributes.clone(), closure));
+            filtered_processor_info.push(last_params.permutation.processors[i].clone());
+        } else {
+            println!("Filtering out processor {:?} as it would increase stretch to {}", name, new_cumulative);
         }
     }
 
-    // Filter the processors in last_params
-    let last_params_processors = last_params.permutation.processors.clone();
-    let mut last_params_processors_filtered = vec![];
-    for (index, processor) in last_params_processors.iter().enumerate() {
-        if index < filtered_node_indexes.len() && !filtered_node_indexes.contains(&index) {
-            last_params_processors_filtered.push(processor.clone());
-        }
-    }
-
-    // Update last_params with filtered processors and reset node_index
-    last_params.permutation.processors = last_params_processors_filtered;
-    last_params.permutation.node_index = 0;  // Reset node_index to 0
-
+    // Update last_params with filtered processors
+    last_params.permutation.processors = filtered_processor_info;
+    last_params.permutation.node_index = 0;
 
     (filtered_processors, last_params)
 }
