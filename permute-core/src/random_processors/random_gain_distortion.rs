@@ -77,7 +77,7 @@ pub fn normalise(_params: &mut ProcessorParams) -> ProcessorPlan  {
 }
 
 pub fn auto_trim(params: &mut ProcessorParams) -> ProcessorPlan {
-    let threshold = 0.1_f64;
+    let threshold = 0.01_f64;
     let attributes = vec![
         ProcessorAttribute {
             key: "Threshold".to_string(),

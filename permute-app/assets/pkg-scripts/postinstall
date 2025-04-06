@@ -1,8 +1,8 @@
 #!/bin/sh
-echo "Installing libsndfile"
+# echo "Installing libsndfile"
 
-mkdir -p /usr/local/lib
-cp -n ./libsndfile.1.dylib /usr/local/lib/libsndfile.1.dylib
+# mkdir -p /usr/local/lib
+# cp -n ./libsndfile.1.dylib /usr/local/lib/libsndfile.1.dylib
 
-exit 0
+# exit 0
 
