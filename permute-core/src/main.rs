@@ -146,8 +146,8 @@ fn main() {
             PermuteUpdate::UpdateSetProcessors(permutation, processors) => {
                     let pretty_processors = processors
                         .iter()
-                        .map(|p| get_processor_display_name(*p))
-                        .collect::<Vec<String>>();
+                        .map(|p| (get_processor_display_name(p.0), p.1.clone()))
+                        .collect::<Vec<(String, Vec<ProcessorAttribute>)>>();
                     println!(
                         "File {} Processors {:#?}",
                         permutation.output, pretty_processors

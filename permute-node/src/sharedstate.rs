@@ -195,7 +195,7 @@ impl SharedState {
     pub fn add_output_progress(
         &mut self,
         permutation: Permutation,
-        processors: Vec<PermuteNodeName>,
+        processors: Vec<(PermuteNodeName, Vec<ProcessorAttribute>)>,
     ) {
         // Find file index
         if let Some(file_index) = self.files.iter().position(|f| f.path == permutation.file) {
@@ -203,7 +203,7 @@ impl SharedState {
             self.outputs.insert(key, OutputProgress {
                 output: permutation.output.clone(),
                 permutation: permutation.clone(),
-                processors,
+                processors: processors.iter().map(|(p, _)| p.clone()).collect(),
                 progress: 0,
                 audio_info: AudioInfo::default(),
                 deleted: false,

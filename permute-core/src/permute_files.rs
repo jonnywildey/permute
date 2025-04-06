@@ -2,7 +2,7 @@ use crate::{
     files::*, permute_error::PermuteError, 
     process::*, 
     random_process::*, 
-    audio_cache::AUDIO_CACHE
+    audio_cache::AUDIO_CACHE,
 };
 use rand::thread_rng;
 use sndfile::*;
@@ -12,14 +12,13 @@ use std::thread::JoinHandle;
 use audio_info::AudioInfo;
 use rayon::prelude::*;
 use crossbeam_channel::{Sender, Receiver};
-use std::collections::HashMap;
 use std::sync::Mutex;
 
 pub enum PermuteUpdate {
     Error(String),
     UpdatePermuteNodeStarted(Permutation, PermuteNodeName, PermuteNodeEvent),
     UpdatePermuteNodeCompleted(Permutation, PermuteNodeName, PermuteNodeEvent),
-    UpdateSetProcessors(Permutation, Vec<PermuteNodeName>),
+    UpdateSetProcessors(Permutation, Vec<(PermuteNodeName, Vec<ProcessorAttribute>)>),
     ProcessComplete(Option<Vec<Permutation>>),
     AudioInfoGenerated(String, AudioInfo),
 }
@@ -88,10 +87,13 @@ pub fn permute_files(mut params: PermuteFilesParams) -> JoinHandle<()> {
 }
 
 
+// permute_file is used to generate a list of processor plans and parameters, then run them for each output file
+// It is called once for each file in the input list
 fn permute_file(
     params: &PermuteFilesParams,
     file: String,
 ) -> Result<Vec<Permutation>, PermuteError> {
+    // Open the file and get metadata
     let snd = sndfile::OpenOptions::ReadOnly(ReadOptions::Auto).from_path(file.clone())?;
     let sample_rate = snd.get_samplerate();
     let channels = snd.get_channels();
@@ -101,19 +103,18 @@ fn permute_file(
         false => snd.get_major_format(),
     };
     let endian = snd.get_endian();
-
+    // Get samples. Either from audio cache or from file
     let samples_64 = AUDIO_CACHE.get_samples(&file)?;
 
+    // Create input and output buffers
     let input_trail_buffer =
         vec![0_f64; (sample_rate as f64 * params.input_trail * channels as f64).ceil() as usize];
     let output_trail_buffer =
         vec![0_f64; (sample_rate as f64 * params.output_trail * channels as f64).ceil() as usize];
     let samples_64 = [input_trail_buffer, samples_64.to_vec(), output_trail_buffer].concat();
-
     let sample_length = samples_64.len();
 
-    let mut generated_processors: Vec<(Vec<ProcessorFn>, ProcessorParams)> = vec![];
-
+    // set output directory
     let output = match params.create_subdirectories {
         true => {
             let o = get_output_run(params.output.clone());
@@ -121,10 +122,14 @@ fn permute_file(
         }
         false => params.output.clone(),
     };
-
+    
+    // Generate ordered list of processor plans and parameters for each output file
+    // Each file will have a different ordered list of processor plans
+    let mut outputs_processor_plans: Vec<(String, ProcessorParams, Vec<ProcessorPlan>)> = vec![];
     for i in 1..=params.permutations {
         let output_i = generate_file_name(file.clone(), output.clone(), i, params.output_file_as_wav);
 
+        // Generate a random ordered list of processors
         let processors = generate_processor_sequence(GetProcessorNodeParams { 
             depth: params.permutation_depth,
             normalise_at_end: params.normalise_at_end,
@@ -136,56 +141,71 @@ fn permute_file(
             rng: thread_rng(),
             original_depth: params.permutation_depth,
         });
+        let mut processor_plans: Vec<ProcessorPlan> = vec![];
+        let mut node_index = 0;
+        let mut last_params: ProcessorParams = ProcessorParams::default();
+        // set the processor names so we have an ok idea of overall progress. 
+        // Length of this vec is used to determine overall progress
+        last_params.permutation.processors = processors.iter()
+        .map(|p| PermutationProcessor {
+            name: p.clone(),
+            attributes: vec![],
+        })
+        .collect::<Vec<PermutationProcessor>>();
+        for processor in processors.iter() {
+            let processor_plan_gen = get_processor_plan(*processor);
 
-        let processor_fns = processors
-            .iter()
-            .map(|n| get_processor_function(*n))
-            .collect();
+            let mut processor_params = ProcessorParams {
+                samples: samples_64.clone(),
+                sample_length,
+                channels,
+                sample_rate,
+                file_format,
+                sub_format,
+                endian,
+                update_sender: params.update_sender.clone(),
+                permutation: Permutation {
+                    file: file.clone(),
+                    permutation_index: i,
+                    output: output_i.clone(),
+                    processor_pool: params.processor_pool.clone(),
+                    processors: last_params.permutation.processors.clone(),
+                    original_sample_rate: sample_rate,
+                    node_index: node_index,
+                    files: vec![file.clone()],
+                },
+            };
+            let processor_plan = processor_plan_gen(&mut processor_params);
+            // set the attributes for the processor now that we know them
+            processor_params.permutation.processors[node_index].attributes = processor_plan.1.clone();
+      
+            processor_plans.push(processor_plan);
+            last_params = processor_params;
+            node_index += 1;
+        }  
 
-        // Create a map of existing processors and their attributes from the previous permutation
-        let existing_processors: HashMap<PermuteNodeName, Vec<ProcessorAttribute>> = HashMap::new();
+        // It is quite easy to get a list of processors that will increase the length of the audio way too much
+        let (processor_plans, last_params) = filter_long_processes(processor_plans, last_params);
 
-        let permutation_processors: Vec<PermutationProcessor> = processors.iter().map(|n| PermutationProcessor {
-            name: n.clone(),
-            attributes: existing_processors.get(n).cloned().unwrap_or_default(),
-        }).collect();
+        params.update_sender.send(PermuteUpdate::UpdateSetProcessors(
+            last_params.permutation.clone(),
+            processor_plans.iter().map(|p| (p.0, p.1.clone())).collect(),
+        ))?;
 
-        let permutation = Permutation {
-            file: file.clone(),
-            permutation_index: i,
-            output: output_i,
-            processor_pool: params.processor_pool.clone(),
-            processors: permutation_processors,
-            original_sample_rate: sample_rate,
-            node_index: 0,
-            files: params.files.clone(),
-        };
-        let processor_params = ProcessorParams {
-            samples: samples_64.clone(),
-            sample_length,
-            permutation: permutation.clone(),
-            channels,
-            sample_rate,
-            file_format,
-            sub_format,
-            endian,
-            update_sender: params.update_sender.clone(),
-        };
-        let _ = params.update_sender.send(PermuteUpdate::UpdateSetProcessors(
-            permutation.clone(),
-            processors,
-        ));
-
-        generated_processors.push((processor_fns, processor_params));
+        outputs_processor_plans.push((output_i, last_params.clone(), processor_plans));
     }
 
+    // Run each outputs processors
     let mut output_permutations: Vec<Permutation> = vec![];
-    for (processor_fns, processor_params) in generated_processors.iter() {
+    let update_sender = params.update_sender.clone();
+    for (_output_i, processor_params, processor_plans) in outputs_processor_plans {
         let output_params = run_processors(RunProcessorsParams {
             processor_params: processor_params.clone(),
-            processors: processor_fns.to_vec(),
+            processor_plans,
         })?;
+
         output_permutations.push(output_params.permutation.clone());
+
         let mut snd = sndfile::OpenOptions::WriteOnly(WriteOptions::new(
             output_params.file_format,
             output_params.sub_format,
@@ -200,7 +220,7 @@ fn permute_file(
         // Generate audio info for the output file
         let mut audio_info = AudioInfo::default();
         if let Ok(()) = audio_info.update_file(output_params.permutation.output.clone()) {
-            params.update_sender.send(PermuteUpdate::AudioInfoGenerated(
+            update_sender.send(PermuteUpdate::AudioInfoGenerated(
                 output_params.permutation.output.clone(),
                 audio_info,
             ))?;
@@ -209,6 +229,9 @@ fn permute_file(
     Ok(output_permutations)
 }
 
+
+// process_file is used to run a single processor on a file e.g. Reverse or Trim
+#[allow(dead_code)]
 pub fn process_file(
     file: String,
     process: PermuteNodeName,
@@ -225,9 +248,8 @@ pub fn process_file(
     let samples = AUDIO_CACHE.get_samples(&file)?;
     let sample_length = samples.len();
 
-    let process_fn = get_processor_function(process);
-
-    let new_params = process_fn(&mut ProcessorParams {
+    // create processor plan
+    let mut params = ProcessorParams {
         channels,
         endian,
         file_format,
@@ -249,6 +271,14 @@ pub fn process_file(
             }],
             files: vec![file.clone()],
         },
+    };
+    let process_plan_fn = get_processor_plan(process);
+    let process_plan = process_plan_fn(&mut params);
+
+    // run processor plan
+    let output_params = run_processors(RunProcessorsParams {
+        processor_params: params,
+        processor_plans: vec![process_plan],
     })?;
 
     
@@ -261,37 +291,59 @@ pub fn process_file(
     ))
     .from_path(file)?;
 
-   snd.write_from_iter(new_params.samples.clone().into_iter())?;
+   snd.write_from_iter(output_params.samples.clone().into_iter())?;
 
     update_sender
-        .send(PermuteUpdate::ProcessComplete(Some(vec![new_params.permutation])))
+        .send(PermuteUpdate::ProcessComplete(Some(vec![output_params.permutation])))
         .expect("Error sending message");
     Ok(())
 }
 
 pub struct RunProcessorsParams {
-    pub processors: Vec<ProcessorFn>,
+    pub processor_plans: Vec<ProcessorPlan>,
     pub processor_params: ProcessorParams,
 }
 
-pub fn run_processors(
-    RunProcessorsParams {
-        processors,
-        processor_params,
-    }: RunProcessorsParams,
-) -> Result<ProcessorParams, PermuteError> {
-    processors
-        .iter()
-        .fold(Ok(processor_params), |params, processor| {
-            let new_params = processor(&mut params?)?;
+pub fn run_processors(params: RunProcessorsParams) -> Result<ProcessorParams, PermuteError> {
+    let mut processor_params = params.processor_params.clone();
+    processor_params.permutation.node_index = 0;
+    for processor in params.processor_plans.into_iter() {
+        let (_name, _attributes, closure) = processor;
+        processor_params = closure(processor_params)?;
+        processor_params.permutation.node_index += 1;
+    }
 
-            Ok(ProcessorParams {
-                permutation: Permutation {
-                    node_index: new_params.permutation.node_index + 1,
-                    processors: new_params.permutation.processors.clone(),
-                    ..new_params.permutation
+    Ok(processor_params)
+}
+
+
+fn filter_long_processes(mut processors: Vec<ProcessorPlan>, mut last_params: ProcessorParams) -> (Vec<ProcessorPlan>, ProcessorParams) {
+    let max_stretch = 3.0;
+    let mut permute_length_factor = 0.0;
+    // get a list of filtered node indexes
+    let mut filtered_node_indexes: Vec<usize> = vec![];
+    let mut node_index = 0;
+    for processor in processors.iter() {
+        let (_name, attributes, _closure) = processor;
+        for attribute in attributes.iter() {
+            match attribute.key.as_str() {
+                "Length Factor" | "Stretch Factor" => {
+                    if let Ok(length_factor) = attribute.value.parse::<f64>() {
+                        permute_length_factor += length_factor;
+                        if permute_length_factor > max_stretch {
+                            println!("Skipping processor: {:?}. Length factor {} is greater than max stretch {}", _name, permute_length_factor, max_stretch);
+                            filtered_node_indexes.push(node_index);
+                        }
+                    }
                 },
-                ..new_params
-            })
-        })
+                _ => {}
+            }
+        }
+        node_index += 1;
+    }
+    for node_index in filtered_node_indexes {
+        last_params.permutation.processors.remove(node_index);
+        processors.remove(node_index);
+    }
+    (processors, last_params)
 }

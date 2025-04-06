@@ -1,8 +1,9 @@
 use std::f64::consts::PI;
 use std::f64::consts::E;
 use crate::permute_files::PermuteUpdate;
-use crate::process::{PermuteNodeEvent, PermuteNodeName, ProcessorParams};
+use crate::process::{PermuteNodeEvent, PermuteNodeName, ProcessorParams, ProcessorClosure, ProcessorAttribute};
 use crate::permute_error::PermuteError;
+use crate::random_processors::utils::format_float;
 
 pub fn ceiling(
     ProcessorParams {
@@ -131,16 +132,8 @@ pub fn saturate(params: &ProcessorParams) -> Result<ProcessorParams, PermuteErro
     })
 }
 
-pub fn trim(params: &mut ProcessorParams) -> Result<ProcessorParams, PermuteError> {
-    let threshold = 0.001;
-    params
-        .update_sender
-        .send(PermuteUpdate::UpdatePermuteNodeStarted(
-            params.permutation.clone(),
-            PermuteNodeName::Trim,
-            PermuteNodeEvent::NodeProcessStarted,
-        ))?;
-
+// Trim samples to the threshold
+pub fn trim_threshold(params: &ProcessorParams, threshold: f64) -> Result<ProcessorParams, PermuteError> {
     let mut start: usize = 0;
     let mut end: usize = params.sample_length;
 
@@ -161,15 +154,8 @@ pub fn trim(params: &mut ProcessorParams) -> Result<ProcessorParams, PermuteErro
     let new_samples = params.samples[start..end].to_vec();
     let len = new_samples.len();
 
-    params
-        .update_sender
-        .send(PermuteUpdate::UpdatePermuteNodeCompleted(
-            params.permutation.clone(),
-            PermuteNodeName::Trim,
-            PermuteNodeEvent::NodeProcessComplete,
-        ))?;
     Ok(ProcessorParams {
-        samples: new_samples,
+      samples: new_samples,
         sample_length: len,
         ..params.clone()
     })

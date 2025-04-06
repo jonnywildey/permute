@@ -12,49 +12,21 @@ use rustfft::FftPlanner;
 use rustfft::num_complex::Complex;
 
 pub fn reverse(
-    ProcessorParams {
-        samples,
-        sample_length,
-        update_sender,
-        permutation,
-        channels,
-        endian,
-        file_format,
-        sub_format,
-        sample_rate,
-    }: &mut ProcessorParams,
+    params: ProcessorParams,
 ) -> Result<ProcessorParams, PermuteError> {
-    update_sender.send(PermuteUpdate::UpdatePermuteNodeStarted(
-        permutation.clone(),
-        PermuteNodeName::Reverse,
-        PermuteNodeEvent::NodeProcessStarted,
-    ))?;
-    let mut new_samples = samples.clone();
-    let channels = *channels as i32;
+    let mut new_samples = params.samples.clone();
+    let channels = params.channels as i32;
 
-    for i in 0..*sample_length {
+    for i in 0..params.sample_length {
         let channel_idx = i as i32 % channels;
         let sample_group = i as i32 / channels;
-        let reversed_group = (*sample_length as i32 / channels) - 1 - sample_group;
+        let reversed_group = (params.sample_length as i32 / channels) - 1 - sample_group;
         let sample_i = (reversed_group * channels + channel_idx) as usize;
-        new_samples[i] = samples[sample_i];
+        new_samples[i] = params.samples[sample_i];
     }
-
-    update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
-        permutation.clone(),
-        PermuteNodeName::Reverse,
-        PermuteNodeEvent::NodeProcessComplete,
-    ))?;
     return Ok(ProcessorParams {
         samples: new_samples,
-        sample_length: *sample_length,
-        channels: channels as usize,
-        endian: *endian,
-        file_format: *file_format,
-        sub_format: *sub_format,
-        sample_rate: *sample_rate,
-        update_sender: update_sender.to_owned(),
-        permutation: permutation.to_owned(),
+        ..params.clone()
     });
 }
 
@@ -85,56 +57,7 @@ pub fn change_sample_rate(
     Ok(resampled)
 }
 
-pub fn change_sample_rate_high(params: &mut ProcessorParams) -> Result<ProcessorParams, PermuteError> {
-    let new_params = params.clone();
-    let update_sender = params.update_sender.to_owned();
-    let permutation = params.permutation.to_owned();
-    update_sender.send(PermuteUpdate::UpdatePermuteNodeStarted(
-        permutation.clone(),
-        PermuteNodeName::SampleRateConversionHigh,
-        PermuteNodeEvent::NodeProcessStarted,
-    ))?;
 
-    let new_sample_rate = match params.sample_rate {
-        0..=48000 => params.sample_rate * 4,
-        48001..=96000 => params.sample_rate * 2,
-        _ => params.sample_rate,
-    };
-
-    let mut new_params = change_sample_rate(new_params, new_sample_rate)?;
-    new_params.permutation.original_sample_rate = params.sample_rate;
-    new_params.sample_rate = new_sample_rate;
-
-    update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
-        new_params.permutation.clone(),
-        PermuteNodeName::SampleRateConversionHigh,
-        PermuteNodeEvent::NodeProcessComplete,
-    ))?;
-    Ok(new_params)
-}
-
-pub fn change_sample_rate_original(
-    params: &mut ProcessorParams,
-) -> Result<ProcessorParams, PermuteError> {
-    let new_params = params.clone();
-    let update_sender = params.update_sender.to_owned();
-
-    let permutation = params.permutation.to_owned();
-    update_sender.send(PermuteUpdate::UpdatePermuteNodeStarted(
-        permutation.clone(),
-        PermuteNodeName::SampleRateConversionOriginal,
-        PermuteNodeEvent::NodeProcessStarted,
-    ))?;
-
-    let new_params = change_sample_rate(new_params, permutation.original_sample_rate)?;
-
-    update_sender.send(PermuteUpdate::UpdatePermuteNodeCompleted(
-        new_params.permutation.clone(),
-        PermuteNodeName::SampleRateConversionOriginal,
-        PermuteNodeEvent::NodeProcessComplete,
-    ))?;
-    Ok(new_params)
-}
 
 pub fn change_speed(
     ProcessorParams {
