@@ -90,22 +90,17 @@ const FileBox = memo(({ file, onRemove, onShow, onPlay }: {
         dangerouslySetInnerHTML={{ __html: file.image }}
       />
       <Box display="flex" alignItems="baseline" width="100%" pos="relative" marginTop={2}>
-        <Tooltip
-          openDelay={FILES_TOOLTIP_DELAY}
-          label="Preview"
-        >
-          <IconButton
-            aria-label="play"
-            variant="ghost"
-            rounded="full"
-            size="xs"
-            disabled={isAiff}
-            icon={<PlayIcon />}
-            onClick={() => onPlay(file)}
-            color="brand.5600"
-            _hover={{ bg: 'brand.50' }}
-          />
-        </Tooltip>
+        <IconButton
+          aria-label="play"
+          variant="ghost"
+          rounded="full"
+          size="xs"
+          disabled={isAiff}
+          icon={<PlayIcon />}
+          onClick={() => onPlay(file)}
+          color="brand.5600"
+          _hover={{ bg: 'brand.50' }}
+        />
         <Tooltip
           openDelay={FILES_TOOLTIP_DELAY}
           label="Open directory"

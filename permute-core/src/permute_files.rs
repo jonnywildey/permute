@@ -173,7 +173,7 @@ fn permute_file(
                     processors: last_params.permutation.processors.clone(),
                     original_sample_rate: sample_rate,
                     node_index: node_index,
-                    files: vec![file.clone()],
+                    files: params.files.clone(),
                 },
             };
             let processor_plan = processor_plan_gen(&mut processor_params);
@@ -186,7 +186,7 @@ fn permute_file(
         }  
 
         // It is quite easy to get a list of processors that will increase the length of the audio way too much
-        let (processor_plans, last_params) = filter_long_processes(processor_plans, last_params, params.max_stretch);
+        // let (processor_plans, last_params) = filter_long_processes(processor_plans, last_params, params.max_stretch);
 
         params.update_sender.send(PermuteUpdate::UpdateSetProcessors(
             last_params.permutation.clone(),
@@ -358,7 +358,11 @@ fn filter_long_processes(mut processors: Vec<ProcessorPlan>, mut last_params: Pr
             last_params_processors_filtered.push(processor.clone());
         }
     }
+
+    // Update last_params with filtered processors and reset node_index
     last_params.permutation.processors = last_params_processors_filtered;
+    last_params.permutation.node_index = 0;  // Reset node_index to 0
+
 
     (filtered_processors, last_params)
 }

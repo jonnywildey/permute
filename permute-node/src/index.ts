@@ -27,7 +27,7 @@ const {
   setMaxStretch,
 } = require("../permute-library");
 
-const PERMUTE_POLL_LATENCY = 50;
+const PERMUTE_POLL_LATENCY = 100;
 
 export interface IPermuteState {
   output: string,

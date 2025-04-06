@@ -115,6 +115,7 @@ const Content = () => {
     trimAll,
     inputTrail,
     outputTrail,
+    processing,
     processorPool,
     permutationOutputs,
     createSubdirectories,
@@ -153,6 +154,7 @@ const Content = () => {
       setState({ ...state, permuteState: pState });
     };
     window.Electron.ipcRenderer.runProcessor(refreshState, onFinished);
+    setState({ permuteState: { ...state.permuteState } });
   };
   const reverseFile = async (file: string) => {
     setState({ permuteState: { ...state.permuteState, processing: true } });
@@ -387,7 +389,7 @@ const Content = () => {
       <MemoizedBottomBar
         permutationOutputs={permutationOutputs}
         runProcessor={runProcessor}
-        processing={state.permuteState.processing}
+        processing={processing}
         depth={permutationDepth}
         permutations={permutations}
         normaliseAtEnd={normaliseAtEnd}

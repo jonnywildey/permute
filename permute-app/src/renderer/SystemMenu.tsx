@@ -108,9 +108,9 @@ export const SystemMenu: React.FC<SystemMenuProps> = ({
         </MenuGroup>
         <MenuGroup title="Max Stretch" color={fontColor} fontSize="xl">
           <Tooltip openDelay={SYSTEM_MENU_TOOLTIP_DELAY} label={maxStretchLabel} fontSize="lg">
-            <Box px={4} py={0}>
+            <Box px={4} py={0} bg={bgColor}>
               <>
-                <Text fontSize="sm" color={fontColor} fontWeight="bold" margin={0}>{maxStretch}x</Text>
+                <Text fontSize="sm" color={fontColor} fontWeight="bold" textAlign="center" margin={0}>{maxStretch}x</Text>
                 <Slider
                   aria-label="max-stretch-slider"
                   min={5}

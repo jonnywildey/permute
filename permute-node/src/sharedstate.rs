@@ -217,8 +217,8 @@ impl SharedState {
 
     pub fn update_output_progress(&mut self, permutation: Permutation) {
         let percentage_progress: f64 =
-            ((permutation.node_index as f64 + 1.0) / permutation.processors.len() as f64) * 100.0;
-
+        ((permutation.node_index as f64 + 1.0) / permutation.processors.len() as f64) * 100.0;
+        
         // Find file index
         if let Some(file_index) = self.files.iter().position(|f| f.path == permutation.file) {
             let key = (file_index, permutation.permutation_index);
