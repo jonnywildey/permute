@@ -42,6 +42,7 @@ pub struct SharedState {
     pub constrain_length: bool,
     pub create_subdirectories: bool,
     pub viewed_welcome: bool,
+    pub max_stretch: f64,
 
     pub update_sender: Arc<Sender<PermuteUpdate>>,
     pub processing: bool,
@@ -77,6 +78,7 @@ impl SharedState {
             constrain_length: true,
             create_subdirectories: true,
             viewed_welcome: false,
+            max_stretch: 17.0,
         }
     }
 
@@ -110,6 +112,7 @@ impl SharedState {
             update_sender: self.update_sender.clone(),
             create_subdirectories: self.create_subdirectories,
             cancel_receiver: Arc::new(cancel_receiver),
+            max_stretch: self.max_stretch,
         }
     }
 
@@ -244,6 +247,10 @@ impl SharedState {
 
     pub fn set_trim_all(&mut self, trim_all: bool) {
         self.trim_all = trim_all;
+    }
+
+    pub fn set_max_stretch(&mut self, max_stretch: f64) {
+        self.max_stretch = max_stretch;
     }
 
     pub fn set_input_trail(&mut self, trail: f64) {
@@ -439,6 +446,7 @@ impl SharedState {
             processor_pool: self.processor_pool.clone(),
             create_subdirectories: self.create_subdirectories,
             viewed_welcome: self.viewed_welcome,
+            max_stretch: self.max_stretch,
         };
         let json = serde_json::to_string(&data)?;
         let mut file = File::create(path)?;
@@ -477,6 +485,7 @@ impl SharedState {
         self.processor_pool = data.processor_pool;
         self.create_subdirectories = data.create_subdirectories;
         self.viewed_welcome = data.viewed_welcome;
+        self.max_stretch = data.max_stretch;
         
         Ok(())
     }
@@ -510,6 +519,8 @@ pub struct SharedStateSerializable {
     pub create_subdirectories: bool,
     #[serde(default)]
     pub viewed_welcome: bool,
+    #[serde(default = "default_max_stretch")]
+    pub max_stretch: f64,
 }
 
 fn default_input_trail() -> f64 { 0.0 }
@@ -524,3 +535,4 @@ fn default_processor_count() -> Option<i32> {
         .unwrap_or(1))
 }
 fn default_true() -> bool { true }
+fn default_max_stretch() -> f64 { 17.0 }

@@ -13,6 +13,8 @@ interface TopBarProps {
   onCreateSubdirectoriesChange?: (createSubfolders: boolean) => void;
   onSaveScene?: () => void;
   onLoadScene?: () => void;
+  maxStretch: number;
+  onMaxStretchChange?: (maxStretch: number) => void;
 }
 
 export const TopBar: React.FC<TopBarProps> = ({
@@ -20,7 +22,9 @@ export const TopBar: React.FC<TopBarProps> = ({
   createSubdirectories: createSubfolders,
   onCreateSubdirectoriesChange,
   onSaveScene,
-  onLoadScene
+  onLoadScene,
+  maxStretch,
+  onMaxStretchChange
 }) => {
   const { colorMode } = useColorMode();
 
@@ -74,6 +78,8 @@ export const TopBar: React.FC<TopBarProps> = ({
             </Heading>
           </Box>
           <SystemMenu
+            maxStretch={maxStretch}
+            onMaxStretchChange={onMaxStretchChange}
             createSubfolders={createSubfolders}
             onCreateSubdirectoriesChange={onCreateSubdirectoriesChange}
             onSaveScene={onSaveScene}

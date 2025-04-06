@@ -41,6 +41,7 @@ pub struct PermuteFilesParams {
     pub create_subdirectories: bool,
     pub cancel_receiver: Arc<Receiver<()>>,
     pub constrain_length: bool,
+    pub max_stretch: f64,
 }
 
 pub fn permute_files(mut params: PermuteFilesParams) -> JoinHandle<()> {
@@ -185,7 +186,7 @@ fn permute_file(
         }  
 
         // It is quite easy to get a list of processors that will increase the length of the audio way too much
-        let (processor_plans, last_params) = filter_long_processes(processor_plans, last_params);
+        let (processor_plans, last_params) = filter_long_processes(processor_plans, last_params, params.max_stretch);
 
         params.update_sender.send(PermuteUpdate::UpdateSetProcessors(
             last_params.permutation.clone(),
@@ -317,8 +318,7 @@ pub fn run_processors(params: RunProcessorsParams) -> Result<ProcessorParams, Pe
 }
 
 
-fn filter_long_processes(mut processors: Vec<ProcessorPlan>, mut last_params: ProcessorParams) -> (Vec<ProcessorPlan>, ProcessorParams) {
-    let max_stretch = 3.0;
+fn filter_long_processes(mut processors: Vec<ProcessorPlan>, mut last_params: ProcessorParams, max_stretch: f64) -> (Vec<ProcessorPlan>, ProcessorParams) {
     let mut permute_length_factor = 0.0;
     // get a list of filtered node indexes
     let mut filtered_node_indexes: Vec<usize> = vec![];
@@ -341,9 +341,24 @@ fn filter_long_processes(mut processors: Vec<ProcessorPlan>, mut last_params: Pr
         }
         node_index += 1;
     }
-    for node_index in filtered_node_indexes {
-        last_params.permutation.processors.remove(node_index);
-        processors.remove(node_index);
+
+    // remove the processors from the list
+    let mut filtered_processors = vec![];
+    for (index, processor) in processors.into_iter().enumerate() {
+        if !filtered_node_indexes.contains(&index) {
+            filtered_processors.push(processor);
+        }
     }
-    (processors, last_params)
+
+    // Filter the processors in last_params
+    let last_params_processors = last_params.permutation.processors.clone();
+    let mut last_params_processors_filtered = vec![];
+    for (index, processor) in last_params_processors.iter().enumerate() {
+        if index < filtered_node_indexes.len() && !filtered_node_indexes.contains(&index) {
+            last_params_processors_filtered.push(processor.clone());
+        }
+    }
+    last_params.permutation.processors = last_params_processors_filtered;
+
+    (filtered_processors, last_params)
 }

@@ -15,12 +15,12 @@ pub fn reverse(
     params: ProcessorParams,
 ) -> Result<ProcessorParams, PermuteError> {
     let mut new_samples = params.samples.clone();
-    let channels = params.channels as i32;
+    let channels = params.channels;
 
     for i in 0..params.sample_length {
-        let channel_idx = i as i32 % channels;
-        let sample_group = i as i32 / channels;
-        let reversed_group = (params.sample_length as i32 / channels) - 1 - sample_group;
+        let channel_idx = i as usize % channels;
+        let sample_group = i as usize / channels;
+        let reversed_group = (params.sample_length / channels as usize) - 1 - sample_group;
         let sample_i = (reversed_group * channels + channel_idx) as usize;
         new_samples[i] = params.samples[sample_i];
     }

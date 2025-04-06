@@ -116,5 +116,8 @@ contextBridge.exposeInMainWorld('Electron', {
     setViewedWelcome(viewed) {
       ipcRenderer.send('set-viewed-welcome', viewed);
     },
+    setMaxStretch(maxStretch) {
+      ipcRenderer.send('set-max-stretch', maxStretch);
+    },
   },
 });

@@ -118,6 +118,7 @@ const Content = () => {
     processorPool,
     permutationOutputs,
     createSubdirectories,
+    maxStretch,
   } = useMemo(() => state.permuteState, [state.permuteState]);
 
   // Memoize the grid layout configuration
@@ -335,6 +336,19 @@ const Content = () => {
     });
   };
 
+  const setMaxStretch = async (maxStretch: number) => {
+    // Update state immediately
+    setState(prevState => ({
+      permuteState: {
+        ...prevState.permuteState,
+        maxStretch
+      }
+    }));
+    // Let IPC update happen in background
+    await window.Electron.ipcRenderer.setMaxStretch(maxStretch);
+    refreshState();
+  };
+
   return (
     <Grid {...gridConfig}>
       <Welcome isOpen={isOpen} onClose={onClose} />
@@ -344,6 +358,8 @@ const Content = () => {
         onCreateSubdirectoriesChange={setCreateSubdirectories}
         onSaveScene={handleSaveScene}
         onLoadScene={handleLoadScene}
+        maxStretch={maxStretch}
+        onMaxStretchChange={setMaxStretch}
       />
       <MemoizedFiles
         files={files}
