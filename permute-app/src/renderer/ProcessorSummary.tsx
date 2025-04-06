@@ -18,12 +18,14 @@ import {
 import { InfoIcon } from './icons/InfoIcon';
 import type { IProcessor } from 'permute-node';
 
+const PROCESSOR_SUMMARY_TOOLTIP_DELAY = 2000;
+
 interface ProcessorSummaryProps {
   processors: IProcessor[];
   tooltipDelay?: number;
 }
 
-export const ProcessorSummary = ({ processors, tooltipDelay = 600 }: ProcessorSummaryProps) => {
+export const ProcessorSummary = ({ processors, tooltipDelay = PROCESSOR_SUMMARY_TOOLTIP_DELAY }: ProcessorSummaryProps) => {
   return (
     <Menu lazyBehavior='unmount'>
       <Tooltip label="Show processors" openDelay={tooltipDelay}>

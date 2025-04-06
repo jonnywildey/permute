@@ -20,6 +20,8 @@ import { displayTime } from './displayTime';
 import { useDropzone } from 'react-dropzone'
 import { LargeCloseIcon } from './icons/CloseIcon';
 
+const FILES_TOOLTIP_DELAY = 1400;
+
 export interface IFilesProps {
   files: IPermutationInput[];
   addFiles: (files: string[]) => void;
@@ -89,7 +91,7 @@ const FileBox = memo(({ file, onRemove, onShow, onPlay }: {
       />
       <Box display="flex" alignItems="baseline" width="100%" pos="relative" marginTop={2}>
         <Tooltip
-          openDelay={200}
+          openDelay={FILES_TOOLTIP_DELAY}
           label="Preview"
         >
           <IconButton
@@ -105,7 +107,7 @@ const FileBox = memo(({ file, onRemove, onShow, onPlay }: {
           />
         </Tooltip>
         <Tooltip
-          openDelay={200}
+          openDelay={FILES_TOOLTIP_DELAY}
           label="Open directory"
         >
           <IconButton
@@ -115,7 +117,6 @@ const FileBox = memo(({ file, onRemove, onShow, onPlay }: {
             size="xs"
             alignSelf="center"
             icon={<ViewIcon />}
-
             onClick={() => onShow(file.path)}
             color="brand.5600"
             _hover={{ bg: 'brand.50' }}

@@ -17,9 +17,7 @@ interface TopBarProps {
 
 export const TopBar: React.FC<TopBarProps> = ({
   openWelcome,
-  overwriteFiles,
   createSubdirectories: createSubfolders,
-  onOverwriteChange,
   onCreateSubdirectoriesChange,
   onSaveScene,
   onLoadScene
@@ -76,9 +74,7 @@ export const TopBar: React.FC<TopBarProps> = ({
             </Heading>
           </Box>
           <SystemMenu
-            overwriteFiles={overwriteFiles}
             createSubfolders={createSubfolders}
-            onOverwriteChange={onOverwriteChange}
             onCreateSubdirectoriesChange={onCreateSubdirectoriesChange}
             onSaveScene={onSaveScene}
             onLoadScene={onLoadScene}

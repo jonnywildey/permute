@@ -8,16 +8,15 @@ export const processorCategories = {
 
 export const processorDescriptions: Record<string, React.ReactNode> = {
   Fuzz: `A distortion that ranges from gentle overdrive to fuzz to "running low on battery" sounds`,
-  Saturate: `A gentle, smooth overdrive. This only has one setting, it has no randomised parameters`,
+  Saturate: `A fairly gentle, smooth overdrive.`,
   Reverse: `Reverses the audio. Best used in conjunction with other effects like delay`,
-  'Granular Stretch': `Inspired by what the audio guesses is how vintage samplers' time stretching works, 
-  applies a granular time stretch. 
+  'Granular Stretch': `Author's guess of how vintage samplers' time stretching works, cuts audio into small chunks, or grains, of sound and loops them. 
   Cycle length, crossfade and stretch amount are randomised. 
-  Be careful when using this with high depths, it can create very long files`,
-  'Blur Stretch': `A time stretch that uses a blurring algorithm to stretch the audio.`,
-  'Metallic Delay': `A delay with low duration (less than 100ms) and high feedbacks to create metallic sounds.`,
+  Be careful when using this with high depths, it can dramatically increase the length of the audio`,
+  'Blur Stretch': `A time stretch that uses a blurring algorithm to stretch the audio. Be careful with high depths, it can dramatically increase the length of the audio`,
+  'Metallic Delay': `A delay with low duration (less than 100ms) and high feedback to create metallic sounds.`,
   'Rhythmic Delay': `A delay between 100ms and 1 second.`,
-  'Filter': `Filters.`,
+  'Filter': `Random Lo-pass, hi-pass, band-pass filters.`,
   Reverb: `A very 80s sounding reverb. Reverb length and mix are randomised`,
   'Half-Speed': `Converts the audio to half speed, lowering the pitch by an octave. The duration of the audio will change. There are no randomised parameters`,
   'Double Speed':

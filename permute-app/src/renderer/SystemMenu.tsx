@@ -2,6 +2,8 @@ import { IconButton, Menu, MenuButton, MenuList, MenuItem, MenuGroup, useColorMo
 import { SunIcon, MoonIcon, CheckIcon, EditIcon, DownloadIcon, RepeatIcon } from '@chakra-ui/icons';
 import { LargeHamburgerIcon } from './icons/HamburgerIcon';
 
+const SYSTEM_MENU_TOOLTIP_DELAY = 800;
+
 interface SystemMenuProps {
   createSubfolders?: boolean;
   onCreateSubdirectoriesChange?: (createSubfolders: boolean) => void;
@@ -16,7 +18,6 @@ export const SystemMenu: React.FC<SystemMenuProps> = ({
   onLoadScene
 }) => {
   const { colorMode, setColorMode } = useColorMode();
-  const toast = useToast();
   const fontColor = colorMode === 'dark' ? 'brand.5600' : 'gray.600';
   const bgColor = colorMode === 'dark' ? 'gray.700' : 'gray.100';
   const overwriteLabel = "Every run will overwrite existing files with the same name. If you want to keep files, you will need to move or rename them first."
@@ -77,7 +78,7 @@ export const SystemMenu: React.FC<SystemMenuProps> = ({
           </MenuItem>
         </MenuGroup>
         <MenuGroup title="Files" color={fontColor} fontSize="xl">
-          <Tooltip openDelay={500} label={overwriteLabel}>
+          <Tooltip openDelay={SYSTEM_MENU_TOOLTIP_DELAY} label={overwriteLabel} fontSize="lg">
             <MenuItem
               onClick={() => onCreateSubdirectoriesChange?.(false)}
               _hover={{ bg: 'brand.150' }}
@@ -88,7 +89,7 @@ export const SystemMenu: React.FC<SystemMenuProps> = ({
               Overwrite Files
             </MenuItem>
           </Tooltip>
-          <Tooltip label={createSubfoldersLabel} openDelay={500}>
+          <Tooltip openDelay={SYSTEM_MENU_TOOLTIP_DELAY} label={createSubfoldersLabel} fontSize="lg">
             <MenuItem
               onClick={() => onCreateSubdirectoriesChange?.(true)}
               _hover={{ bg: 'brand.150' }}
@@ -101,6 +102,6 @@ export const SystemMenu: React.FC<SystemMenuProps> = ({
           </Tooltip>
         </MenuGroup>
       </MenuList>
-    </Menu >
+    </Menu>
   );
 }; 
