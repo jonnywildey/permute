@@ -23,6 +23,8 @@ import { LargeFolderIcon } from './icons/FolderIcon';
 import { LargeTrashIcon } from './icons/TrashIcon';
 import { ProcessorSummary } from './ProcessorSummary';
 
+const OUTPUT_TOOLTIP_DELAY = 1400;
+
 export interface IOutputProps {
   output: string;
   setOutput: () => void;
@@ -37,8 +39,6 @@ export interface IOutputProps {
 const buttonBg = 'brand.175';
 const bg = 'brand.25';
 const fileBorderColour = 'brand.150';
-
-const tooltipDelay = 600;
 
 const OutputFile = memo(({ file, onDelete, onShow, onReverse, onTrim, onPlay }: {
   file: IPermutationOutput;
@@ -68,7 +68,7 @@ const OutputFile = memo(({ file, onDelete, onShow, onReverse, onTrim, onPlay }: 
         justifyContent="space-between"
       >
         <Tooltip
-          openDelay={500}
+          openDelay={OUTPUT_TOOLTIP_DELAY}
           label={file.name}
         >
           <Heading
@@ -83,7 +83,7 @@ const OutputFile = memo(({ file, onDelete, onShow, onReverse, onTrim, onPlay }: 
           </Heading>
         </Tooltip>
         <Tooltip
-          openDelay={tooltipDelay}
+          openDelay={OUTPUT_TOOLTIP_DELAY}
           label="Delete file"
         >
           <IconButton
@@ -112,24 +112,19 @@ const OutputFile = memo(({ file, onDelete, onShow, onReverse, onTrim, onPlay }: 
         dangerouslySetInnerHTML={{ __html: file.image }}
       />
       <Box display="flex" alignItems="baseline" width="100%" pos="relative" marginTop={2}>
+        <IconButton
+          aria-label="show"
+          variant="ghost"
+          rounded="full"
+          size="xs"
+          disabled={isAiff}
+          icon={<PlayIcon />}
+          onClick={() => onPlay(file)}
+          color="brand.5600"
+          _hover={{ bg: 'brand.50' }}
+        />
         <Tooltip
-          openDelay={tooltipDelay}
-          label="Preview"
-        >
-          <IconButton
-            aria-label="show"
-            variant="ghost"
-            rounded="full"
-            size="xs"
-            disabled={isAiff}
-            icon={<PlayIcon />}
-            onClick={() => onPlay(file)}
-            color="brand.5600"
-            _hover={{ bg: 'brand.50' }}
-          />
-        </Tooltip>
-        <Tooltip
-          openDelay={tooltipDelay}
+          openDelay={OUTPUT_TOOLTIP_DELAY}
           label="Open directory"
         >
           <IconButton
@@ -145,7 +140,7 @@ const OutputFile = memo(({ file, onDelete, onShow, onReverse, onTrim, onPlay }: 
           />
         </Tooltip>
         <Tooltip
-          openDelay={tooltipDelay}
+          openDelay={OUTPUT_TOOLTIP_DELAY}
           label="Reverse"
         >
           <IconButton
@@ -161,7 +156,7 @@ const OutputFile = memo(({ file, onDelete, onShow, onReverse, onTrim, onPlay }: 
           />
         </Tooltip>
         <Tooltip
-          openDelay={tooltipDelay}
+          openDelay={OUTPUT_TOOLTIP_DELAY}
           label="Auto-trim"
         >
           <IconButton
@@ -176,7 +171,7 @@ const OutputFile = memo(({ file, onDelete, onShow, onReverse, onTrim, onPlay }: 
             _hover={{ bg: 'brand.50' }}
           />
         </Tooltip>
-        <ProcessorSummary processors={file.processors} tooltipDelay={tooltipDelay} />
+        <ProcessorSummary processors={file.processors} tooltipDelay={OUTPUT_TOOLTIP_DELAY} />
         <Text
           pr={2}
           width="100%"
@@ -301,7 +296,7 @@ export const Output = memo(({
       <Text justifyContent="start" mr={2} flex={1} fontSize="sm">
         {completeFiles.length} files
       </Text>
-      <Tooltip openDelay={1000}
+      <Tooltip openDelay={OUTPUT_TOOLTIP_DELAY}
         label="Delete all permuted files">
         <Button
           variant="ghost"

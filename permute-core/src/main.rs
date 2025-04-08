@@ -65,6 +65,8 @@ struct PermuteArgs {
     /// Whether to constrain the length of audio by limiting length-increasing processors
     #[structopt(long = "constrainLength", takes_value = false)]
     constrain_length: bool,
+    #[structopt(long = "maxStretch", default_value = "17.0")]
+    max_stretch: f64,
 }
 
 fn main() {
@@ -126,6 +128,7 @@ fn main() {
             update_sender: Arc::new(tx),
             processor_count,
             constrain_length: args.constrain_length,
+            max_stretch: args.max_stretch,
             cancel_receiver: Arc::new(cancel_receiver),
         });
     });
@@ -146,8 +149,8 @@ fn main() {
             PermuteUpdate::UpdateSetProcessors(permutation, processors) => {
                     let pretty_processors = processors
                         .iter()
-                        .map(|p| get_processor_display_name(*p))
-                        .collect::<Vec<String>>();
+                        .map(|p| (get_processor_display_name(p.0), p.1.clone()))
+                        .collect::<Vec<(String, Vec<ProcessorAttribute>)>>();
                     println!(
                         "File {} Processors {:#?}",
                         permutation.output, pretty_processors

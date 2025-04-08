@@ -51,13 +51,21 @@
       "hardenedRuntime": true,
       "entitlements": "assets/entitlements.mac.plist",
       "entitlementsInherit": "assets/entitlements.mac.plist",
+      "extendInfo": {
+        "NSCameraUsageDescription": "Microphone access is required to use Permute."
+      },
       "gatekeeperAssess": false,
-      "extraDistFiles": [
-        "./release/app/node_modules/permute-node/permute-library/libsndfile.1.dylib"
+      "extraFiles": [
+        {
+          "from": "resources/",
+          "to": "Frameworks",
+          "filter": [
+            "libsndfile.1.dylib"
+          ]
+        }
       ]
     },
     "pkg": {
-      "scripts": "pkg-scripts",
       "installLocation": "/Applications",
       "allowAnywhere": false,
       "allowCurrentUserHome": false,

@@ -125,7 +125,7 @@ ipcMain.on('set-output-trail', async (_, param) => {
   processor.setOutputTrail(param);
 });
 ipcMain.on('set-output', async (_, param) => {
-  processor.setOutput(param);
+  processor.setOutput(String(param));
 });
 ipcMain.on('get-state', async (event) => {
   const state = await processor.getState();
@@ -157,6 +157,10 @@ ipcMain.on('deselect-all-processors', async () => {
 
 ipcMain.on('set-viewed-welcome', async (_, param) => {
   processor.setViewedWelcome(param);
+});
+
+ipcMain.on('set-max-stretch', async (_, param) => {
+  processor.setMaxStretch(param);
 });
 
 app.on('before-quit', () => {

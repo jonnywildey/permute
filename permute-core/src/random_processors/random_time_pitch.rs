@@ -3,41 +3,43 @@ use rand::{thread_rng, Rng};
 
 // Internal modules
 use crate::{
-    permute_error::PermuteError, permute_files::PermuteUpdate, process::{PermuteNodeEvent, PermuteNodeName, ProcessorAttribute, ProcessorParams}, processors::time_pitch::{
-        change_speed, stft_time_stretch, time_stretch_cross, StftTimeStretchParams, TimeStretchParams, WindowType
-    }, random_process::{complete_event, start_event}, random_processors::utils::{format_factor_to_pitch, format_samples_as_ms, DistributionRng}
+    permute_files::PermuteUpdate, 
+    process::{PermuteNodeEvent, PermuteNodeName, ProcessorAttribute, ProcessorPlan, ProcessorClosure, ProcessorParams}, 
+    processors::time_pitch::{
+        change_sample_rate, change_speed, reverse, stft_time_stretch, time_stretch_cross, StftTimeStretchParams, TimeStretchParams, WindowType
+    }, 
+    random_process::{complete_event, start_event}, random_processors::utils::{format_factor_to_pitch, DistributionRng}
 };
 
-pub fn random_pitch(params: &mut ProcessorParams) -> Result<ProcessorParams, PermuteError> {
-    start_event!(PermuteNodeName::RandomPitch, params);
+use super::utils::{format_float_ms, format_hz_usize};
+
+pub fn random_pitch(_params: &mut ProcessorParams) -> ProcessorPlan {
     let mut rng = thread_rng();
-
-    let speeds: [f64; 10] =
-        [-10.0, -8.0, -7.0, -5.0, -2.0, 2.0, 5.0, 7.0, 8.0, 10.0].map(|v| 2_f64.powf(v / 12.0));
-
+    let speeds: [f64; 10] = [-10.0, -8.0, -7.0, -5.0, -2.0, 2.0, 5.0, 7.0, 8.0, 10.0].map(|v| 2_f64.powf(v / 12.0));
     let speed = speeds[rng.gen_range(0..speeds.len())];
 
-    params.update_processor_attributes(
-        params.permutation.clone(),
-        vec![
-            ProcessorAttribute {
-                key: "Pitch".to_string(),
-                value: format_factor_to_pitch(speed),
-            },
-        ],
-    );
+    let attributes = vec![
+        ProcessorAttribute {
+            key: "Pitch".to_string(),
+            value: format_factor_to_pitch(speed),
+        },
+        ProcessorAttribute {
+            key: "Length Factor".to_string(),
+            value: format!("{:.2}x", 1.0 / speed),
+        },
+    ];
 
-    let new_params = change_speed(params.clone(), speed);
-    complete_event!(PermuteNodeName::RandomPitch, new_params);
+    let processor = move |params: ProcessorParams| {
+        start_event!(PermuteNodeName::RandomPitch, &params);
+        let new_params: ProcessorParams = change_speed(params, speed);
+        complete_event!(PermuteNodeName::RandomPitch, new_params);
+        Ok(new_params)
+    };
 
-    Ok(new_params)
+    (PermuteNodeName::RandomPitch, attributes, Box::new(processor))
 }
 
-pub fn random_granular_time_stretch(
-    params: &mut ProcessorParams,
-) -> Result<ProcessorParams, PermuteError> {
-    start_event!(PermuteNodeName::GranularTimeStretch, params);
-
+pub fn random_granular_time_stretch(params: &mut ProcessorParams) -> ProcessorPlan {
     let mut rng = thread_rng();
     let grain_distributions = vec![
         (5.0, 0.1),    // 5ms
@@ -95,54 +97,81 @@ pub fn random_granular_time_stretch(
     }
     let blend_samples = ((blend_ms / 1000.0) * params.sample_rate as f64) as usize;
 
-    let time_stretch_params = TimeStretchParams {
-        grain_samples,
-        stretch_factor,
-        blend_samples,
+    let attributes = vec![
+        ProcessorAttribute {
+            key: "Grain".to_string(),
+            value: format_float_ms(grain_ms),
+        },
+        ProcessorAttribute {
+            key: "Stretch Factor".to_string(),
+            value: format!("{}", stretch_factor),
+        },
+        ProcessorAttribute {
+            key: "Blend".to_string(),
+            value: format_float_ms(blend_ms),
+        },
+    ];
+
+    let processor = move |params: ProcessorParams| {
+        start_event!(PermuteNodeName::GranularTimeStretch, &params);
+        let time_stretch_params = TimeStretchParams {
+            grain_samples,
+            stretch_factor,
+            blend_samples,
+        };
+        let new_params = time_stretch_cross(&params, time_stretch_params)?;
+        complete_event!(PermuteNodeName::GranularTimeStretch, new_params);
+        Ok(new_params)
     };
-    // Update processor attributes
-    params.update_processor_attributes(
-        params.permutation.clone(),
-        vec![
-            ProcessorAttribute {
-                key: "Grain".to_string(),
-                value: format!("{:.1} ms", grain_ms),
-            },
-            ProcessorAttribute {
-                key: "Stretch Factor".to_string(),
-                value: format!("{}X", stretch_factor.to_string()),
-            },
-            ProcessorAttribute {
-                key: "Blend".to_string(),
-                value: format!("{:.1} ms", blend_ms),
-            },
-        ],
-    );
 
-    let new_params = time_stretch_cross(&params, time_stretch_params)?;
-
-    complete_event!(PermuteNodeName::GranularTimeStretch, new_params);
-    Ok(new_params)
+    (PermuteNodeName::GranularTimeStretch, attributes, Box::new(processor))
 }
 
-pub fn half_speed(params: &mut ProcessorParams) -> Result<ProcessorParams, PermuteError> {
-    start_event!(PermuteNodeName::HalfSpeed, params);
-    let new_params = change_speed(params.to_owned(), 0.5_f64);
-    complete_event!(PermuteNodeName::HalfSpeed, new_params);
-    Ok(new_params)
-}
-pub fn double_speed(params: &mut ProcessorParams) -> Result<ProcessorParams, PermuteError> {
-    start_event!(PermuteNodeName::DoubleSpeed, params);
-    let new_params = change_speed(params.to_owned(), 2_f64);
-    complete_event!(PermuteNodeName::DoubleSpeed, new_params);
-    Ok(new_params)
+pub fn half_speed(_params: &mut ProcessorParams) -> ProcessorPlan {
+    let attributes = vec![
+        ProcessorAttribute {
+            key: "Speed".to_string(),
+            value: "0.5x".to_string(),
+        },
+        ProcessorAttribute {
+            key: "Length Factor".to_string(),
+            value: "2.0".to_string(),
+        },
+    ];
+
+    let processor = move |params: ProcessorParams| {
+        start_event!(PermuteNodeName::HalfSpeed, &params);
+        let new_params = change_speed(params, 0.5_f64);
+        complete_event!(PermuteNodeName::HalfSpeed, new_params);
+        Ok(new_params)
+    };
+
+    (PermuteNodeName::HalfSpeed, attributes, Box::new(processor))
 }
 
-pub fn random_blur_stretch(
-    params: &mut ProcessorParams,
-) -> Result<ProcessorParams, PermuteError> {
-    start_event!(PermuteNodeName::BlurStretch, params);
+pub fn double_speed(_params: &mut ProcessorParams) -> ProcessorPlan {
+    let attributes = vec![
+        ProcessorAttribute {
+            key: "Speed".to_string(),
+            value: "2.0x".to_string(),
+        },
+        ProcessorAttribute {
+            key: "Length Factor".to_string(),
+            value: "0.5".to_string(),
+        },
+    ];
 
+    let processor = move |params: ProcessorParams| {
+        start_event!(PermuteNodeName::DoubleSpeed, &params);
+        let new_params = change_speed(params, 2_f64);
+        complete_event!(PermuteNodeName::DoubleSpeed, new_params);
+        Ok(new_params)
+    };
+
+    (PermuteNodeName::DoubleSpeed, attributes, Box::new(processor))
+}
+
+pub fn random_blur_stretch(params: &mut ProcessorParams) -> ProcessorPlan {
     let mut rng = rand::thread_rng();
     // Randomize window size between 1024 and 4096 samples
     let window_distributions = vec![
@@ -181,39 +210,99 @@ pub fn random_blur_stretch(
         1 => WindowType::Blackman,
         _ => WindowType::Hamming,
     };
-    params.update_processor_attributes(
-        params.permutation.clone(),
-        vec![
-            ProcessorAttribute {
-                key: "Window Size".to_string(),
-                value: window_size.to_string(),
-            },
-            ProcessorAttribute {
-                key: "Hop Size".to_string(),
-                value: hop_size.to_string(),
-            },
-            ProcessorAttribute {
-                key: "Stretch Factor".to_string(),
-                value: stretch_factor.to_string(),
-            },
-            ProcessorAttribute {
-                key: "Window Type".to_string(),
-                value: format!("{:?}", window_type),
-            },
-        ],
-    );
-    let result = stft_time_stretch(
-        params,
-        StftTimeStretchParams {
-            window_size,
-            hop_size,
-            stretch_factor,
-            rng,
-            window_type,
-        },
-    );
 
-    
-    complete_event!(PermuteNodeName::BlurStretch, params);
-    result
+    let attributes = vec![
+        ProcessorAttribute {
+            key: "Window Size".to_string(),
+            value: window_size.to_string(),
+        },
+        ProcessorAttribute {
+            key: "Hop Size".to_string(),
+            value: hop_size.to_string(),
+        },
+        ProcessorAttribute {
+            key: "Stretch Factor".to_string(),
+            value: format!("{}", stretch_factor),
+        },
+        ProcessorAttribute {
+            key: "Window Type".to_string(),
+            value: format!("{:?}", window_type),
+        },
+    ];
+
+    let processor = move |params: ProcessorParams| {
+        start_event!(PermuteNodeName::BlurStretch, &params);
+        let result = stft_time_stretch(
+            &params,
+            StftTimeStretchParams {
+                window_size,
+                hop_size,
+                stretch_factor,
+                rng,
+                window_type,
+            },
+        );
+        complete_event!(PermuteNodeName::BlurStretch, &params);
+        result
+    };
+
+    (PermuteNodeName::BlurStretch, attributes, Box::new(processor))
 } 
+
+
+pub fn reverse_with_plan(_params: &mut ProcessorParams) -> ProcessorPlan {
+    let attributes = vec![];
+    
+    let processor = move |params: ProcessorParams| {
+        start_event!(PermuteNodeName::Reverse, &params);
+        let new_params = reverse(params)?;
+        complete_event!(PermuteNodeName::Reverse, new_params);
+        Ok(new_params)
+    };
+
+    (PermuteNodeName::Reverse, attributes, Box::new(processor))
+}
+
+pub fn change_sample_rate_high(params: &mut ProcessorParams) -> ProcessorPlan {
+    let new_sample_rate = match params.sample_rate {
+        0..=48000 => params.sample_rate * 4,
+        48001..=96000 => params.sample_rate * 2,
+        _ => params.sample_rate,
+    };
+    let attributes = vec![
+        ProcessorAttribute {
+            key: "Sample Rate".to_string(),
+            value: format_hz_usize(new_sample_rate),
+        },
+        ];
+
+    let processor = move |params: ProcessorParams| {
+        start_event!(PermuteNodeName::SampleRateConversionHigh, &params);
+        let new_params = change_sample_rate(params, new_sample_rate)?;
+        complete_event!(PermuteNodeName::SampleRateConversionHigh, new_params);
+        Ok(new_params)
+    };
+
+    (PermuteNodeName::SampleRateConversionHigh, attributes, Box::new(processor))
+}
+
+pub fn change_sample_rate_original(
+    params: &mut ProcessorParams,
+) -> ProcessorPlan {
+    let new_sample_rate = params.permutation.original_sample_rate;
+    let attributes = vec![
+        ProcessorAttribute {
+            key: "Sample Rate".to_string(),
+            value: format_hz_usize(new_sample_rate),
+        },
+        ];
+
+    let processor = move |params: ProcessorParams| {
+        start_event!(PermuteNodeName::SampleRateConversionHigh, &params);
+        let new_params = change_sample_rate(params, new_sample_rate)?;
+        complete_event!(PermuteNodeName::SampleRateConversionHigh, new_params);
+        Ok(new_params)
+    };
+
+    (PermuteNodeName::SampleRateConversionOriginal, attributes, Box::new(processor))
+}

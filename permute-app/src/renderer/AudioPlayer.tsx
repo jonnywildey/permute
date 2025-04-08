@@ -5,6 +5,8 @@ import { LargePlayIcon } from './icons/PlayIcon';
 import { LargePauseIcon } from './icons/PauseIcon';
 import { LargeStopIcon } from './icons/StopIcon';
 
+const AUDIO_PLAYER_TOOLTIP_DELAY = 1400;
+
 export const AudioPlayer: React.FC = () => {
   const { colorMode } = useColorMode();
   const { resume, pause, stop, file, setOnPlayUpdate, isPlaying, setPosition } =
@@ -65,7 +67,7 @@ export const AudioPlayer: React.FC = () => {
       </Box>
       <Box display="flex" alignItems="baseline" pt={2.5} pr={1}>
         <Tooltip
-          openDelay={500}
+          openDelay={AUDIO_PLAYER_TOOLTIP_DELAY}
           label={file.name}
         >
           <Heading

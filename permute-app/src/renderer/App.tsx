@@ -115,9 +115,11 @@ const Content = () => {
     trimAll,
     inputTrail,
     outputTrail,
+    processing,
     processorPool,
     permutationOutputs,
     createSubdirectories,
+    maxStretch,
   } = useMemo(() => state.permuteState, [state.permuteState]);
 
   // Memoize the grid layout configuration
@@ -152,6 +154,7 @@ const Content = () => {
       setState({ ...state, permuteState: pState });
     };
     window.Electron.ipcRenderer.runProcessor(refreshState, onFinished);
+    setState({ permuteState: { ...state.permuteState } });
   };
   const reverseFile = async (file: string) => {
     setState({ permuteState: { ...state.permuteState, processing: true } });
@@ -335,6 +338,19 @@ const Content = () => {
     });
   };
 
+  const setMaxStretch = async (maxStretch: number) => {
+    // Update state immediately
+    setState(prevState => ({
+      permuteState: {
+        ...prevState.permuteState,
+        maxStretch
+      }
+    }));
+    // Let IPC update happen in background
+    await window.Electron.ipcRenderer.setMaxStretch(maxStretch);
+    refreshState();
+  };
+
   return (
     <Grid {...gridConfig}>
       <Welcome isOpen={isOpen} onClose={onClose} />
@@ -344,6 +360,8 @@ const Content = () => {
         onCreateSubdirectoriesChange={setCreateSubdirectories}
         onSaveScene={handleSaveScene}
         onLoadScene={handleLoadScene}
+        maxStretch={maxStretch}
+        onMaxStretchChange={setMaxStretch}
       />
       <MemoizedFiles
         files={files}
@@ -371,7 +389,7 @@ const Content = () => {
       <MemoizedBottomBar
         permutationOutputs={permutationOutputs}
         runProcessor={runProcessor}
-        processing={state.permuteState.processing}
+        processing={processing}
         depth={permutationDepth}
         permutations={permutations}
         normaliseAtEnd={normaliseAtEnd}

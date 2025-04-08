@@ -13,7 +13,9 @@ use crate::{
     permute_files::PermuteUpdate,
 };
 
-pub type ProcessorFn = fn(&mut ProcessorParams) -> Result<ProcessorParams, PermuteError>;
+pub type ProcessorPlanGenerator = fn(&mut ProcessorParams) -> ProcessorPlan;
+pub type ProcessorPlan = (PermuteNodeName, Vec<ProcessorAttribute>, ProcessorClosure);
+pub type ProcessorClosure = Box<dyn FnOnce(ProcessorParams) -> Result<ProcessorParams, PermuteError>>;
 
 #[derive(Debug, Clone)]
 pub struct ProcessorParams {
@@ -30,11 +32,23 @@ pub struct ProcessorParams {
     pub update_sender: Arc<Sender<PermuteUpdate>>,
 }
 
-impl ProcessorParams {
-    pub fn update_processor_attributes(&mut self, permutation: Permutation, attributes: Vec<ProcessorAttribute>) {
-        self.permutation.processors[permutation.node_index].attributes = attributes;
+impl Default for ProcessorParams {
+    fn default() -> Self {
+        ProcessorParams { 
+            samples: vec![], 
+            sample_length: 0, 
+            permutation: 
+            Permutation::default(), 
+            channels: 0, 
+            sample_rate: 0, 
+            sub_format: SubtypeFormat::PCM_16, 
+            file_format: MajorFormat::WAV,
+            endian: Endian::Little,
+            update_sender: Arc::new(crossbeam_channel::unbounded().0)
+        }
     }
 }
+
 
 #[derive(Debug, Clone)]
 pub struct Permutation {
@@ -46,6 +60,21 @@ pub struct Permutation {
     pub original_sample_rate: usize,
     pub node_index: usize,
     pub files: Vec<String>,
+}
+
+impl Default for Permutation {
+    fn default() -> Self {
+        Permutation { 
+            file: String::new(), 
+            permutation_index: 0, 
+            output: String::new(), 
+            processor_pool: vec![], 
+            processors: vec![], 
+            original_sample_rate: 0, 
+            node_index: 0, 
+            files: vec![] 
+        }
+    }
 }
 
 

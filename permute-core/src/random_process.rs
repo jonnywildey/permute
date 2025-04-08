@@ -1,19 +1,16 @@
 // External dependencies
-use rand::{rngs::ThreadRng, thread_rng, Rng};
+use rand::{rngs::ThreadRng, Rng};
 
 // Internal modules
 use crate::{
-    process::{ProcessorFn, PermuteNodeName},
-    random_processors::{
-        random_cross::{random_cross_gain, random_cross_filter, random_cross_distort},
-        random_delay_verb::{random_metallic_delay, random_rhythmic_delay, random_reverb},
+    process::{PermuteNodeName, ProcessorPlanGenerator}, random_processors::{
+        random_cross::{random_cross_distort, random_cross_filter, random_cross_gain},
+        random_delay_verb::{random_metallic_delay, random_reverb, random_rhythmic_delay},
         random_filter::{random_filter, random_line_filter, random_oscillating_filter},
-        random_gain_distortion::{random_fuzz, random_saturate, normalise},
-        random_modulation::{random_chorus, random_phaser, random_wow, random_tremolo, random_lazer, random_zero_flange, random_flutter},
-        random_time_pitch::{random_granular_time_stretch, random_pitch, half_speed, double_speed, random_blur_stretch},
-    },
-    processors::time_pitch::{change_sample_rate_high, change_sample_rate_original, reverse},
-    processors::gain_distortion::trim,
+        random_gain_distortion::{auto_trim, normalise, random_fuzz, random_saturate},
+        random_modulation::{random_chorus, random_flutter, random_lazer, random_phaser, random_tremolo, random_wow, random_zero_flange},
+        random_time_pitch::{change_sample_rate_high, change_sample_rate_original, double_speed, half_speed, random_blur_stretch, random_granular_time_stretch, random_pitch, reverse_with_plan},
+    }
 };
 
 macro_rules! start_event {
@@ -41,9 +38,6 @@ macro_rules! complete_event {
     }};
 }
 pub(crate) use complete_event;
-
-
-const MAX_LENGTH_INCREASING: usize = 3;
 
 pub struct GetProcessorNodeParams  {
     pub normalise_at_end: bool,
@@ -97,20 +91,7 @@ pub fn generate_processor_sequence(
     let processor_count = processor_count.unwrap_or(rng.gen_range(2..5));
 
     for _ in 0..processor_count {
-        let available_processors: Vec<PermuteNodeName> = if constrain_length && count_length_increasing(&processors) >= MAX_LENGTH_INCREASING {
-            // If we've hit the length increase limit, filter out length-increasing processors
-                processor_pool
-                    .iter()
-                    .filter(|p| !is_length_increasing(p))
-                    .cloned()
-                    .collect()
-        } else {
-            processor_pool.clone()
-        };
-
-        if !available_processors.is_empty() {
-            processors.push(available_processors[rng.gen_range(0..available_processors.len())]);
-        }
+        processors.push(processor_pool[rng.gen_range(0..processor_pool.len())]);
     }
 
     processors = [
@@ -132,49 +113,46 @@ pub fn generate_processor_sequence(
     processors
 }
 
-fn is_length_increasing(processor: &PermuteNodeName) -> bool {
-    matches!(
-        processor,
-        PermuteNodeName::GranularTimeStretch | 
-        PermuteNodeName::HalfSpeed | 
-        PermuteNodeName::BlurStretch |
-        PermuteNodeName::RandomPitch
-    )
-}
-
-fn count_length_increasing(processors: &[PermuteNodeName]) -> usize {
-    processors.iter().filter(|p| is_length_increasing(p)).count()
-}
-
-pub fn get_processor_function(name: PermuteNodeName) -> ProcessorFn {
+pub fn get_processor_plan(name: PermuteNodeName) -> ProcessorPlanGenerator {
     match name {
+        // Time and pitch
         PermuteNodeName::GranularTimeStretch => random_granular_time_stretch,
-        PermuteNodeName::Fuzz => random_fuzz,
-        PermuteNodeName::Saturate => random_saturate,
-        PermuteNodeName::Reverse => reverse,
-        PermuteNodeName::Chorus => random_chorus,
-        PermuteNodeName::Phaser => random_phaser,
         PermuteNodeName::DoubleSpeed => double_speed,
         PermuteNodeName::RandomPitch => random_pitch,
+        PermuteNodeName::BlurStretch => random_blur_stretch,
+        PermuteNodeName::HalfSpeed => half_speed,
+        PermuteNodeName::Reverse => reverse_with_plan,
+        // // Modulation
+        PermuteNodeName::Chorus => random_chorus,
+        PermuteNodeName::Phaser => random_phaser,
         PermuteNodeName::Flutter => random_flutter,
         PermuteNodeName::Flange => random_zero_flange,
-        PermuteNodeName::HalfSpeed => half_speed,
-        PermuteNodeName::MetallicDelay => random_metallic_delay,
-        PermuteNodeName::RhythmicDelay => random_rhythmic_delay,
-        PermuteNodeName::Reverb => random_reverb,
         PermuteNodeName::Wow => random_wow,
         PermuteNodeName::Tremolo => random_tremolo,
         PermuteNodeName::Lazer => random_lazer,
-        PermuteNodeName::Normalise => normalise,
-        PermuteNodeName::Trim => trim,
-        PermuteNodeName::SampleRateConversionHigh => change_sample_rate_high,
-        PermuteNodeName::SampleRateConversionOriginal => change_sample_rate_original,
+        
+        // // Delay and reverb
+        PermuteNodeName::RhythmicDelay => random_rhythmic_delay,
+        PermuteNodeName::Reverb => random_reverb,
+        PermuteNodeName::MetallicDelay => random_metallic_delay,
+        
+        // // Gain and distortion
+        PermuteNodeName::Fuzz => random_fuzz,
+        PermuteNodeName::Saturate => random_saturate,
+        // // Filters
         PermuteNodeName::Filter => random_filter,
         PermuteNodeName::LineFilter => random_line_filter,
         PermuteNodeName::OscillatingFilter => random_oscillating_filter,
+        
+        // // Cross/sidechain
         PermuteNodeName::CrossGain => random_cross_gain,
         PermuteNodeName::CrossFilter => random_cross_filter,
         PermuteNodeName::CrossDistort => random_cross_distort,
-        PermuteNodeName::BlurStretch => random_blur_stretch,
+        // // Util
+        PermuteNodeName::Normalise => normalise,
+        PermuteNodeName::Trim => auto_trim,
+        PermuteNodeName::SampleRateConversionHigh => change_sample_rate_high,
+        PermuteNodeName::SampleRateConversionOriginal => change_sample_rate_original,
+        _ => panic!("Processor not found {:?}", name),
     }
 }

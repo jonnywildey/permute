@@ -2,6 +2,8 @@ import { Button, Tooltip } from '@chakra-ui/react';
 import { processorDescriptions } from './processorDescriptions';
 import { memo } from 'react';
 
+const PROCESSOR_TOOLTIP_DELAY = 1400;
+
 export interface IProcessorProps {
   name: string;
   enabled: boolean;
@@ -35,7 +37,7 @@ export const Processor = memo(({
   const description = processorDescriptions[name];
   if (description) {
     return (
-      <Tooltip openDelay={500} label={description} fontSize="md">
+      <Tooltip openDelay={PROCESSOR_TOOLTIP_DELAY} label={description} fontSize="md">
         {button}
       </Tooltip>
     );
