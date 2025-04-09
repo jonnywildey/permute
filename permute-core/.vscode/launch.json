@@ -53,7 +53,7 @@
         "--depth=1",
         "--normalise",
         "--processorCount=1",
-        "--processor=Sidechain Gain"
+        "--processor=Blur Stretch"
       ],
       "cwd": "${workspaceFolder}"
     },

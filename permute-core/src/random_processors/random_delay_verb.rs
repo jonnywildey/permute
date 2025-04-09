@@ -5,14 +5,12 @@ use rand::{thread_rng, Rng};
 use crate::{
     processors::delay_reverb::{DelayLineParams, ReverbParams, delay_line, reverb},
     random_processors::utils::{format_float_percent, format_samples_as_ms, format_float_ms},
-    process::{ProcessorParams, PermuteNodeName, ProcessorAttribute, PermuteNodeEvent},
+    process::{ProcessorParams, ProcessorPlan, PermuteNodeName, ProcessorAttribute, PermuteNodeEvent, ProcessorClosure},
     random_process::{start_event, complete_event},
     permute_files::PermuteUpdate,
-    permute_error::PermuteError,
 };
 
-pub fn random_metallic_delay(params: &mut ProcessorParams) -> Result<ProcessorParams, PermuteError> {
-    start_event!(PermuteNodeName::MetallicDelay, params);
+pub fn random_metallic_delay(params: &mut ProcessorParams) -> ProcessorPlan {
     let mut rng = thread_rng();
 
     let sec_10 = (params.sample_rate as f64 * 0.1) as usize;
@@ -20,23 +18,20 @@ pub fn random_metallic_delay(params: &mut ProcessorParams) -> Result<ProcessorPa
     let delay_sample_length = rng.gen_range(10..sec_10);
     let wet_gain_factor = rng.gen_range(0.3..1_f64);
 
-    params.update_processor_attributes(
-        params.permutation.clone(),
-        vec![
-            ProcessorAttribute {
-                key: "Feedback".to_string(),
-                value: format_float_percent(feedback_factor),
-            },
-            ProcessorAttribute {
-                key: "Delay".to_string(),
-                value: format_samples_as_ms(delay_sample_length, params.sample_rate),
-            },
-            ProcessorAttribute {
-                key: "Wet".to_string(),
-                value: format_float_percent(wet_gain_factor),
-            },
-        ],
-    );
+    let attributes = vec![
+        ProcessorAttribute {
+            key: "Feedback".to_string(),
+            value: format_float_percent(feedback_factor),
+        },
+        ProcessorAttribute {
+            key: "Delay".to_string(),
+            value: format_samples_as_ms(delay_sample_length, params.sample_rate),
+        },
+        ProcessorAttribute {
+            key: "Wet".to_string(),
+            value: format_float_percent(wet_gain_factor),
+        },
+    ];
 
     let delay_params = DelayLineParams {
         feedback_factor,
@@ -45,13 +40,17 @@ pub fn random_metallic_delay(params: &mut ProcessorParams) -> Result<ProcessorPa
         wet_gain_factor,
     };
 
-    let new_params = delay_line(&params.clone(), &delay_params)?;
-    complete_event!(PermuteNodeName::MetallicDelay, new_params);
-    Ok(new_params)
+    let processor = move |params: ProcessorParams| {
+        start_event!(PermuteNodeName::MetallicDelay, &params);
+        let new_params = delay_line(&params, &delay_params)?;
+        complete_event!(PermuteNodeName::MetallicDelay, new_params);
+        Ok(new_params)
+    };
+
+    (PermuteNodeName::MetallicDelay, attributes, Box::new(processor))
 }
 
-pub fn random_rhythmic_delay(params: &mut ProcessorParams) -> Result<ProcessorParams, PermuteError> {
-    start_event!(PermuteNodeName::RhythmicDelay, params);
+pub fn random_rhythmic_delay(params: &mut ProcessorParams) -> ProcessorPlan {
     let mut rng = thread_rng();
 
     let sec_10 = (params.sample_rate as f64 * 0.1) as usize;
@@ -59,19 +58,16 @@ pub fn random_rhythmic_delay(params: &mut ProcessorParams) -> Result<ProcessorPa
     let feedback_factor = rng.gen_range(0_f64..0.9);
     let delay_sample_length = rng.gen_range(sec_10..sec);
 
-    params.update_processor_attributes(
-        params.permutation.clone(),
-        vec![
-            ProcessorAttribute {
-                key: "Feedback".to_string(),
-                value: format_float_percent(feedback_factor),
-            },
-            ProcessorAttribute {
-                key: "Delay".to_string(),
-                value: format_samples_as_ms(delay_sample_length, params.sample_rate),
-            },
-        ],
-    );
+    let attributes = vec![
+        ProcessorAttribute {
+            key: "Feedback".to_string(),
+            value: format_float_percent(feedback_factor),
+        },
+        ProcessorAttribute {
+            key: "Delay".to_string(),
+            value: format_samples_as_ms(delay_sample_length, params.sample_rate),
+        },
+    ];
 
     let delay_params = DelayLineParams {
         feedback_factor,
@@ -80,14 +76,17 @@ pub fn random_rhythmic_delay(params: &mut ProcessorParams) -> Result<ProcessorPa
         wet_gain_factor: 1_f64,
     };
 
-    let new_params = delay_line(&params, &delay_params)?;
-    complete_event!(PermuteNodeName::RhythmicDelay, new_params);
-    Ok(new_params)
+    let processor = move |params: ProcessorParams| {
+        start_event!(PermuteNodeName::RhythmicDelay, &params);
+        let new_params = delay_line(&params, &delay_params)?;
+        complete_event!(PermuteNodeName::RhythmicDelay, new_params);
+        Ok(new_params)
+    };
+
+    (PermuteNodeName::RhythmicDelay, attributes, Box::new(processor))
 }
 
-pub fn random_reverb(params: &mut ProcessorParams) -> Result<ProcessorParams, PermuteError> {
-    start_event!(PermuteNodeName::Reverb, params);
-
+pub fn random_reverb(params: &mut ProcessorParams) -> ProcessorPlan {
     let mut rng = thread_rng();
 
     let len_factors = [0.1, 0.3, 0.6, 1.0, 1.2, 1.4];
@@ -98,39 +97,38 @@ pub fn random_reverb(params: &mut ProcessorParams) -> Result<ProcessorParams, Pe
     let len_factor = len_factors[rng.gen_range(0..len_factors.len())];
     let decay_factor = decay_factors[rng.gen_range(0..decay_factors.len())];
 
-    let mut new_params = reverb(
-        params,
-        ReverbParams {
-            predelay_ms,
-            wet_mix,
-            len_factor,
-            decay_factor,
+    let attributes = vec![
+        ProcessorAttribute {
+            key: "Predelay".to_string(),
+            value: format_float_ms(predelay_ms),
         },
-    )?;
+        ProcessorAttribute {
+            key: "Wet Mix".to_string(),
+            value: format_float_percent(wet_mix),
+        },
+        ProcessorAttribute {
+            key: "Length Factor".to_string(),
+            value: len_factor.to_string(),
+        },
+        ProcessorAttribute {
+            key: "Decay Factor".to_string(),
+            value: decay_factor.to_string(),
+        },
+    ];
 
-    // Update processor attributes
-    new_params.update_processor_attributes(
-        new_params.permutation.clone(),
-        vec![
-            ProcessorAttribute {
-                key: "Predelay".to_string(),
-                value:  format_float_ms(predelay_ms),
-            },
-            ProcessorAttribute {
-                key: "Wet Mix".to_string(),
-                value: format_float_percent(wet_mix),
-            },
-            ProcessorAttribute {
-                key: "Length Factor".to_string(),
-                value: len_factor.to_string(),
-            },
-            ProcessorAttribute {
-                key: "Decay Factor".to_string(),
-                value: decay_factor.to_string(),
-            },
-        ],
-    );
+    let reverb_params = ReverbParams {
+        predelay_ms,
+        wet_mix,
+        len_factor,
+        decay_factor,
+    };
 
-    complete_event!(PermuteNodeName::Reverb, new_params);
-    Ok(new_params)
+    let processor = move |params: ProcessorParams| {
+        start_event!(PermuteNodeName::Reverb, &params);
+        let new_params = reverb(&params, reverb_params)?;
+        complete_event!(PermuteNodeName::Reverb, new_params);
+        Ok(new_params)
+    };
+
+    (PermuteNodeName::Reverb, attributes, Box::new(processor))
 }

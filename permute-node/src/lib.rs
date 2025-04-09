@@ -43,6 +43,7 @@ enum ProcessorMessage {
     SelectAllProcessors,
     DeselectAllProcessors,
     SetViewedWelcome(bool),
+    SetMaxStretch(f64),
     Cancel,
 }
 
@@ -152,6 +153,9 @@ impl Processor {
                                 }
                                 ProcessorMessage::SetTrimAll(trim_all) => {
                                     state.set_trim_all(trim_all);
+                                }
+                                ProcessorMessage::SetMaxStretch(max_stretch) => {
+                                    state.set_max_stretch(max_stretch);
                                 }
                                 ProcessorMessage::SetPermutations(permutations) => {
                                     state.set_permutations(permutations);
@@ -308,6 +312,7 @@ impl Processor {
                     let create_subdirectories: Handle<'_, JsBoolean> =
                         cx.boolean(state.create_subdirectories);
                     let viewed_welcome: Handle<'_, JsBoolean> = cx.boolean(state.viewed_welcome);
+                    let max_stretch = cx.number(state.max_stretch);
 
                     let files = cx.empty_array();
                     for i in 0..state.files.len() {
@@ -392,6 +397,7 @@ impl Processor {
                     obj.set(&mut cx, "permutationOutputs", permutation_outputs)?;
                     obj.set(&mut cx, "createSubdirectories", create_subdirectories)?;
                     obj.set(&mut cx, "viewedWelcome", viewed_welcome)?;
+                    obj.set(&mut cx, "maxStretch", max_stretch)?;
 
                     let args = vec![obj];
 
@@ -467,6 +473,12 @@ impl Processor {
     fn js_set_trim_all(mut cx: FunctionContext) -> JsResult<JsUndefined> {
         let trim_all = cx.argument::<JsBoolean>(0)?.value(&mut cx);
         js_hook!(trim_all, ProcessorMessage::SetTrimAll, cx);
+        Ok(cx.undefined())
+    }
+
+    fn js_set_max_stretch(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+        let max_stretch = cx.argument::<JsNumber>(0)?.value(&mut cx);
+        js_hook!(max_stretch, ProcessorMessage::SetMaxStretch, cx);
         Ok(cx.undefined())
     }
 
@@ -556,6 +568,7 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
     cx.export_function("setTrimAll", Processor::js_set_trim_all)?;
     cx.export_function("reverseFile", Processor::js_reverse_file)?;
     cx.export_function("trimFile", Processor::js_trim_file)?;
+    cx.export_function("setMaxStretch", Processor::js_set_max_stretch)?;
     cx.export_function("saveSettings", Processor::js_save_settings)?;
     cx.export_function("loadSettings", Processor::js_load_settings)?;
     cx.export_function("setCreateSubdirectories", Processor::js_set_create_subdirectories)?;

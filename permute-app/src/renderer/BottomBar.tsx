@@ -18,6 +18,8 @@ import type { IPermutationOutput, IPermutationInput } from 'permute-node';
 import { AudioPlayer } from './AudioPlayer';
 import { useState, useEffect } from 'react';
 
+const BOTTOM_BAR_TOOLTIP_DELAY = 1400;
+
 export interface IBottomBarProps {
   runProcessor: () => void;
   processing: boolean;
@@ -117,7 +119,7 @@ function InputTrail(
   return (
     <GridItem rowSpan={1} colSpan={2} pr={4} pl={4}>
       <Tooltip
-        openDelay={200}
+        openDelay={BOTTOM_BAR_TOOLTIP_DELAY}
         label={
           <Text fontSize="lg">
             Adds extra seconds to the end of the audio file. Useful when using
@@ -181,7 +183,7 @@ function Depth(depth: number, setDepth: (depth: number) => void) {
   return (
     <GridItem rowSpan={1} colSpan={2} pl={4}>
       <Tooltip
-        openDelay={200}
+        openDelay={BOTTOM_BAR_TOOLTIP_DELAY}
         label={
           <Text fontSize="lg">
             Controls how many processors the audio is run through. <br />
@@ -237,7 +239,7 @@ function Permutations(
   return (
     <GridItem rowSpan={1} colSpan={2} pl={4} pt={3}>
       <Tooltip
-        openDelay={200}
+        openDelay={BOTTOM_BAR_TOOLTIP_DELAY}
         label={
           <Text fontSize="lg">
             How many permutations to generate per file. <br />
@@ -306,7 +308,7 @@ function OutputTrail(
   return (
     <GridItem rowSpan={1} colSpan={2} pr={4} pt={3} pl={4}>
       <Tooltip
-        openDelay={200}
+        openDelay={BOTTOM_BAR_TOOLTIP_DELAY}
         label={
           <Text fontSize="lg">
             Adds extra seconds to the end of the audio file. Useful when using
@@ -489,7 +491,7 @@ function Normalise(
   return (
     <GridItem rowSpan={1} colSpan={2} pl="33%">
       <Tooltip
-        openDelay={200}
+        openDelay={BOTTOM_BAR_TOOLTIP_DELAY}
         label={
           <Text fontSize="lg">
             If enabled, normalises audio to ensure there is no digital clipping{' '}
@@ -516,7 +518,7 @@ function TrimAll(
   return (
     <GridItem rowSpan={1} colSpan={2} pt={3} pl="33%">
       <Tooltip
-        openDelay={200}
+        openDelay={BOTTOM_BAR_TOOLTIP_DELAY}
         label={
           <Text fontSize="lg">
             If enabled, trims all permuted audio, removing silence{' '}

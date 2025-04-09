@@ -27,6 +27,10 @@ pub fn format_hz(value: f64) -> String {
     format!("{:.2} hz", value)
 }
 
+pub fn format_hz_usize(value: usize) -> String {
+    format!("{} hz", value)
+}
+
 pub fn format_float_percent(value: f64) -> String {
     format!("{:.2}%", value * 100.0)
 }

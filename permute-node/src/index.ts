@@ -24,6 +24,7 @@ const {
   selectAllProcessors,
   deselectAllProcessors,
   setViewedWelcome,
+  setMaxStretch,
 } = require("../permute-library");
 
 const PERMUTE_POLL_LATENCY = 100;
@@ -46,6 +47,7 @@ export interface IPermuteState {
   createSubdirectories: boolean,
   permutationOutputs: IPermutationOutput[],
   viewedWelcome: boolean,
+  maxStretch: number,
 };
 
 export interface IPermutationInput {
@@ -185,6 +187,9 @@ export function createPermuteProcessor() {
     },
     setViewedWelcome(viewed: boolean) {
       return setViewedWelcome.call(permuteLibrary, viewed);
+    },
+    setMaxStretch(maxStretch: number) {
+      return setMaxStretch.call(permuteLibrary, maxStretch);
     },
     getStateCallback,
     async getState(): Promise<IPermuteState> {
