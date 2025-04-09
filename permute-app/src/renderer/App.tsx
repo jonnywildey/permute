@@ -153,8 +153,8 @@ const Content = () => {
       }
       setState({ ...state, permuteState: pState });
     };
+    setState({ permuteState: { ...state.permuteState, processing: true } });
     window.Electron.ipcRenderer.runProcessor(refreshState, onFinished);
-    setState({ permuteState: { ...state.permuteState } });
   };
   const reverseFile = async (file: string) => {
     setState({ permuteState: { ...state.permuteState, processing: true } });
