@@ -25,6 +25,7 @@ enum ProcessorMessage {
     RemoveFile(String),
     DeleteOutputFile(String),
     DeleteAllOutputFiles,
+    ClearAllFiles,
     ReverseFile(String),
     TrimFile(String),
     AddProcessor(String),
@@ -118,6 +119,9 @@ impl Processor {
                                             state.set_error(err.to_string());
                                         }
                                     }
+                                }
+                                ProcessorMessage::ClearAllFiles => {
+                                    state.clear_all_files();
                                 }
                                 ProcessorMessage::ReverseFile(file) => match state.reverse_file(file) {
                                     Ok(()) => {}
@@ -452,6 +456,11 @@ impl Processor {
         Ok(cx.undefined())
     }
 
+    fn js_clear_all_files(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+        js_hook!(ProcessorMessage::ClearAllFiles, cx);
+        Ok(cx.undefined())
+    }
+
     fn js_set_permutations(mut cx: FunctionContext) -> JsResult<JsUndefined> {
         let permutations = cx.argument::<JsNumber>(0)?.value(&mut cx) as usize;
         js_hook!(permutations, ProcessorMessage::SetPermutations, cx);
@@ -557,6 +566,7 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
     cx.export_function("removeFile", Processor::js_remove_file)?;
     cx.export_function("deleteOutputFile", Processor::js_delete_output_file)?;
     cx.export_function("deleteAllOutputFiles", Processor::js_delete_all_output_files)?;
+    cx.export_function("clearAllFiles", Processor::js_clear_all_files)?;
     cx.export_function("addProcessor", Processor::js_add_processor)?;
     cx.export_function("removeProcessor", Processor::js_remove_processor)?;
     cx.export_function("setOutput", Processor::js_set_output)?;

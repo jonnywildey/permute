@@ -46,7 +46,7 @@ impl AudioInfo {
     }
 
     fn get_image(mut snd: SndFile) -> Result<String, ()> {
-        let frames = 100;
+        let frames = 400;
         let samples_64: Vec<f64> = snd.read_all_to_vec()?;
         let frame_size = samples_64.len() / frames;
 

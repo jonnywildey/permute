@@ -26,13 +26,13 @@ mkdir -p x86_64_lib
 cp ../libsndfile-binaries/libsndfile_universal.dylib x86_64_lib/libsndfile.dylib
 
 echo "Building for ARM64..."
-RUSTFLAGS="-L $(pwd)/arm64_lib" cargo build --release --target aarch64-apple-darwin || {
+RUSTFLAGS="-L $(pwd)/arm64_lib -C link-arg=-headerpad_max_install_names" cargo build --release --target aarch64-apple-darwin || {
     echo "Failed to build for ARM64"
     exit 1
 }
 
 echo "Building for x86_64..."
-RUSTFLAGS="-L $(pwd)/x86_64_lib" cargo build --release --target x86_64-apple-darwin || {
+RUSTFLAGS="-L $(pwd)/x86_64_lib -C link-arg=-headerpad_max_install_names" cargo build --release --target x86_64-apple-darwin || {
     echo "Failed to build for x86_64"
     exit 1
 }
