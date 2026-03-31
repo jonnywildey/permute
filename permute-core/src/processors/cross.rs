@@ -176,6 +176,105 @@ pub fn cross_mix(params: &ProcessorParams, mix_params: &CrossMixParams) -> Resul
 }
 
 #[derive(Debug, Clone)]
+pub struct CrossGrainParams {
+    pub sidechain_file: String,
+    pub grain_samples: usize, // grain size in samples, multiple of channels
+    pub blend_samples: usize, // crossfade length in samples, multiple of channels
+}
+
+/// Find the next zero crossing at or after `nominal`, stepping by `channels`,
+/// searching up to `max_search` samples ahead. Falls back to the channel-aligned
+/// nominal position if none is found.
+fn find_zero_crossing(samples: &[f64], nominal: usize, max_search: usize, channels: usize) -> usize {
+    let aligned = (nominal / channels) * channels;
+    let limit = (aligned + max_search).min(samples.len().saturating_sub(channels));
+    let mut pos = aligned;
+    while pos + channels < limit {
+        if (samples[pos] >= 0.0) != (samples[pos + channels] >= 0.0) {
+            return pos;
+        }
+        pos += channels;
+    }
+    aligned
+}
+
+fn apply_grain_fade(samples: &[f64], blend: usize, fade_in: bool, fade_out: bool) -> Vec<f64> {
+    let len = samples.len();
+    let blend = blend.min(len / 2);
+    let mut result = samples.to_vec();
+    if fade_in && blend > 0 {
+        for i in 0..blend {
+            result[i] *= i as f64 / blend as f64;
+        }
+    }
+    if fade_out && blend > 0 {
+        for i in 0..blend {
+            result[len - 1 - i] *= i as f64 / blend as f64;
+        }
+    }
+    result
+}
+
+pub fn cross_grain(params: &ProcessorParams, grain_params: &CrossGrainParams) -> Result<ProcessorParams, PermuteError> {
+    let sidechain = AUDIO_CACHE.get_samples(&grain_params.sidechain_file)?;
+    let channels = params.channels.max(1);
+    let grain_samples = grain_params.grain_samples.max(channels);
+    let blend_samples = grain_params.blend_samples;
+    let current_len = params.samples.len();
+    let sidechain_len = sidechain.len();
+
+    if sidechain_len == 0 || current_len == 0 {
+        return Ok(params.clone());
+    }
+
+    // Build zero-crossing-snapped grain boundaries for the current audio
+    let max_snap = grain_samples / 2;
+    let mut boundaries: Vec<usize> = vec![0];
+    let mut pos = grain_samples;
+    while pos < current_len {
+        let snapped = find_zero_crossing(&params.samples, pos, max_snap, channels);
+        boundaries.push(snapped);
+        pos = snapped + grain_samples;
+    }
+    let num_grains = boundaries.len();
+
+    let mut output: Vec<f64> = Vec::with_capacity(current_len * 2);
+    let mut sc_pos = 0usize;
+
+    for (i, &start) in boundaries.iter().enumerate() {
+        let end = if i + 1 < num_grains { boundaries[i + 1] } else { current_len };
+        let grain_len = end.saturating_sub(start);
+        if grain_len == 0 {
+            continue;
+        }
+
+        let is_first = i == 0;
+        let is_last = i == num_grains - 1;
+
+        // Current audio grain: no fade-in on the very first, fade-out on all
+        let current_grain = &params.samples[start..start + grain_len];
+        output.extend(apply_grain_fade(current_grain, blend_samples, !is_first, true));
+
+        // Sidechain grain cycled from sc_pos, wrapping around if needed
+        let mut sc_grain = Vec::with_capacity(grain_len);
+        for j in 0..grain_len {
+            sc_grain.push(sidechain[(sc_pos + j) % sidechain_len]);
+        }
+        // Advance sc_pos, keeping it channel-aligned
+        sc_pos = ((sc_pos + grain_len) % sidechain_len) / channels * channels;
+
+        // Sidechain grain: fade-in on all, no fade-out on the very last
+        output.extend(apply_grain_fade(&sc_grain, blend_samples, true, !is_last));
+    }
+
+    Ok(ProcessorParams {
+        sample_length: output.len(),
+        samples: output,
+        ..params.clone()
+    })
+}
+
+#[derive(Debug, Clone)]
 pub struct CrossDistortParams {
     pub sidechain_file: String,
     pub min_factor: f64,

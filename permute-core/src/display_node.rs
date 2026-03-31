@@ -30,6 +30,7 @@ pub fn get_processor_display_name(name: PermuteNodeName) -> String {
         PermuteNodeName::CrossFilter => String::from("Cross Filter"),
         PermuteNodeName::CrossDistort => String::from("Cross Distort"),
         PermuteNodeName::CrossMix => String::from("Cross Mix"),
+        PermuteNodeName::CrossGrain => String::from("Cross Grain"),
         PermuteNodeName::BlurStretch => String::from("Blur Stretch"),
     }
 }
@@ -64,6 +65,7 @@ pub fn get_processor_from_display_name(name: &str) -> Result<PermuteNodeName, St
         "Cross Filter" => Ok(PermuteNodeName::CrossFilter),
         "Cross Distort" => Ok(PermuteNodeName::CrossDistort),
         "Cross Mix" => Ok(PermuteNodeName::CrossMix),
+        "Cross Grain" => Ok(PermuteNodeName::CrossGrain),
         "Blur Stretch" => Ok(PermuteNodeName::BlurStretch),
         _ => Err(format!("{} not found", name)),
     }

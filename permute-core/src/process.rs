@@ -126,11 +126,12 @@ pub enum PermuteNodeName {
     CrossFilter,
     CrossDistort,
     CrossMix,
+    CrossGrain,
     BlurStretch,
 }
 
 // Only processors we want to be visible to users
-pub const ALL_PROCESSORS: [PermuteNodeName; 24] = [
+pub const ALL_PROCESSORS: [PermuteNodeName; 25] = [
     PermuteNodeName::GranularTimeStretch,
     PermuteNodeName::Fuzz,
     PermuteNodeName::Saturate,
@@ -161,5 +162,6 @@ pub const ALL_PROCESSORS: [PermuteNodeName; 24] = [
     // Cross Distort doesn't seem to do much different to cross gain
     // PermuteNodeName::CrossDistort,
     PermuteNodeName::CrossMix,
+    PermuteNodeName::CrossGrain,
     PermuteNodeName::BlurStretch,
 ];

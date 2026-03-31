@@ -6,7 +6,7 @@ use crate::{
     permute_files::PermuteUpdate,
     process::{PermuteNodeEvent, PermuteNodeName, ProcessorAttribute, ProcessorClosure, ProcessorParams, ProcessorPlan},
     processors::{
-        cross::{cross_distort, cross_filter, cross_gain, cross_mix, CrossDistortParams, CrossFilterParams, CrossGainParams, CrossMixParams},
+        cross::{cross_distort, cross_filter, cross_gain, cross_grain, cross_mix, CrossDistortParams, CrossFilterParams, CrossGainParams, CrossGrainParams, CrossMixParams},
         gain_distortion::DistortionAlgorithm},
         random_process::{complete_event, start_event},
         random_processors::utils::{format_float, format_float_ms, format_float_percent, format_hz, get_filename
@@ -271,6 +271,64 @@ pub fn random_cross_distort(params: &mut ProcessorParams) -> ProcessorPlan {
     };
 
     (PermuteNodeName::CrossDistort, attributes, Box::new(processor))
+}
+
+pub fn random_cross_grain(params: &mut ProcessorParams) -> ProcessorPlan {
+    let mut rng = thread_rng();
+
+    let sidechain_file = match select_sidechain_file(&params.permutation.file, &params.permutation.files) {
+        Some(file) => file,
+        None => {
+            let processor = move |params: ProcessorParams| {
+                start_event!(PermuteNodeName::CrossGrain, &params);
+                complete_event!(PermuteNodeName::CrossGrain, params);
+                Ok(params)
+            };
+            return (PermuteNodeName::CrossGrain, vec![], Box::new(processor));
+        }
+    };
+
+    let channels = params.channels.max(1);
+    let sample_rate = params.sample_rate;
+
+    // Grain size distributed across musically useful ranges (80ms–2000ms)
+    let grain_ms_options: [f64; 9] = [80.0, 150.0, 250.0, 400.0, 600.0, 800.0, 1200.0, 1600.0, 2000.0];
+    let grain_ms = grain_ms_options[rng.gen_range(0..grain_ms_options.len())];
+    let grain_samples = ((grain_ms / 1000.0) * sample_rate as f64) as usize / channels * channels;
+
+    // Blend: 10–25% of grain size
+    let blend_ratio = rng.gen_range(0.10_f64..0.25);
+    let blend_samples = (grain_samples as f64 * blend_ratio) as usize / channels * channels;
+
+    let attributes = vec![
+        ProcessorAttribute {
+            key: "Sidechain File".to_string(),
+            value: get_filename(&sidechain_file),
+        },
+        ProcessorAttribute {
+            key: "Grain Size".to_string(),
+            value: format_float_ms(grain_ms),
+        },
+        ProcessorAttribute {
+            key: "Blend".to_string(),
+            value: format_float_ms(blend_ratio * grain_ms),
+        },
+    ];
+
+    let cross_params = CrossGrainParams {
+        sidechain_file,
+        grain_samples,
+        blend_samples,
+    };
+
+    let processor = move |params: ProcessorParams| {
+        start_event!(PermuteNodeName::CrossGrain, &params);
+        let new_params = cross_grain(&params, &cross_params)?;
+        complete_event!(PermuteNodeName::CrossGrain, new_params);
+        Ok(new_params)
+    };
+
+    (PermuteNodeName::CrossGrain, attributes, Box::new(processor))
 }
 
 pub fn random_cross_mix(params: &mut ProcessorParams) -> ProcessorPlan {
