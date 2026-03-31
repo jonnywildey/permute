@@ -2,6 +2,7 @@ const {
   addFile,
   addProcessor,
   cancel,
+  clearAllFiles,
   deleteAllOutputFiles,
   deleteOutputFile,
   getStateCallback,
@@ -112,6 +113,9 @@ export function createPermuteProcessor() {
     },
     removeFile(file: string) {
       return removeFile.call(permuteLibrary, file);
+    },
+    clearAllFiles() {
+      return clearAllFiles.call(permuteLibrary);
     },
     deleteOutputFile(file: string) {
       return deleteOutputFile.call(permuteLibrary, file);

@@ -15,6 +15,7 @@ declare global {
         getState(): Promise<IPermuteState>;
         openOutputDialog(callback: (args: [string]) => void): void;
         removeFile(file: string): void;
+        clearAllFiles(): void;
         removeProcessor(name: string): void;
         saveScene(callback: (filePath: string) => void): void;
         loadScene(callback: (filePath: string) => void): void;

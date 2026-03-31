@@ -157,6 +157,12 @@ impl SharedState {
         self.files.retain(|f| f.path != file);
     }
 
+    pub fn clear_all_files(&mut self) {
+        self.clear_error();
+        self.files.clear();
+        self.outputs.clear();
+    }
+
     pub fn add_processor(&mut self, name: String) {
         self.clear_error();
         let processor = get_processor_from_display_name(&name).unwrap();

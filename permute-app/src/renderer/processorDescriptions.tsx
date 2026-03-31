@@ -3,7 +3,7 @@ export const processorCategories = {
   'Modulation': ['Wow', 'Flutter', 'Chorus', 'Flange', 'Phaser', 'Tremolo', 'Lazer'],
   'Filter/Drive': ['Fuzz', 'Saturate', 'LFO Filter', 'Line Filter', 'Filter'],
   'Delay/Reverb': ['Metallic Delay', 'Rhythmic Delay', 'Reverb'],
-  'Cross Processing': ['Cross Gain', 'Cross Filter', 'Cross Distort']
+  'Cross Processing': ['Cross Gain', 'Cross Filter', 'Cross Distort', 'Cross Mix', 'Cross Grain']
 };
 
 export const processorDescriptions: Record<string, React.ReactNode> = {
@@ -44,5 +44,12 @@ export const processorDescriptions: Record<string, React.ReactNode> = {
   'Cross Distort': `Modulates the distortion amount based on the RMS energy of another audio file.
   Uses a variety of gentler distortion algorithms including hyperbolic tangent, arctangent, soft clipping, and saturation.
   The distortion factor varies based on the modulating audio's amplitude.
+  Cross effects run quite slow. Be careful with high depth values or large numbers of files`,
+  'Cross Grain': `Cuts two audio files into grains (80ms–2000ms) and interleaves them, alternating a grain from the current file with a grain from another input file.
+  The sidechain file cycles from the beginning if shorter than the current file, so each run produces a different interleaving.
+  Output length is approximately double the current audio length. Crossfades are applied at each grain boundary to avoid clicks.
+  Cross effects run quite slow. Be careful with high depth values or large numbers of files`,
+  'Cross Mix': `Sums the audio with another input file at a random offset and mix ratio.
+  The output length extends to fit both files in full. The offset is randomised each run, so even with the same two files the result will differ.
   Cross effects run quite slow. Be careful with high depth values or large numbers of files`,
 };

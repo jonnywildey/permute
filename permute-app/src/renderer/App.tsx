@@ -252,6 +252,11 @@ const Content = () => {
     const permuteState = await window.Electron.ipcRenderer.getState();
     setState({ permuteState });
   };
+  const clearAllFiles = async () => {
+    window.Electron.ipcRenderer.clearAllFiles();
+    const permuteState = await window.Electron.ipcRenderer.getState();
+    setState({ permuteState });
+  };
   const showFile = async (file: string) => {
     window.Electron.ipcRenderer.showFile(file);
   };
@@ -367,6 +372,7 @@ const Content = () => {
         files={files}
         addFiles={addFiles}
         removeFile={removeFile}
+        clearAllFiles={clearAllFiles}
         showFile={showFile}
       />
       <MemoizedProcessors

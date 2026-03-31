@@ -42,6 +42,10 @@ if [ "$DEV_MODE" = false ]; then
     cd ..
     echo "Build process completed!"
 else
+    echo "Copying libsndfile to Electron Frameworks directory for dev mode..."
+    ELECTRON_FRAMEWORKS="permute-app/node_modules/electron/dist/Electron.app/Contents/Frameworks"
+    cp libsndfile-binaries/libsndfile_universal.dylib "$ELECTRON_FRAMEWORKS/libsndfile.1.dylib"
+
     echo "Starting development server..."
     cd permute-app
     arch -arm64 npm start

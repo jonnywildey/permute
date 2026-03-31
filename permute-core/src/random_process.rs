@@ -4,7 +4,7 @@ use rand::{rngs::ThreadRng, Rng};
 // Internal modules
 use crate::{
     process::{PermuteNodeName, ProcessorPlanGenerator}, random_processors::{
-        random_cross::{random_cross_distort, random_cross_filter, random_cross_gain},
+        random_cross::{random_cross_distort, random_cross_filter, random_cross_gain, random_cross_grain, random_cross_mix},
         random_delay_verb::{random_metallic_delay, random_reverb, random_rhythmic_delay},
         random_filter::{random_filter, random_line_filter, random_oscillating_filter},
         random_gain_distortion::{auto_trim, normalise, random_fuzz, random_saturate},
@@ -148,6 +148,8 @@ pub fn get_processor_plan(name: PermuteNodeName) -> ProcessorPlanGenerator {
         PermuteNodeName::CrossGain => random_cross_gain,
         PermuteNodeName::CrossFilter => random_cross_filter,
         PermuteNodeName::CrossDistort => random_cross_distort,
+        PermuteNodeName::CrossMix => random_cross_mix,
+        PermuteNodeName::CrossGrain => random_cross_grain,
         // // Util
         PermuteNodeName::Normalise => normalise,
         PermuteNodeName::Trim => auto_trim,
