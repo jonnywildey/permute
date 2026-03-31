@@ -9,3 +9,4 @@ edition = "2021"
 [dependencies]
 sndfile = "0.0.4"
 serde = { version = "1.0.134", features = ["derive"] }
+structopt = "0.3.26"

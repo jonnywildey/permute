@@ -53,6 +53,9 @@ contextBridge.exposeInMainWorld('Electron', {
     removeFile(file) {
       ipcRenderer.send('remove-file', file);
     },
+    clearAllFiles() {
+      ipcRenderer.send('clear-all-files');
+    },
     removeProcessor(name) {
       ipcRenderer.send('remove-processor', name);
     },
