@@ -147,6 +147,35 @@ pub fn get_sidechain_rms_signal(
 }
 
 #[derive(Debug, Clone)]
+pub struct CrossMixParams {
+    pub sidechain_file: String,
+    pub offset_samples: usize, // offset in samples, pre-aligned to channel count
+    pub mix: f64,              // blend of sidechain (0.0 = dry, 1.0 = sidechain only)
+}
+
+pub fn cross_mix(params: &ProcessorParams, mix_params: &CrossMixParams) -> Result<ProcessorParams, PermuteError> {
+    let sidechain = AUDIO_CACHE.get_samples(&mix_params.sidechain_file)?;
+
+    let current_len = params.samples.len();
+    let offset = mix_params.offset_samples;
+    let output_len = current_len.max(offset + sidechain.len());
+
+    let mut output = vec![0.0f64; output_len];
+
+    for (i, &s) in params.samples.iter().enumerate() {
+        output[i] += s * (1.0 - mix_params.mix);
+    }
+    for (i, &s) in sidechain.iter().enumerate() {
+        output[offset + i] += s * mix_params.mix;
+    }
+
+    Ok(ProcessorParams {
+        samples: output,
+        ..params.clone()
+    })
+}
+
+#[derive(Debug, Clone)]
 pub struct CrossDistortParams {
     pub sidechain_file: String,
     pub min_factor: f64,

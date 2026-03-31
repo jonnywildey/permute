@@ -3,12 +3,12 @@ use rand::{thread_rng, Rng};
 
 // Internal modules
 use crate::{
-    permute_files::PermuteUpdate, 
-    process::{PermuteNodeEvent, PermuteNodeName, ProcessorAttribute, ProcessorClosure, ProcessorParams, ProcessorPlan}, 
+    permute_files::PermuteUpdate,
+    process::{PermuteNodeEvent, PermuteNodeName, ProcessorAttribute, ProcessorClosure, ProcessorParams, ProcessorPlan},
     processors::{
-        cross::{cross_distort, cross_filter, cross_gain, CrossDistortParams, CrossFilterParams, CrossGainParams}, 
-        gain_distortion::DistortionAlgorithm}, 
-        random_process::{complete_event, start_event}, 
+        cross::{cross_distort, cross_filter, cross_gain, cross_mix, CrossDistortParams, CrossFilterParams, CrossGainParams, CrossMixParams},
+        gain_distortion::DistortionAlgorithm},
+        random_process::{complete_event, start_event},
         random_processors::utils::{format_float, format_float_ms, format_float_percent, format_hz, get_filename
  }
 };
@@ -271,6 +271,62 @@ pub fn random_cross_distort(params: &mut ProcessorParams) -> ProcessorPlan {
     };
 
     (PermuteNodeName::CrossDistort, attributes, Box::new(processor))
+}
+
+pub fn random_cross_mix(params: &mut ProcessorParams) -> ProcessorPlan {
+    let mut rng = thread_rng();
+
+    let sidechain_file = match select_sidechain_file(&params.permutation.file, &params.permutation.files) {
+        Some(file) => file,
+        None => {
+            let processor = move |params: ProcessorParams| {
+                start_event!(PermuteNodeName::CrossMix, &params);
+                complete_event!(PermuteNodeName::CrossMix, params);
+                Ok(params)
+            };
+            return (PermuteNodeName::CrossMix, vec![], Box::new(processor));
+        }
+    };
+
+    // Random offset from 0 up to the length of the current audio, aligned to channel count
+    // so both files play in full with a varying overlap each run
+    let channels = params.channels.max(1);
+    let current_frames = params.samples.len() / channels;
+    let offset_frames = rng.gen_range(0..=current_frames);
+    let offset_samples = offset_frames * channels;
+    let offset_ms = (offset_frames as f64 / params.sample_rate as f64) * 1000.0;
+
+    let mix = rng.gen_range(0.3..0.7_f64);
+
+    let attributes = vec![
+        ProcessorAttribute {
+            key: "Sidechain File".to_string(),
+            value: get_filename(&sidechain_file),
+        },
+        ProcessorAttribute {
+            key: "Offset".to_string(),
+            value: format_float_ms(offset_ms),
+        },
+        ProcessorAttribute {
+            key: "Mix".to_string(),
+            value: format_float_percent(mix),
+        },
+    ];
+
+    let cross_params = CrossMixParams {
+        sidechain_file,
+        offset_samples,
+        mix,
+    };
+
+    let processor = move |params: ProcessorParams| {
+        start_event!(PermuteNodeName::CrossMix, &params);
+        let new_params = cross_mix(&params, &cross_params)?;
+        complete_event!(PermuteNodeName::CrossMix, new_params);
+        Ok(new_params)
+    };
+
+    (PermuteNodeName::CrossMix, attributes, Box::new(processor))
 }
 
 /// Select a random file from the available files list that is different from the current file
