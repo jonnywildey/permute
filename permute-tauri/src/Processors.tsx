@@ -1,6 +1,6 @@
 import { Grid, GridItem, Heading, IconButton, Menu, MenuButton, MenuList, MenuItem, Box, Text, VStack } from '@chakra-ui/react';
 import { Processor } from './Processor';
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useRef } from 'react';
 import { LargeHamburgerIcon } from './icons/HamburgerIcon';
 import { processorCategories } from './processorDescriptions';
 
@@ -19,8 +19,15 @@ export const Processors = memo(({
   onSelectAll,
   onDeselectAll,
 }: IProcessorsProps) => {
-  const handleProcessorClick = useCallback((processor: string, enabled: boolean) => {
-    setProcessorEnabled(processor, !enabled);
+  // Keep processorPool current in a ref so handleToggle stays stable (no
+  // processorPool in its dep array), meaning Processor's memo can bail out for
+  // every button except the one whose enabled state actually changed.
+  const processorPoolRef = useRef(processorPool);
+  processorPoolRef.current = processorPool;
+
+  const handleToggle = useCallback((name: string) => {
+    const enabled = processorPoolRef.current.includes(name);
+    setProcessorEnabled(name, !enabled);
   }, [setProcessorEnabled]);
 
   const renderProcessorGroup = (category: string, processors: string[]) => {
@@ -31,7 +38,7 @@ export const Processors = memo(({
           key={ap}
           name={ap}
           enabled={enabled}
-          onClick={() => handleProcessorClick(ap, enabled)}
+          onToggle={handleToggle}
         />
       );
     });

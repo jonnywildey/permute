@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback, useMemo } from 'react';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import type { IPermutationInput } from './types';
 
@@ -7,13 +7,14 @@ export interface IAudioContext {
   pause: () => void;
   stop: () => void;
   resume: () => void;
-  setOnPlayUpdate: (cb: (secs: number) => void) => void;
+  getCurrentTime: () => number;
   setPosition: (secs: number) => void;
   isPlaying: boolean;
   file: IPermutationInput;
   reset: () => void;
 }
 
+// Kept for external compatibility
 export interface IAudioState {
   file: IPermutationInput;
   isPlaying: boolean;
@@ -31,102 +32,71 @@ const defaultFile: IPermutationInput = {
 
 export const AudioContext = React.createContext<IAudioContext>({} as any);
 
-const UPDATE_LATENCY = 50;
-
 export const CreateAudioContext: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
-  const [state, setState] = useState<IAudioState>({
-    file: defaultFile,
-    isPlaying: false,
-    audio: new Audio(),
-  });
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [file, setFile] = useState<IPermutationInput>(defaultFile);
+  const audioRef = useRef(new Audio());
 
-  const playFile = (file: IPermutationInput) => {
-    clearInterval(state.timeChecker!);
-    const { path } = file;
-    state.audio.autoplay = true;
-    // convertFileSrc converts an absolute path to asset://localhost/... and the
-    // timestamp query string busts the browser cache (same role as the old audio:/// date).
-    state.audio.src = convertFileSrc(path) + '?t=' + Date.now();
-    const newState = { ...state, isPlaying: true, file };
+  const playFile = useCallback((f: IPermutationInput) => {
+    const audio = audioRef.current;
+    audio.pause();
+    audio.src = convertFileSrc(f.path) + '?t=' + Date.now();
+    audio.onended = () => setIsPlaying(false);
+    setFile(f);
+    // Explicit play() rather than autoplay=true: the returned Promise resolves
+    // only when the browser has actually started playback (after buffering).
+    // Delaying setIsPlaying(true) until then prevents the rAF loop from running
+    // while getCurrentTime() is stuck at 0, which caused the ~500ms stutter.
+    audio.play().then(() => setIsPlaying(true)).catch(console.error);
+  }, []);
 
-    let startedPlaying = false;
-    const timeChecker = setInterval(() => {
-      if (state.audio.paused && startedPlaying) {
-        setState({ ...newState, isPlaying: false, timeChecker: undefined });
-        clearInterval(timeChecker);
-      }
-      startedPlaying = state.audio.currentTime !== 0 && startedPlaying === false;
-      if (state.onPlayUpdate) {
-        state.onPlayUpdate(state.audio.currentTime);
-      }
-    }, UPDATE_LATENCY);
-    setState({ ...newState, timeChecker });
-  };
+  const resume = useCallback(() => {
+    if (!audioRef.current.src) return;
+    audioRef.current.play();
+    setIsPlaying(true);
+  }, []);
 
-  const resume = () => {
-    if (!state.file.path) return;
-    clearInterval(state.timeChecker!);
-    state.audio.play();
+  const pause = useCallback(() => {
+    audioRef.current.pause();
+    setIsPlaying(false);
+  }, []);
 
-    let startedPlaying = false;
-    const timeChecker = setInterval(() => {
-      if (state.audio.paused && startedPlaying) {
-        setState({ ...state, isPlaying: false, timeChecker: undefined });
-        clearInterval(timeChecker);
-      }
-      startedPlaying = state.audio.currentTime !== 0 && startedPlaying === false;
-      if (state.onPlayUpdate) {
-        state.onPlayUpdate(state.audio.currentTime);
-      }
-    }, UPDATE_LATENCY);
-    setState({ ...state, isPlaying: true, timeChecker });
-  };
+  const stop = useCallback(() => {
+    const audio = audioRef.current;
+    audio.pause();
+    audio.currentTime = 0;
+    setIsPlaying(false);
+  }, []);
 
-  const pause = () => {
-    state.audio.pause();
-    setState({ ...state, isPlaying: false });
-  };
+  const reset = useCallback(() => {
+    const audio = audioRef.current;
+    audio.pause();
+    audio.onended = null;
+    audio.currentTime = 0;
+    audioRef.current = new Audio();
+    setFile(defaultFile);
+    setIsPlaying(false);
+  }, []);
 
-  const stop = () => {
-    state.audio.pause();
-    state.audio.currentTime = 0;
-    if (state.onPlayUpdate) state.onPlayUpdate(0);
-    setState({ ...state, isPlaying: false });
-  };
+  // Stable getter — AudioPlayer polls this via requestAnimationFrame instead of
+  // receiving push callbacks, eliminating React state updates during playback.
+  const getCurrentTime = useCallback(() => audioRef.current.currentTime, []);
 
-  const reset = () => {
-    clearInterval(state.timeChecker!);
-    state.audio.pause();
-    state.audio.currentTime = 0;
-    if (state.onPlayUpdate) state.onPlayUpdate(0);
-    setState({
-      ...state,
-      file: defaultFile,
-      isPlaying: false,
-      audio: new Audio(),
-    });
-  };
+  const setPosition = useCallback((secs: number) => {
+    audioRef.current.currentTime = secs;
+  }, []);
 
-  const setOnPlayUpdate = (cb: (secs: number) => void) => {
-    setState({ ...state, onPlayUpdate: cb });
-  };
-
-  const setPosition = (secs: number) => {
-    state.audio.currentTime = secs;
-    if (state.onPlayUpdate) state.onPlayUpdate(secs);
-  };
-
-  const value: IAudioContext = {
+  const value = useMemo<IAudioContext>(() => ({
     playFile,
-    setOnPlayUpdate,
-    isPlaying: state.isPlaying,
+    getCurrentTime,
+    isPlaying,
     setPosition,
     resume,
     pause,
     stop,
     reset,
-    file: state.file,
-  };
+    file,
+  }), [file, isPlaying, pause, playFile, reset, resume, getCurrentTime, setPosition, stop]);
 
   return (
     <AudioContext.Provider value={value}>{children}</AudioContext.Provider>

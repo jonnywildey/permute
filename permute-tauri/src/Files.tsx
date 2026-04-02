@@ -34,6 +34,17 @@ const buttonBg = 'brand.550';
 const bg = 'brand.25';
 const fileBorderColour = 'brand.150';
 
+// Custom comparator: input files are immutable once added, so path alone
+// determines identity. Handler refs are stable via useCallback in App.tsx.
+const fileBoxEqual = (
+  prev: { file: IPermutationInput; onRemove: unknown; onShow: unknown; onPlay: unknown },
+  next: { file: IPermutationInput; onRemove: unknown; onShow: unknown; onPlay: unknown }
+) =>
+  prev.file.path === next.file.path &&
+  prev.onRemove === next.onRemove &&
+  prev.onShow === next.onShow &&
+  prev.onPlay === next.onPlay;
+
 const FileBox = memo(
   ({
     file,
@@ -140,7 +151,8 @@ const FileBox = memo(
         </Box>
       </Box>
     );
-  }
+  },
+  fileBoxEqual
 );
 
 export const Files = memo(

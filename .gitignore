@@ -3,4 +3,8 @@
 /sndfile.rs
 /sndfile-sys
 /releases
+
 .aider*
+/permute-tauri/dist
+/permute-tauri/node_modules
+/target

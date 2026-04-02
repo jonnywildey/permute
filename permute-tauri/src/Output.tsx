@@ -13,7 +13,7 @@ import {
 } from '@chakra-ui/react';
 import { ViewIcon, DeleteIcon } from '@chakra-ui/icons';
 import type { IPermutationOutput } from './types';
-import { useContext, useCallback, memo } from 'react';
+import { useContext, useCallback, memo, useMemo } from 'react';
 import { PlayIcon } from './icons/PlayIcon';
 import { AudioContext } from './AudioContext';
 import { displayTime } from './displayTime';
@@ -40,14 +40,29 @@ const buttonBg = 'brand.175';
 const bg = 'brand.25';
 const fileBorderColour = 'brand.150';
 
-const OutputFile = memo(({ file, onDelete, onShow, onReverse, onTrim, onPlay }: {
+type OutputFileProps = {
   file: IPermutationOutput;
   onDelete: (path: string) => void;
   onShow: (path: string) => void;
   onReverse: (path: string) => void;
   onTrim: (path: string) => void;
   onPlay: (file: IPermutationOutput) => void;
-}) => {
+};
+
+// Custom comparator: getState() returns fresh objects every call, so default
+// reference equality would re-render all output files when any one changes.
+// We compare the fields that actually affect rendering.
+const outputFileEqual = (prev: OutputFileProps, next: OutputFileProps) =>
+  prev.file.path === next.file.path &&
+  prev.file.progress === next.file.progress &&
+  prev.file.deleted === next.file.deleted &&
+  prev.onDelete === next.onDelete &&
+  prev.onShow === next.onShow &&
+  prev.onReverse === next.onReverse &&
+  prev.onTrim === next.onTrim &&
+  prev.onPlay === next.onPlay;
+
+const OutputFile = memo(({ file, onDelete, onShow, onReverse, onTrim, onPlay }: OutputFileProps) => {
   const { colorMode } = useColorMode();
   const props: PropsOf<typeof Box> = {
     borderBottom: '1px solid',
@@ -185,7 +200,7 @@ const OutputFile = memo(({ file, onDelete, onShow, onReverse, onTrim, onPlay }: 
       </Box>
     </Box>
   );
-});
+}, outputFileEqual);
 
 export const Output = memo(({
   output,
@@ -219,19 +234,22 @@ export const Output = memo(({
     playFile(file);
   }, [playFile]);
 
-  const outputBoxes = permutationOutputs
-    .filter((f) => f.progress === 100 && f.image && !f.deleted)
-    .map((file) => (
-      <OutputFile
-        key={file.path}
-        file={file}
-        onDelete={handleDelete}
-        onShow={handleShow}
-        onReverse={handleReverse}
-        onTrim={handleTrim}
-        onPlay={handlePlay}
-      />
-    ));
+  const completeFiles = useMemo(
+    () => permutationOutputs.filter((f) => f.progress === 100 && f.image && !f.deleted),
+    [permutationOutputs]
+  );
+
+  const outputBoxes = completeFiles.map((file) => (
+    <OutputFile
+      key={file.path}
+      file={file}
+      onDelete={handleDelete}
+      onShow={handleShow}
+      onReverse={handleReverse}
+      onTrim={handleTrim}
+      onPlay={handlePlay}
+    />
+  ));
 
   const directory = output && (
     <Box
@@ -280,7 +298,6 @@ export const Output = memo(({
       </Link>
     </Box>
   );
-  const completeFiles = permutationOutputs.filter((f) => f.progress === 100 && f.image && !f.deleted);
   const deleteAll = output && permutationOutputs.length > 0 && (
     <Box
       display="flex"

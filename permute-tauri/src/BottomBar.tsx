@@ -16,7 +16,7 @@ import {
 } from '@chakra-ui/react';
 import type { IPermutationOutput, IPermutationInput } from './types';
 import { AudioPlayer } from './AudioPlayer';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 
 const BOTTOM_BAR_TOOLTIP_DELAY = 1400;
 
@@ -43,7 +43,6 @@ export interface IBottomBarProps {
 }
 
 const buttonBg = 'brand.200';
-const borderColour = 'gray.100';
 
 export const BottomBar: React.FC<IBottomBarProps> = ({
   permutationOutputs,
@@ -90,9 +89,9 @@ export const BottomBar: React.FC<IBottomBarProps> = ({
         p={3}
       >
         <AudioPlayer />
-        {InputTrail(inputTrail, setInputTrail)}
-        {Depth(depth, setDepth)}
-        {Normalise(normaliseAtEnd, setNormalised)}
+        <InputTrailControl inputTrail={inputTrail} setInputTrail={setInputTrail} />
+        <DepthControl depth={depth} setDepth={setDepth} />
+        <NormaliseControl normaliseAtEnd={normaliseAtEnd} setNormalised={setNormalised} />
         <Run
           files={files}
           output={output}
@@ -103,270 +102,186 @@ export const BottomBar: React.FC<IBottomBarProps> = ({
           runProcessor={runProcessor}
           cancelProcessing={cancelProcessing}
         />
-        {OutputTrail(outputTrail, setOutputTrail)}
-        {Permutations(permutations, setPermutations)}
-        {TrimAll(trimAll, setTrimAll)}
+        <OutputTrailControl outputTrail={outputTrail} setOutputTrail={setOutputTrail} />
+        <PermutationsControl permutations={permutations} setPermutations={setPermutations} />
+        <TrimAllControl trimAll={trimAll} setTrimAll={setTrimAll} />
         <GridItem rowSpan={1} colSpan={2} />
       </Grid>
     </GridItem>
   );
 };
 
-function InputTrail(
-  inputTrail: number,
-  setInputTrail: (trail: number) => void
-) {
-  return (
-    <GridItem rowSpan={1} colSpan={2} pr={4} pl={4}>
-      <Tooltip
-        openDelay={BOTTOM_BAR_TOOLTIP_DELAY}
-        label={
-          <Text fontSize="lg">
-            Adds extra seconds to the end of the audio file. Useful when using
-            effects like delay with reverse
-          </Text>
-        }
-      >
-        <Heading size="md" textAlign="center">
-          Start Trail (sec)
-        </Heading>
-      </Tooltip>
-      <Slider
-        aria-label="slider-ex-2"
-        min={0}
-        max={8}
-        step={1}
-        colorScheme="brand"
-        value={inputTrail}
-        onChange={setInputTrail}
-        color="gray.5600"
-        fontSize="sm"
-      >
-        <SliderMark value={0} mt="2" ml="-0.75">
-          0
-        </SliderMark>
-        <SliderMark value={1} mt="2" ml="-0.75">
-          1
-        </SliderMark>
-        <SliderMark value={2} mt="2" ml="-0.75">
-          2
-        </SliderMark>
-        <SliderMark value={3} mt="2" ml="-0.75">
-          3
-        </SliderMark>
-        <SliderMark value={4} mt="2" ml="-0.75">
-          4
-        </SliderMark>
-        <SliderMark value={5} mt="2" ml="-0.75">
-          5
-        </SliderMark>
-        <SliderMark value={6} mt="2" ml="-0.75">
-          6
-        </SliderMark>
-        <SliderMark value={7} mt="2" ml="-0.75">
-          7
-        </SliderMark>
-        <SliderMark value={8} mt="2" ml="-0.75">
-          8
-        </SliderMark>
+// ─── Memoised sub-controls ────────────────────────────────────────────────────
+// Each is a proper component so React can bail out of re-rendering it when its
+// specific props haven't changed (e.g. moving the Depth slider doesn't
+// re-render InputTrail, Permutations, etc.).
 
-        <SliderTrack>
-          <SliderFilledTrack />
-        </SliderTrack>
-        <SliderThumb />
-      </Slider>
-    </GridItem>
-  );
-}
+const InputTrailControl = memo(({ inputTrail, setInputTrail }: { inputTrail: number; setInputTrail: (v: number) => void }) => (
+  <GridItem rowSpan={1} colSpan={2} pr={4} pl={4}>
+    <Tooltip
+      openDelay={BOTTOM_BAR_TOOLTIP_DELAY}
+      label={
+        <Text fontSize="lg">
+          Adds extra seconds to the end of the audio file. Useful when using
+          effects like delay with reverse
+        </Text>
+      }
+    >
+      <Heading size="md" textAlign="center">
+        Start Trail (sec)
+      </Heading>
+    </Tooltip>
+    <Slider
+      aria-label="input-trail"
+      min={0} max={8} step={1}
+      colorScheme="brand"
+      value={inputTrail}
+      onChange={setInputTrail}
+      color="gray.5600"
+      fontSize="sm"
+    >
+      {[0,1,2,3,4,5,6,7,8].map(v => <SliderMark key={v} value={v} mt="2" ml="-0.75">{v}</SliderMark>)}
+      <SliderTrack><SliderFilledTrack /></SliderTrack>
+      <SliderThumb />
+    </Slider>
+  </GridItem>
+));
 
-function Depth(depth: number, setDepth: (depth: number) => void) {
-  return (
-    <GridItem rowSpan={1} colSpan={2} pl={4}>
-      <Tooltip
-        openDelay={BOTTOM_BAR_TOOLTIP_DELAY}
-        label={
-          <Text fontSize="lg">
-            Controls how many processors the audio is run through. <br />
-            High depth values can run up to 32 processors and can be noisy /
-            very long. <br />
-            Setting depth to 0 will always run the audio through 1 processor
-          </Text>
-        }
-      >
-        <Heading size="md" textAlign="center">
-          Depth
-        </Heading>
-      </Tooltip>
-      <Slider
-        aria-label="slider-ex-2"
-        min={0}
-        max={4}
-        step={1}
-        colorScheme="brand"
-        value={depth}
-        onChange={setDepth}
-        color="gray.5600"
-        fontSize="sm"
-      >
-        <SliderMark value={0} mt="2" ml="-0.75">
-          0
-        </SliderMark>
-        <SliderMark value={1} mt="2" ml="-0.75">
-          1
-        </SliderMark>
-        <SliderMark value={2} mt="2" ml="-0.75">
-          2
-        </SliderMark>
-        <SliderMark value={3} mt="2" ml="-0.75">
-          3
-        </SliderMark>
-        <SliderMark value={4} mt="2" ml="-0.75">
-          4
-        </SliderMark>
-        <SliderTrack>
-          <SliderFilledTrack />
-        </SliderTrack>
-        <SliderThumb />
-      </Slider>
-    </GridItem>
-  );
-}
+const DepthControl = memo(({ depth, setDepth }: { depth: number; setDepth: (v: number) => void }) => (
+  <GridItem rowSpan={1} colSpan={2} pl={4}>
+    <Tooltip
+      openDelay={BOTTOM_BAR_TOOLTIP_DELAY}
+      label={
+        <Text fontSize="lg">
+          Controls how many processors the audio is run through. <br />
+          High depth values can run up to 32 processors and can be noisy /
+          very long. <br />
+          Setting depth to 0 will always run the audio through 1 processor
+        </Text>
+      }
+    >
+      <Heading size="md" textAlign="center">Depth</Heading>
+    </Tooltip>
+    <Slider
+      aria-label="depth"
+      min={0} max={4} step={1}
+      colorScheme="brand"
+      value={depth}
+      onChange={setDepth}
+      color="gray.5600"
+      fontSize="sm"
+    >
+      {[0,1,2,3,4].map(v => <SliderMark key={v} value={v} mt="2" ml="-0.75">{v}</SliderMark>)}
+      <SliderTrack><SliderFilledTrack /></SliderTrack>
+      <SliderThumb />
+    </Slider>
+  </GridItem>
+));
 
-function Permutations(
-  permutations: number,
-  setPermutations: (permutations: number) => void
-) {
-  return (
-    <GridItem rowSpan={1} colSpan={2} pl={4} pt={3}>
-      <Tooltip
-        openDelay={BOTTOM_BAR_TOOLTIP_DELAY}
-        label={
-          <Text fontSize="lg">
-            How many permutations to generate per file. <br />
-            e.g. setting permutations to 5 and selecting one file will generate
-            5 files <br />
-            Selecting 2 files would generate 10
-          </Text>
-        }
-      >
-        <Heading size="md" textAlign="center">
-          Permutations
-        </Heading>
-      </Tooltip>
-      <Slider
-        aria-label="slider-ex-2"
-        min={1}
-        max={9}
-        step={1}
-        colorScheme="brand"
-        value={permutations}
-        onChange={setPermutations}
-        color="gray.5600"
-        fontSize="sm"
-      >
-        <SliderMark value={1} mt="2" ml="-0.75">
-          1
-        </SliderMark>
-        <SliderMark value={2} mt="2" ml="-0.75">
-          2
-        </SliderMark>
-        <SliderMark value={3} mt="2" ml="-0.75">
-          3
-        </SliderMark>
-        <SliderMark value={4} mt="2" ml="-0.75">
-          4
-        </SliderMark>
-        <SliderMark value={5} mt="2" ml="-0.75">
-          5
-        </SliderMark>
-        <SliderMark value={6} mt="2" ml="-0.75">
-          6
-        </SliderMark>
-        <SliderMark value={7} mt="2" ml="-0.75">
-          7
-        </SliderMark>
-        <SliderMark value={8} mt="2" ml="-0.75">
-          8
-        </SliderMark>
-        <SliderMark value={9} mt="2" ml="-0.75">
-          9
-        </SliderMark>
+const PermutationsControl = memo(({ permutations, setPermutations }: { permutations: number; setPermutations: (v: number) => void }) => (
+  <GridItem rowSpan={1} colSpan={2} pl={4} pt={3}>
+    <Tooltip
+      openDelay={BOTTOM_BAR_TOOLTIP_DELAY}
+      label={
+        <Text fontSize="lg">
+          How many permutations to generate per file. <br />
+          e.g. setting permutations to 5 and selecting one file will generate
+          5 files <br />
+          Selecting 2 files would generate 10
+        </Text>
+      }
+    >
+      <Heading size="md" textAlign="center">Permutations</Heading>
+    </Tooltip>
+    <Slider
+      aria-label="permutations"
+      min={1} max={9} step={1}
+      colorScheme="brand"
+      value={permutations}
+      onChange={setPermutations}
+      color="gray.5600"
+      fontSize="sm"
+    >
+      {[1,2,3,4,5,6,7,8,9].map(v => <SliderMark key={v} value={v} mt="2" ml="-0.75">{v}</SliderMark>)}
+      <SliderTrack><SliderFilledTrack /></SliderTrack>
+      <SliderThumb />
+    </Slider>
+  </GridItem>
+));
 
-        <SliderTrack>
-          <SliderFilledTrack />
-        </SliderTrack>
-        <SliderThumb />
-      </Slider>
-    </GridItem>
-  );
-}
+const OutputTrailControl = memo(({ outputTrail, setOutputTrail }: { outputTrail: number; setOutputTrail: (v: number) => void }) => (
+  <GridItem rowSpan={1} colSpan={2} pr={4} pt={3} pl={4}>
+    <Tooltip
+      openDelay={BOTTOM_BAR_TOOLTIP_DELAY}
+      label={
+        <Text fontSize="lg">
+          Adds extra seconds to the end of the audio file. Useful when using
+          effects like delay
+        </Text>
+      }
+    >
+      <Heading size="md" textAlign="center">End Trail (sec)</Heading>
+    </Tooltip>
+    <Slider
+      aria-label="output-trail"
+      min={0} max={8} step={1}
+      colorScheme="brand"
+      value={outputTrail}
+      onChange={setOutputTrail}
+      color="gray.5600"
+      fontSize="sm"
+    >
+      {[0,1,2,3,4,5,6,7,8].map(v => <SliderMark key={v} value={v} mt="2" ml="-0.75">{v}</SliderMark>)}
+      <SliderTrack><SliderFilledTrack /></SliderTrack>
+      <SliderThumb />
+    </Slider>
+  </GridItem>
+));
 
-function OutputTrail(
-  outputTrail: number,
-  setOutputTrail: (trail: number) => void
-) {
-  return (
-    <GridItem rowSpan={1} colSpan={2} pr={4} pt={3} pl={4}>
-      <Tooltip
-        openDelay={BOTTOM_BAR_TOOLTIP_DELAY}
-        label={
-          <Text fontSize="lg">
-            Adds extra seconds to the end of the audio file. Useful when using
-            effects like delay
-          </Text>
-        }
-      >
-        <Heading size="md" textAlign="center">
-          End Trail (sec)
-        </Heading>
-      </Tooltip>
-      <Slider
-        aria-label="slider-ex-2"
-        min={0}
-        max={8}
-        step={1}
-        colorScheme="brand"
-        value={outputTrail}
-        onChange={setOutputTrail}
-        color="gray.5600"
-        fontSize="sm"
-      >
-        <SliderMark value={0} mt="2" ml="-0.75">
-          0
-        </SliderMark>
-        <SliderMark value={1} mt="2" ml="-0.75">
-          1
-        </SliderMark>
-        <SliderMark value={2} mt="2" ml="-0.75">
-          2
-        </SliderMark>
-        <SliderMark value={3} mt="2" ml="-0.75">
-          3
-        </SliderMark>
-        <SliderMark value={4} mt="2" ml="-0.75">
-          4
-        </SliderMark>
-        <SliderMark value={5} mt="2" ml="-0.75">
-          5
-        </SliderMark>
-        <SliderMark value={6} mt="2" ml="-0.75">
-          6
-        </SliderMark>
-        <SliderMark value={7} mt="2" ml="-0.75">
-          7
-        </SliderMark>
-        <SliderMark value={8} mt="2" ml="-0.75">
-          8
-        </SliderMark>
+const NormaliseControl = memo(({ normaliseAtEnd, setNormalised }: { normaliseAtEnd: boolean; setNormalised: (v: boolean) => void }) => (
+  <GridItem rowSpan={1} colSpan={2} pl="33%">
+    <Tooltip
+      openDelay={BOTTOM_BAR_TOOLTIP_DELAY}
+      label={
+        <Text fontSize="lg">
+          If enabled, normalises audio to ensure there is no digital clipping{' '}
+          <b>(recommended)</b>
+        </Text>
+      }
+    >
+      <Heading size="md">Normalise</Heading>
+    </Tooltip>
+    <Switch
+      colorScheme="brand"
+      isChecked={normaliseAtEnd}
+      onChange={(e) => setNormalised(e.target.checked)}
+      ml={2}
+    />
+  </GridItem>
+));
 
-        <SliderTrack>
-          <SliderFilledTrack />
-        </SliderTrack>
-        <SliderThumb />
-      </Slider>
-    </GridItem>
-  );
-}
+const TrimAllControl = memo(({ trimAll, setTrimAll }: { trimAll: boolean; setTrimAll: (v: boolean) => void }) => (
+  <GridItem rowSpan={1} colSpan={2} pt={3} pl="33%">
+    <Tooltip
+      openDelay={BOTTOM_BAR_TOOLTIP_DELAY}
+      label={
+        <Text fontSize="lg">
+          If enabled, trims all permuted audio, removing silence{' '}
+        </Text>
+      }
+    >
+      <Heading size="md">Trim All</Heading>
+    </Tooltip>
+    <Switch
+      colorScheme="brand"
+      isChecked={trimAll}
+      onChange={(e) => setTrimAll(e.target.checked)}
+      ml={2}
+    />
+  </GridItem>
+));
+
+// ─── Run button ───────────────────────────────────────────────────────────────
 
 export interface IRunProps {
   runProcessor: () => void;
@@ -391,17 +306,13 @@ const Run: React.FC<IRunProps> = ({
 }) => {
   const [timeElapsed, setTimeElapsed] = useState(0);
   const progress =
-    permutationOutputs.reduce((acc, permutationOutput) => {
-      return acc + permutationOutput.progress;
-    }, 0) /
+    permutationOutputs.reduce((acc, p) => acc + p.progress, 0) /
     (files.length * permutations);
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
     if (processing) {
-      interval = setInterval(() => {
-        setTimeElapsed(prev => prev + 1);
-      }, 1000);
+      interval = setInterval(() => setTimeElapsed(prev => prev + 1), 1000);
     } else {
       setTimeElapsed(0);
     }
@@ -412,35 +323,25 @@ const Run: React.FC<IRunProps> = ({
   const noFiles = files.length === 0;
   const noOutput = !output;
   const noProcessors = processorPool.length === 0;
-
-  // During processing, only enable the button if it's been running long enough to show cancel
-  // When not processing, disable if any required conditions are not met
-  const isDisabled = processing
-    ? !isLongRunning
-    : (noFiles || noOutput || noProcessors);
+  const isDisabled = processing ? !isLongRunning : (noFiles || noOutput || noProcessors);
 
   const getDisabledReason = () => {
-    if (noFiles) return "Please add some audio files";
-    if (noOutput) return "Please select an output directory";
-    if (noProcessors) return "Please select at least one processor";
-    return "";
+    if (noFiles) return 'Please add some audio files';
+    if (noOutput) return 'Please select an output directory';
+    if (noProcessors) return 'Please select at least one processor';
+    return '';
   };
 
   const buttonHandler = () => {
-    if (isDisabled) {
-      return;
-    }
-    if (isLongRunning) {
-      return cancelProcessing();
-    }
+    if (isDisabled) return;
+    if (isLongRunning) return cancelProcessing();
     return runProcessor();
-  }
-
+  };
 
   return (
     <GridItem rowSpan={2} colSpan={3} display="flex" pl={6} pr={6} alignItems="center">
       <Tooltip
-        label={!processing && isDisabled ? getDisabledReason() : ""}
+        label={!processing && isDisabled ? getDisabledReason() : ''}
         isDisabled={!isDisabled || processing}
         fontSize="md"
       >
@@ -448,19 +349,19 @@ const Run: React.FC<IRunProps> = ({
           onClick={buttonHandler}
           disabled={isDisabled}
           width="100%"
-          bg={isDisabled ? "brand.210" : !processing ? buttonBg : undefined}
-          color={!processing ? "gray.50" : undefined}
+          bg={isDisabled ? 'brand.210' : !processing ? buttonBg : undefined}
+          color={!processing ? 'gray.50' : undefined}
           fontSize="2xl"
           shadow="sm"
-          _hover={isLongRunning ? { bg: "red.200" } : { bg: "brand.210" }}
+          _hover={isLongRunning ? { bg: 'red.200' } : { bg: 'brand.210' }}
           transition="all 0.3s ease-in-out"
           display="flex"
           alignItems="center"
-          justifyContent={isLongRunning ? "flex-start" : "center"}
+          justifyContent={isLongRunning ? 'flex-start' : 'center'}
           gap={3}
           px={6}
-          className={processing ? "color-shift" : ""}
-          cursor={isDisabled ? "not-allowed" : "pointer"}
+          className={processing ? 'color-shift' : ''}
+          cursor={isDisabled ? 'not-allowed' : 'pointer'}
         >
           {!processing ? (
             'Run'
@@ -468,12 +369,12 @@ const Run: React.FC<IRunProps> = ({
             <>
               <CircularProgress
                 value={progress}
-                color={isLongRunning ? "red.300" : "brand.300"}
+                color={isLongRunning ? 'red.300' : 'brand.300'}
                 size={8}
                 transition="all 2.3s cubic-bezier(0.4, 0, 0.2, 1)"
-                className={isLongRunning ? "slide-in" : ""}
+                className={isLongRunning ? 'slide-in' : ''}
               />
-              <span className={isLongRunning ? "slide-in" : ""}>
+              <span className={isLongRunning ? 'slide-in' : ''}>
                 {isLongRunning ? 'Cancel' : ''}
               </span>
             </>
@@ -483,56 +384,3 @@ const Run: React.FC<IRunProps> = ({
     </GridItem>
   );
 };
-
-function Normalise(
-  normaliseAtEnd: boolean,
-  setNormalised: (normaliseAtEnd: boolean) => void
-) {
-  return (
-    <GridItem rowSpan={1} colSpan={2} pl="33%">
-      <Tooltip
-        openDelay={BOTTOM_BAR_TOOLTIP_DELAY}
-        label={
-          <Text fontSize="lg">
-            If enabled, normalises audio to ensure there is no digital clipping{' '}
-            <b>(recommended)</b>
-          </Text>
-        }
-      >
-        <Heading size="md">Normalise</Heading>
-      </Tooltip>
-      <Switch
-        colorScheme="brand"
-        isChecked={normaliseAtEnd}
-        onChange={(e) => setNormalised(e.target.checked)}
-        ml={2}
-      />
-    </GridItem>
-  );
-}
-
-function TrimAll(
-  trimAll: boolean,
-  setTrimAll: (trimAll: boolean) => void
-) {
-  return (
-    <GridItem rowSpan={1} colSpan={2} pt={3} pl="33%">
-      <Tooltip
-        openDelay={BOTTOM_BAR_TOOLTIP_DELAY}
-        label={
-          <Text fontSize="lg">
-            If enabled, trims all permuted audio, removing silence{' '}
-          </Text>
-        }
-      >
-        <Heading size="md">Trim All</Heading>
-      </Tooltip>
-      <Switch
-        colorScheme="brand"
-        isChecked={trimAll}
-        onChange={(e) => setTrimAll(e.target.checked)}
-        ml={2}
-      />
-    </GridItem>
-  );
-}

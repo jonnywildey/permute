@@ -1,5 +1,5 @@
 import { Box, GridItem, Heading, IconButton, useColorMode, Tooltip } from '@chakra-ui/react';
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useContext, useEffect, useRef } from 'react';
 import { AudioContext } from './AudioContext';
 import { LargePlayIcon } from './icons/PlayIcon';
 import { LargePauseIcon } from './icons/PauseIcon';
@@ -9,34 +9,52 @@ const AUDIO_PLAYER_TOOLTIP_DELAY = 1400;
 
 export const AudioPlayer: React.FC = () => {
   const { colorMode } = useColorMode();
-  const { resume, pause, stop, file, setOnPlayUpdate, isPlaying, setPosition } =
+  const { resume, pause, stop, file, getCurrentTime, isPlaying, setPosition } =
     useContext(AudioContext);
-  const [secs, setSecs] = useState<number>(0);
+
+  // Direct ref to the progress bar DOM node — we animate its width without
+  // going through React state, so there are zero re-renders during playback.
+  const progressRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setOnPlayUpdate((s) => setSecs(s));
-  }, []);
+    // scaleX(fraction) is GPU-composited — no layout reflow per frame.
+    const setScale = (fraction: number) => {
+      if (progressRef.current) {
+        progressRef.current.style.transform = `scaleX(${Math.min(fraction, 1)})`;
+      }
+    };
 
-  let progress = (secs / file.durationSec) * 100;
-  progress = progress > 100 ? 100 : progress;
+    if (!isPlaying) {
+      setScale(file.durationSec > 0 ? getCurrentTime() / file.durationSec : 0);
+      return;
+    }
+
+    let raf: number;
+    const tick = () => {
+      if (file.durationSec > 0) setScale(getCurrentTime() / file.durationSec);
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [isPlaying, file.durationSec, getCurrentTime]);
 
   if (!file.name) {
-    return (
-      <GridItem rowSpan={2} colSpan={3} padding={3} mr={2} pos="relative" />
-    );
+    return <GridItem rowSpan={2} colSpan={3} padding={3} mr={2} pos="relative" />;
   }
 
-  const onClick: React.DragEventHandler<HTMLDivElement> = (ev) => {
+  const handleClick: React.MouseEventHandler<HTMLDivElement> = (ev) => {
     const x = ev.nativeEvent.offsetX;
     const width = document.getElementById('audio-image')!.offsetWidth;
-    const progress = x / width;
-    const newSecs = file.durationSec * progress;
+    const fraction = x / width;
+    const newSecs = file.durationSec * fraction;
     setPosition(newSecs);
-    ev.stopPropagation();
+    // Update the bar immediately so it doesn't wait for the next rAF tick.
+    if (progressRef.current) {
+      progressRef.current.style.transform = `scaleX(${Math.min(fraction, 1)})`;
+    }
   };
-  const allowDrop: React.DragEventHandler<HTMLDivElement> = (ev) => {
-    ev.preventDefault();
-  };
+
+  const allowDrop: React.DragEventHandler<HTMLDivElement> = (ev) => ev.preventDefault();
 
   return (
     <GridItem rowSpan={2} colSpan={3} padding={3} mr={2} pos="relative">
@@ -47,29 +65,34 @@ export const AudioPlayer: React.FC = () => {
           onDragOver={allowDrop}
           id="audio-image"
           dangerouslySetInnerHTML={{ __html: file.image }}
-          onClick={onClick}
+          onClick={handleClick}
         />
+        {/* Width is controlled via the ref during playback; the initial value is
+            read from getCurrentTime() so re-renders (e.g. when isPlaying flips)
+            don't cause a flash back to 0% before the next rAF tick. */}
         <Box
+          ref={progressRef}
           bg="brand.126"
           className="audio-position"
           pos="relative"
-          onClick={onClick}
           bottom="70px"
           height="70px"
-          onDragOver={allowDrop}
           fontSize="lg"
           borderRight="1px solid"
           borderRightColor="brand.100"
-          width={`${progress}%`}
+          pointerEvents="none"
+          style={{
+            width: '100%',
+            transformOrigin: 'left center',
+            transform: `scaleX(${file.durationSec > 0 ? Math.min(getCurrentTime() / file.durationSec, 1) : 0})`,
+            willChange: 'transform',
+          }}
         >
           &nbsp;
         </Box>
       </Box>
       <Box display="flex" alignItems="baseline" pt={2.5} pr={1}>
-        <Tooltip
-          openDelay={AUDIO_PLAYER_TOOLTIP_DELAY}
-          label={file.name}
-        >
+        <Tooltip openDelay={AUDIO_PLAYER_TOOLTIP_DELAY} label={file.name}>
           <Heading
             size="md"
             pl={2}
@@ -82,9 +105,8 @@ export const AudioPlayer: React.FC = () => {
             {file.name}
           </Heading>
         </Tooltip>
-
         <IconButton
-          aria-label="show"
+          aria-label="play/pause"
           variant="ghost"
           rounded="full"
           size="xs"
@@ -94,7 +116,7 @@ export const AudioPlayer: React.FC = () => {
           _hover={{ bg: 'brand.50' }}
         />
         <IconButton
-          aria-label="show"
+          aria-label="stop"
           variant="ghost"
           rounded="full"
           size="xs"

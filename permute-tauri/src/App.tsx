@@ -11,7 +11,7 @@ import {
   useColorMode
 } from '@chakra-ui/react';
 import type { IPermuteState } from './types';
-import { useEffect, useState, useMemo, memo, useCallback } from 'react';
+import { useEffect, useState, useMemo, memo, useCallback, useRef } from 'react';
 import { Files } from './Files';
 import { TopBar } from './TopBar';
 import { Output } from './Output';
@@ -72,18 +72,14 @@ const Content = () => {
   );
 
   useEffect(() => {
-    return () => {
-      refreshState.cancel();
-    };
+    return () => { refreshState.cancel(); };
   }, [refreshState]);
 
   useEffect(() => {
     const setup = async () => {
       try {
         const permuteState = await bridge.getState();
-        if (!permuteState) {
-          throw new Error('Failed to load permute state');
-        }
+        if (!permuteState) throw new Error('Failed to load permute state');
         setState({ permuteState });
       } catch (error) {
         console.error('Failed to setup initial state:', error);
@@ -96,10 +92,11 @@ const Content = () => {
       }
     };
     setup();
-  }, [toast, setState]);
+  }, [toast]);
 
   const { isOpen, onClose, onOpen } = useDisclosure({ defaultIsOpen: false });
 
+  // Direct destructure — no useMemo needed, the object reference is already stable.
   const {
     allProcessors,
     permutationDepth,
@@ -115,7 +112,7 @@ const Content = () => {
     permutationOutputs,
     createSubdirectories,
     maxStretch,
-  } = useMemo(() => state.permuteState, [state.permuteState]);
+  } = state.permuteState;
 
   const gridConfig = useMemo(() => ({
     templateRows: "repeat(26, 1fr)",
@@ -126,206 +123,167 @@ const Content = () => {
     height: "100vh"
   }), []);
 
-  const runProcessor = async () => {
+  // ─── Processing ─────────────────────────────────────────────────────────────
+
+  const runProcessor = useCallback(() => {
     const onFinished = (pState: IPermuteState) => {
       if (pState.error) {
-        toast({
-          description: pState.error,
-          status: 'error',
-          duration: 5000,
-          isClosable: true,
-        });
+        toast({ description: pState.error, status: 'error', duration: 5000, isClosable: true });
       } else {
-        const description = `${pState.files.length * pState.permutations} files permuted!`;
-        toast({
-          description,
-          status: 'success',
-          duration: 5000,
-          isClosable: true,
-        });
+        toast({ description: `${pState.files.length * pState.permutations} files permuted!`, status: 'success', duration: 5000, isClosable: true });
       }
-      setState({ ...state, permuteState: pState });
+      setState({ permuteState: pState });
     };
-    setState({ permuteState: { ...state.permuteState, processing: true } });
+    setState(prev => ({ permuteState: { ...prev.permuteState, processing: true } }));
     bridge.runProcessor(refreshState, onFinished);
-  };
+  }, [toast, refreshState]);
 
-  const reverseFile = async (file: string) => {
-    setState({ permuteState: { ...state.permuteState, processing: true } });
-    const onFinished = (pState: IPermuteState) => {
-      setState({ ...state, permuteState: pState });
-    };
-    bridge.reverseFile(refreshState, onFinished, file);
-  };
+  const reverseFile = useCallback((file: string) => {
+    setState(prev => ({ permuteState: { ...prev.permuteState, processing: true } }));
+    bridge.reverseFile(refreshState, (pState) => setState({ permuteState: pState }), file);
+  }, [refreshState]);
 
-  const trimFile = async (file: string) => {
-    setState({ permuteState: { ...state.permuteState, processing: true } });
-    const onFinished = (pState: IPermuteState) => {
-      setState({ ...state, permuteState: pState });
-    };
-    bridge.trimFile(refreshState, onFinished, file);
-  };
+  const trimFile = useCallback((file: string) => {
+    setState(prev => ({ permuteState: { ...prev.permuteState, processing: true } }));
+    bridge.trimFile(refreshState, (pState) => setState({ permuteState: pState }), file);
+  }, [refreshState]);
 
-  const setDepth = async (depth: number) => {
-    setState(prevState => ({
-      permuteState: { ...prevState.permuteState, permutationDepth: depth }
-    }));
+  const cancelProcessing = useCallback(() => {
+    bridge.cancel();
+    refreshState();
+  }, [refreshState]);
+
+  // ─── Simple setters (optimistic update, no re-fetch needed) ─────────────────
+
+  const setDepth = useCallback(async (depth: number) => {
+    setState(prev => ({ permuteState: { ...prev.permuteState, permutationDepth: depth } }));
     await bridge.setDepth(depth);
-    refreshState();
-  };
+  }, []);
 
-  const setPermutations = async (permutations: number) => {
-    setState(prevState => ({
-      permuteState: { ...prevState.permuteState, permutations }
-    }));
+  const setPermutations = useCallback(async (permutations: number) => {
+    setState(prev => ({ permuteState: { ...prev.permuteState, permutations } }));
     await bridge.setPermutations(permutations);
-    refreshState();
-  };
+  }, []);
 
-  const setNormalised = async (normaliseAtEnd: boolean) => {
-    setState(prevState => ({
-      permuteState: { ...prevState.permuteState, normaliseAtEnd }
-    }));
+  const setNormalised = useCallback(async (normaliseAtEnd: boolean) => {
+    setState(prev => ({ permuteState: { ...prev.permuteState, normaliseAtEnd } }));
     await bridge.setNormalised(normaliseAtEnd);
-    refreshState();
-  };
+  }, []);
 
-  const setTrimAll = async (trimAll: boolean) => {
-    setState(prevState => ({
-      permuteState: { ...prevState.permuteState, trimAll }
-    }));
+  const setTrimAll = useCallback(async (trimAll: boolean) => {
+    setState(prev => ({ permuteState: { ...prev.permuteState, trimAll } }));
     await bridge.setTrimAll(trimAll);
-    refreshState();
-  };
+  }, []);
 
-  const setInputTrail = async (inputTrail: number) => {
-    setState(prevState => ({
-      permuteState: { ...prevState.permuteState, inputTrail }
-    }));
+  const setInputTrail = useCallback(async (inputTrail: number) => {
+    setState(prev => ({ permuteState: { ...prev.permuteState, inputTrail } }));
     await bridge.setInputTrail(inputTrail);
-    refreshState();
-  };
+  }, []);
 
-  const setOutputTrail = async (outputTrail: number) => {
-    setState(prevState => ({
-      permuteState: { ...prevState.permuteState, outputTrail }
-    }));
+  const setOutputTrail = useCallback(async (outputTrail: number) => {
+    setState(prev => ({ permuteState: { ...prev.permuteState, outputTrail } }));
     await bridge.setOutputTrail(outputTrail);
-    refreshState();
-  };
+  }, []);
 
-  const addFiles = async (files: string[]) => {
+  const setMaxStretch = useCallback(async (maxStretch: number) => {
+    setState(prev => ({ permuteState: { ...prev.permuteState, maxStretch } }));
+    await bridge.setMaxStretch(maxStretch);
+  }, []);
+
+  const setCreateSubdirectories = useCallback(async (createSubfolders: boolean) => {
+    setState(prev => ({ permuteState: { ...prev.permuteState, createSubdirectories: createSubfolders } }));
+    await bridge.setCreateSubdirectories(createSubfolders);
+  }, []);
+
+  // ─── Processor pool ─────────────────────────────────────────────────────────
+  // Optimistic updates so the UI responds immediately without waiting for IPC.
+
+  const setProcessorEnabled = useCallback((name: string, enable: boolean) => {
+    setState(prev => ({
+      permuteState: {
+        ...prev.permuteState,
+        processorPool: enable
+          ? [...prev.permuteState.processorPool, name]
+          : prev.permuteState.processorPool.filter(p => p !== name),
+      },
+    }));
+    if (enable) bridge.addProcessor(name);
+    else bridge.removeProcessor(name);
+  }, []);
+
+  // Keep allProcessors in a ref so selectAll/deselectAll stay stable.
+  const allProcessorsRef = useRef(allProcessors);
+  allProcessorsRef.current = allProcessors;
+
+  const selectAllProcessors = useCallback(async () => {
+    setState(prev => ({ permuteState: { ...prev.permuteState, processorPool: [...allProcessorsRef.current] } }));
+    await bridge.selectAllProcessors();
+  }, []);
+
+  const deselectAllProcessors = useCallback(async () => {
+    setState(prev => ({ permuteState: { ...prev.permuteState, processorPool: [] } }));
+    await bridge.deselectAllProcessors();
+  }, []);
+
+  // ─── File management ────────────────────────────────────────────────────────
+
+  const addFiles = useCallback(async (files: string[]) => {
     await Promise.all(files.map((f) => bridge.addFile(f)));
     const permuteState = await bridge.getState();
     setState({ permuteState });
-  };
+  }, []);
 
-  const removeFile = async (file: string) => {
+  const removeFile = useCallback(async (file: string) => {
     await bridge.removeFile(file);
     const permuteState = await bridge.getState();
     setState({ permuteState });
-  };
+  }, []);
 
-  const clearAllFiles = async () => {
+  const clearAllFiles = useCallback(async () => {
     await bridge.clearAllFiles();
     const permuteState = await bridge.getState();
     setState({ permuteState });
-  };
+  }, []);
 
-  const showFile = async (file: string) => {
-    bridge.showFile(file);
-  };
+  const showFile = useCallback((file: string) => { bridge.showFile(file); }, []);
 
-  const deleteOutputFile = async (file: string) => {
+  const deleteOutputFile = useCallback(async (file: string) => {
     await bridge.deleteOutputFile(file);
     const permuteState = await bridge.getState();
     setState({ permuteState });
-  };
+  }, []);
 
-  const deleteAllOutputFiles = async () => {
+  const deleteAllOutputFiles = useCallback(async () => {
     await bridge.deleteAllOutputFiles();
     const permuteState = await bridge.getState();
     setState({ permuteState });
-  };
+  }, []);
 
-  const setOutput = async () => {
+  const setOutput = useCallback(async () => {
     const chosen = await bridge.openOutputDialog();
-    if (chosen) {
-      refreshState();
-    }
-  };
+    if (chosen) refreshState();
+  }, [refreshState]);
 
-  const setProcessorEnabled = (name: string, enable: boolean) => {
-    if (enable) {
-      bridge.addProcessor(name);
-    } else {
-      bridge.removeProcessor(name);
-    }
-    refreshState();
-  };
+  // ─── Scene ──────────────────────────────────────────────────────────────────
 
-  const selectAllProcessors = async () => {
-    await bridge.selectAllProcessors();
-    refreshState();
-  };
-
-  const deselectAllProcessors = async () => {
-    await bridge.deselectAllProcessors();
-    refreshState();
-  };
-
-  const cancelProcessing = async () => {
-    bridge.cancel();
-    refreshState();
-  };
-
-  const setCreateSubdirectories = async (createSubfolders: boolean) => {
-    await bridge.setCreateSubdirectories(createSubfolders);
-    const permuteState = await bridge.getState();
-    setState({ permuteState });
-  };
-
-  const handleSaveScene = async () => {
+  const handleSaveScene = useCallback(async () => {
     const filePath = await bridge.saveScene();
     if (filePath) {
-      toast({
-        description: 'Scene saved successfully',
-        status: 'success',
-        duration: 3000,
-        isClosable: true,
-      });
+      toast({ description: 'Scene saved successfully', status: 'success', duration: 3000, isClosable: true });
       refreshState();
     }
-  };
+  }, [toast, refreshState]);
 
-  const handleLoadScene = async () => {
+  const handleLoadScene = useCallback(async () => {
     const response = await bridge.loadScene();
     if (response.success) {
       const permuteState = await bridge.getState();
       setState({ permuteState });
-      toast({
-        description: 'Scene loaded successfully',
-        status: 'success',
-        duration: 3000,
-        isClosable: true,
-      });
+      toast({ description: 'Scene loaded successfully', status: 'success', duration: 3000, isClosable: true });
     } else {
-      toast({
-        description: 'Error loading scene',
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-      });
+      toast({ description: 'Error loading scene', status: 'error', duration: 5000, isClosable: true });
     }
-  };
-
-  const setMaxStretch = async (maxStretch: number) => {
-    setState(prevState => ({
-      permuteState: { ...prevState.permuteState, maxStretch }
-    }));
-    await bridge.setMaxStretch(maxStretch);
-    refreshState();
-  };
+  }, [toast]);
 
   return (
     <Grid {...gridConfig}>
