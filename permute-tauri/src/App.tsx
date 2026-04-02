@@ -135,7 +135,10 @@ const Content = () => {
       setState({ permuteState: pState });
     };
     setState(prev => ({ permuteState: { ...prev.permuteState, processing: true } }));
-    bridge.runProcessor(refreshState, onFinished);
+    bridge.runProcessor(
+      (pState) => setState({ permuteState: pState }),
+      onFinished,
+    );
   }, [toast, refreshState]);
 
   const reverseFile = useCallback((file: string) => {

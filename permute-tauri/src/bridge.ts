@@ -44,17 +44,22 @@ export function runProcessor(
   });
 }
 
+let activeReverseUnlisten: (() => void) | undefined;
+let activeTrimUnlisten: (() => void) | undefined;
+
 export function reverseFile(
   updateFn: GetStateCallback,
   completeFn: GetStateCallback,
   file: string
 ): void {
-  let unlistenEnd: (() => void) | undefined;
+  activeReverseUnlisten?.();
+  activeReverseUnlisten = undefined;
   listen<IPermuteState>('permute-ended', (e) => {
-    unlistenEnd?.();
+    activeReverseUnlisten?.();
+    activeReverseUnlisten = undefined;
     completeFn(e.payload);
   }).then((u) => {
-    unlistenEnd = u;
+    activeReverseUnlisten = u;
     invoke('reverse_file', { file }).catch(console.error);
   });
 }
@@ -64,12 +69,14 @@ export function trimFile(
   completeFn: GetStateCallback,
   file: string
 ): void {
-  let unlistenEnd: (() => void) | undefined;
+  activeTrimUnlisten?.();
+  activeTrimUnlisten = undefined;
   listen<IPermuteState>('permute-ended', (e) => {
-    unlistenEnd?.();
+    activeTrimUnlisten?.();
+    activeTrimUnlisten = undefined;
     completeFn(e.payload);
   }).then((u) => {
-    unlistenEnd = u;
+    activeTrimUnlisten = u;
     invoke('trim_file', { file }).catch(console.error);
   });
 }
