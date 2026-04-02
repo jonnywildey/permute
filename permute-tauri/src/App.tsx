@@ -320,6 +320,7 @@ const Content = () => {
         trimFile={trimFile}
         deleteOutputFile={deleteOutputFile}
         deleteAllOutputFiles={deleteAllOutputFiles}
+        processing={processing}
       />
       <MemoizedBottomBar
         permutationOutputs={permutationOutputs}
