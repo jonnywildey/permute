@@ -1,0 +1,7 @@
+[workspace]
+members = [
+    "permute-core",
+    "audio-info",
+    "permute-tauri/src-tauri",
+]
+resolver = "2"
