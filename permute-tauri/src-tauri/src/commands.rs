@@ -2,7 +2,7 @@ use std::{sync::Arc, thread};
 
 use tauri::{AppHandle, Emitter, State};
 
-use crate::state::{AppState, PermuteStateDto};
+use crate::state::{AppState, PermuteProgressEvent, PermuteStateDto};
 
 // ─── State query ─────────────────────────────────────────────────────────────
 
@@ -14,7 +14,12 @@ pub fn get_state(state: State<'_, AppState>) -> PermuteStateDto {
 // ─── Processing commands ─────────────────────────────────────────────────────
 
 #[tauri::command]
-pub fn run_processor(state: State<'_, AppState>) -> Result<(), String> {
+pub fn run_processor(
+    state: State<'_, AppState>,
+    on_event: tauri::ipc::Channel<PermuteProgressEvent>,
+) -> Result<(), String> {
+    // Register the channel so the update thread sends delta events to it.
+    *state.active_channel.lock().unwrap() = Some(on_event);
     let mut s = state.shared.lock().unwrap();
     if !s.processing {
         s.run_process();

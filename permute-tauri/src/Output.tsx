@@ -57,6 +57,8 @@ const outputFileEqual = (prev: OutputFileProps, next: OutputFileProps) =>
   prev.file.path === next.file.path &&
   prev.file.progress === next.file.progress &&
   prev.file.deleted === next.file.deleted &&
+  prev.file.image === next.file.image &&
+  prev.file.durationSec === next.file.durationSec &&
   prev.onDelete === next.onDelete &&
   prev.onShow === next.onShow &&
   prev.onReverse === next.onReverse &&

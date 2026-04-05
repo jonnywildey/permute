@@ -6,7 +6,7 @@ mod state;
 
 use commands::*;
 use permute::permute_files::PermuteUpdate;
-use state::{AppState, SharedState};
+use state::{AppState, SharedState, PermuteProgressEvent, build_progress_event, update_state_from_message};
 use std::{sync::Arc, thread};
 use tauri::{Emitter, Manager, WindowEvent};
 
@@ -36,49 +36,60 @@ fn main() {
             let shared = Arc::new(std::sync::Mutex::new(initial_state));
             let shared_for_update = Arc::clone(&shared);
 
-            // Spawn the update thread — mirrors the update thread in the old Neon lib.rs
+            // Per-run Tauri channel: set by run_processor, cleared on completion.
+            let active_channel: Arc<std::sync::Mutex<Option<tauri::ipc::Channel<PermuteProgressEvent>>>> =
+                Arc::new(std::sync::Mutex::new(None));
+            let active_channel_for_thread = Arc::clone(&active_channel);
+
+            // Spawn the update thread.
+            // When a Tauri Channel is active (run_processor), send lightweight delta
+            // events instead of serialising the full state on every tick.
+            // When no channel is active (reverse/trim), fall back to global events.
             thread::Builder::new()
                 .name("PermuteUpdateThread".into())
                 .spawn(move || {
                     while let Ok(message) = permute_rx.recv() {
-                        let (is_complete, dto) = {
-                            let mut s = shared_for_update.lock().unwrap();
-                            match &message {
-                                PermuteUpdate::UpdatePermuteNodeCompleted(perm, _, _) => {
-                                    s.update_output_progress(perm.clone());
-                                }
-                                PermuteUpdate::UpdatePermuteNodeStarted(_, _, _) => {}
-                                PermuteUpdate::UpdateSetProcessors(perm, procs) => {
-                                    s.add_output_progress(perm.clone(), procs.clone());
-                                }
-                                PermuteUpdate::AudioInfoGenerated(file, info) => {
-                                    s.update_output_audioinfo(file.clone(), info.clone());
-                                }
-                                PermuteUpdate::ProcessComplete(_) => {
-                                    let _ = s.set_finished();
-                                }
-                                PermuteUpdate::Error(err) => {
-                                    let _ = s.set_finished();
-                                    s.set_error(err.clone());
+                        let is_complete = matches!(
+                            message,
+                            PermuteUpdate::ProcessComplete(_) | PermuteUpdate::Error(_)
+                        );
+                        let has_channel = active_channel_for_thread.lock().unwrap().is_some();
+
+                        if has_channel {
+                            // Update state, then build a lightweight delta event.
+                            let progress_event = {
+                                let mut s = shared_for_update.lock().unwrap();
+                                update_state_from_message(&mut s, &message);
+                                build_progress_event(&message)
+                            };
+                            if let Some(event) = progress_event {
+                                let guard = active_channel_for_thread.lock().unwrap();
+                                if let Some(channel) = guard.as_ref() {
+                                    channel.send(event).ok();
                                 }
                             }
-                            let complete = matches!(
-                                message,
-                                PermuteUpdate::ProcessComplete(_) | PermuteUpdate::Error(_)
-                            );
-                            (complete, s.to_state_dto())
-                        };
-
-                        if is_complete {
-                            let _ = app_handle.emit("permute-ended", dto);
+                            if is_complete {
+                                *active_channel_for_thread.lock().unwrap() = None;
+                            }
                         } else {
-                            let _ = app_handle.emit("permute-update", dto);
+                            // No active channel: update state and emit full DTO as
+                            // global events (used by reverse_file / trim_file).
+                            let dto = {
+                                let mut s = shared_for_update.lock().unwrap();
+                                update_state_from_message(&mut s, &message);
+                                s.to_state_dto()
+                            };
+                            if is_complete {
+                                let _ = app_handle.emit("permute-ended", dto);
+                            } else {
+                                let _ = app_handle.emit("permute-update", dto);
+                            }
                         }
                     }
                 })
                 .expect("failed to spawn update thread");
 
-            app.manage(AppState { shared });
+            app.manage(AppState { shared, active_channel });
 
             // Store config path for the on-close handler
             app.manage(ConfigPath(config_path.to_string_lossy().into_owned()));

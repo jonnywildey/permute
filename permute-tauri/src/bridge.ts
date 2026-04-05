@@ -4,9 +4,18 @@
  * Provides the same API shape that App.tsx used to call on the Electron bridge,
  * implemented with Tauri's invoke() / listen() instead.
  */
-import { invoke } from '@tauri-apps/api/core';
+import { invoke, Channel } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
-import type { IPermuteState, GetStateCallback } from './types';
+import type { IPermuteState, GetStateCallback, IProcessor } from './types';
+
+// ─── Channel event types ──────────────────────────────────────────────────────
+
+export type PermuteProgressEvent =
+  | { type: 'outputAdded'; path: string; processors: IProcessor[] }
+  | { type: 'outputProgress'; path: string; progress: number }
+  | { type: 'outputCompleted'; path: string; name: string; image: string; durationSec: number }
+  | { type: 'finished' }
+  | { type: 'error'; message: string };
 
 // ─── State ───────────────────────────────────────────────────────────────────
 
@@ -16,32 +25,24 @@ export const getState = (): Promise<IPermuteState> =>
 // ─── Processing ──────────────────────────────────────────────────────────────
 
 /**
- * Starts the permutation run. Progress events arrive as 'permute-update';
- * the completion event arrives as 'permute-ended'.
+ * Starts the permutation run. Progress arrives as lightweight delta events
+ * via a Tauri Channel instead of full state snapshots.
  */
 export function runProcessor(
-  updateFn: GetStateCallback,
-  completeFn: GetStateCallback
+  onProgress: (event: PermuteProgressEvent) => void,
+  onFinished: (success: boolean, error?: string) => void,
 ): void {
-  let unlistenUpdate: (() => void) | undefined;
-  let unlistenEnd: (() => void) | undefined;
-
-  Promise.all([
-    listen<IPermuteState>('permute-update', (e) => {
-      updateFn(e.payload);
-    }).then((u) => {
-      unlistenUpdate = u;
-    }),
-    listen<IPermuteState>('permute-ended', (e) => {
-      unlistenUpdate?.();
-      unlistenEnd?.();
-      completeFn(e.payload);
-    }).then((u) => {
-      unlistenEnd = u;
-    }),
-  ]).then(() => {
-    invoke('run_processor').catch(console.error);
-  });
+  const channel = new Channel<PermuteProgressEvent>();
+  channel.onmessage = (event) => {
+    if (event.type === 'finished') {
+      onFinished(true);
+    } else if (event.type === 'error') {
+      onFinished(false, event.message);
+    } else {
+      onProgress(event);
+    }
+  };
+  invoke('run_processor', { onEvent: channel }).catch(console.error);
 }
 
 let activeReverseUnlisten: (() => void) | undefined;

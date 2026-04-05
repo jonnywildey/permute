@@ -1,3 +1,4 @@
+.env
 /lib-sndfile-src
 /libsndfile-binaries
 /sndfile.rs

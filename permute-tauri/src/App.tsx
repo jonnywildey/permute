@@ -22,6 +22,7 @@ import { Welcome } from './Welcome';
 import { CreateAudioContext } from './AudioContext';
 import { debounce } from 'lodash';
 import * as bridge from './bridge';
+import type { PermuteProgressEvent } from './bridge';
 import bg2Url from './img/bg2.png';
 
 export interface IAppState {
@@ -126,20 +127,55 @@ const Content = () => {
   // ─── Processing ─────────────────────────────────────────────────────────────
 
   const runProcessor = useCallback(() => {
-    const onFinished = (pState: IPermuteState) => {
-      if (pState.error) {
-        toast({ description: pState.error, status: 'error', duration: 5000, isClosable: true });
-      } else {
-        toast({ description: `${pState.files.length * pState.permutations} files permuted!`, status: 'success', duration: 5000, isClosable: true });
-      }
-      setState({ permuteState: pState });
-    };
-    setState(prev => ({ permuteState: { ...prev.permuteState, processing: true } }));
+    const expectedCount = files.length * (permutations ?? 0);
+    // Clear outputs immediately — backend will stream them back as OutputAdded events.
+    setState(prev => ({
+      permuteState: { ...prev.permuteState, processing: true, permutationOutputs: [] },
+    }));
     bridge.runProcessor(
-      (pState) => setState({ permuteState: pState }),
-      onFinished,
+      (event: PermuteProgressEvent) => {
+        setState(prev => {
+          const outputs = prev.permuteState.permutationOutputs;
+          switch (event.type) {
+            case 'outputAdded':
+              return {
+                permuteState: {
+                  ...prev.permuteState,
+                  permutationOutputs: [
+                    ...outputs,
+                    { path: event.path, name: '', progress: 0, processors: event.processors, image: '', durationSec: 0, deleted: false },
+                  ],
+                },
+              };
+            case 'outputProgress': {
+              const idx = outputs.findIndex(o => o.path === event.path);
+              if (idx < 0) return prev;
+              const updated = [...outputs];
+              updated[idx] = { ...updated[idx], progress: event.progress };
+              return { permuteState: { ...prev.permuteState, permutationOutputs: updated } };
+            }
+            case 'outputCompleted': {
+              const idx = outputs.findIndex(o => o.path === event.path);
+              if (idx < 0) return prev;
+              const updated = [...outputs];
+              updated[idx] = { ...updated[idx], name: event.name, image: event.image, durationSec: event.durationSec, progress: 100 };
+              return { permuteState: { ...prev.permuteState, permutationOutputs: updated } };
+            }
+            default:
+              return prev;
+          }
+        });
+      },
+      (success, error) => {
+        if (!success && error) {
+          toast({ description: error, status: 'error', duration: 5000, isClosable: true });
+        } else {
+          toast({ description: `${expectedCount} files permuted!`, status: 'success', duration: 5000, isClosable: true });
+        }
+        setState(prev => ({ permuteState: { ...prev.permuteState, processing: false } }));
+      },
     );
-  }, [toast, refreshState]);
+  }, [toast, files, permutations]);
 
   const reverseFile = useCallback((file: string) => {
     setState(prev => ({ permuteState: { ...prev.permuteState, processing: true } }));

@@ -1,5 +1,6 @@
 use audio_info::{AudioFileError, AudioInfo};
 use crossbeam_channel::Sender;
+use tauri::ipc::Channel;
 use permute::{
     audio_cache::AUDIO_CACHE,
     display_node::{get_processor_display_name, get_processor_from_display_name},
@@ -22,6 +23,39 @@ use std::{
 
 pub struct AppState {
     pub shared: Arc<std::sync::Mutex<SharedState>>,
+    /// Set by `run_processor` for the duration of a processing run.
+    /// The update thread sends lightweight delta events through this channel
+    /// instead of serialising the full state on every tick.
+    pub active_channel: Arc<std::sync::Mutex<Option<Channel<PermuteProgressEvent>>>>,
+}
+
+// ─── Lightweight per-event progress type (sent via Tauri Channel) ─────────────
+
+#[derive(Serialize, Clone)]
+#[serde(tag = "type", rename_all = "camelCase")]
+pub enum PermuteProgressEvent {
+    #[serde(rename_all = "camelCase")]
+    OutputAdded {
+        path: String,
+        processors: Vec<ProcessorDto>,
+    },
+    #[serde(rename_all = "camelCase")]
+    OutputProgress {
+        path: String,
+        progress: i32,
+    },
+    #[serde(rename_all = "camelCase")]
+    OutputCompleted {
+        path: String,
+        name: String,
+        image: String,
+        duration_sec: f64,
+    },
+    Finished,
+    #[serde(rename_all = "camelCase")]
+    Error {
+        message: String,
+    },
 }
 
 // ─── DTO structs (serialise to match TypeScript IPermuteState) ───────────────
@@ -645,4 +679,80 @@ pub struct OutputProgress {
     pub audio_info: AudioInfo,
     pub deleted: bool,
     pub source_file: String,
+}
+
+// ─── Update-thread helpers ────────────────────────────────────────────────────
+
+/// Apply a `PermuteUpdate` message to the shared state (always called,
+/// regardless of whether a Tauri Channel is active).
+pub fn update_state_from_message(s: &mut SharedState, message: &PermuteUpdate) {
+    match message {
+        PermuteUpdate::UpdatePermuteNodeCompleted(perm, _, _) => {
+            s.update_output_progress(perm.clone());
+        }
+        PermuteUpdate::UpdateSetProcessors(perm, procs) => {
+            s.add_output_progress(perm.clone(), procs.clone());
+        }
+        PermuteUpdate::AudioInfoGenerated(file, info) => {
+            s.update_output_audioinfo(file.clone(), info.clone());
+        }
+        PermuteUpdate::ProcessComplete(_) => {
+            let _ = s.set_finished();
+        }
+        PermuteUpdate::Error(err) => {
+            let _ = s.set_finished();
+            s.set_error(err.clone());
+        }
+        PermuteUpdate::UpdatePermuteNodeStarted(_, _, _) => {}
+    }
+}
+
+/// Build a lightweight `PermuteProgressEvent` from a `PermuteUpdate` message.
+/// Returns `None` for events that don't need forwarding to the frontend.
+pub fn build_progress_event(message: &PermuteUpdate) -> Option<PermuteProgressEvent> {
+    match message {
+        PermuteUpdate::UpdateSetProcessors(perm, procs) => {
+            let processors = procs
+                .iter()
+                .map(|(name, attrs)| ProcessorDto {
+                    name: get_processor_display_name(*name).to_string(),
+                    attributes: attrs
+                        .iter()
+                        .map(|a| ProcessorAttributeDto {
+                            key: a.key.clone(),
+                            value: a.value.clone(),
+                        })
+                        .collect(),
+                })
+                .collect();
+            Some(PermuteProgressEvent::OutputAdded {
+                path: perm.output.clone(),
+                processors,
+            })
+        }
+        PermuteUpdate::UpdatePermuteNodeCompleted(perm, _, _) => {
+            let progress = if perm.processors.is_empty() {
+                100
+            } else {
+                (((perm.node_index as f64 + 1.0) / perm.processors.len() as f64) * 100.0) as i32
+            };
+            Some(PermuteProgressEvent::OutputProgress {
+                path: perm.output.clone(),
+                progress,
+            })
+        }
+        PermuteUpdate::AudioInfoGenerated(file, info) => {
+            Some(PermuteProgressEvent::OutputCompleted {
+                path: file.clone(),
+                name: info.name.clone(),
+                image: info.image.clone(),
+                duration_sec: info.duration_sec,
+            })
+        }
+        PermuteUpdate::ProcessComplete(_) => Some(PermuteProgressEvent::Finished),
+        PermuteUpdate::Error(err) => Some(PermuteProgressEvent::Error {
+            message: err.clone(),
+        }),
+        PermuteUpdate::UpdatePermuteNodeStarted(_, _, _) => None,
+    }
 }

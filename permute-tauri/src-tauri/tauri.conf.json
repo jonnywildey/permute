@@ -43,7 +43,9 @@
     ],
     "macOS": {
       "minimumSystemVersion": "11.0",
-      "frameworks": ["../../libsndfile-binaries/libsndfile_universal.dylib"]
+      "frameworks": ["../../libsndfile-binaries/libsndfile_universal.dylib"],
+      "entitlements": "./Entitlements.plist",
+      "hardenedRuntime": true
     }
   }
 }
