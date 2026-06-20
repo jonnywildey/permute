@@ -3,45 +3,57 @@
 
 Permute is a library and UI for quickly generating large numbers of variations of audio files.
 
-There is a small library of signal processors, terminal tools and UIs for randomly chaining processors together.
+There is a small library of signal processors, terminal tools and a UI for randomly chaining processors together.
 
 ![short demo of permute UI](docs/permute.gif "Permute")
 
 
 ## Architecture
 
-_permute-core_ is the rust audio processing library
+_permute-core_ is the Rust audio processing library
 
 _audio-info_ generates waveform SVGs
 
-_permute-node_ is the node bindings for permute-core and audio-info
-
-_permute_app_ is the electron app
+_permute-tauri_ is the desktop UI (Tauri + React)
 
 
 ## How to install UI
 
-Only works on MacOS. [Download package](https://github.com/jonnywildey/permute/releases)
+Only works on macOS. [Download package](https://github.com/jonnywildey/permute/releases)
 
 ## How to install terminal
 
-Clone the repo, build in Rust. You may need to install `libsndfile`
+Clone the repo, build in Rust. You may need to install `libsndfile`.
 
-# libsndfile
+## How to run the UI (development)
 
-- Install libsndfile binaries https://github.com/bastibe/libsndfile-binaries
-- Run autogen.sh
-- mv the newly created libsndfile/src/.libs to ./libsndfile-src
+```bash
+cd permute-tauri
+npm install
+npm run tauri dev
+```
 
-# Steps to run electron app with updated core
+## How to build a release
 
-- run cargo build in core
-- run package.json build-update in node
-- run release/app/package.json install  postinstall
-- Potentially update the release/app to  "permute-node": "../../../permute-node/permute-node-0.2.0.tgz"
+Universal macOS binary (arm64 + x86_64):
+
+```bash
+cd permute-tauri
+npm run build:universal
+```
+
+The `.app` and `.dmg` are output to `permute-tauri/src-tauri/target/universal-apple-darwin/release/bundle/`.
+
+## libsndfile
+
+Pre-built binaries are included in `libsndfile-binaries/`. The build system picks up `libsndfile_universal.dylib` automatically.
+
+To rebuild from source:
+- Install libsndfile: https://github.com/bastibe/libsndfile-binaries
+- Run `autogen.sh`
+- Move the newly created `libsndfile/src/.libs` to `./libsndfile-src`
 
 ## Quirks
 
-- Multiple instances of granualar stretching and pitch shifting can create very large audio files
-- Chaining processes can quickly dramatically affect volume levels. We recommend enabling normalise
-- Aifs cannot be played in electron apps. 
+- Multiple instances of granular stretching and pitch shifting can create very large audio files
+- Chaining processes can quickly dramatically affect volume levels — enabling normalise is recommended
